@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <!-- #region Google Tag Manager -->
     <!-- Google Tag Manager -->
     <script>
       (function (w, d, s, l, i) {
@@ -14,15 +15,21 @@
         f.parentNode.insertBefore(j, f);
       })(window, document, "script", "dataLayer", "GTM-P8QLZVZ7");
     </script>
-    <!-- End Google Tag Manager -->
+
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-EQZGTXEB26"></script>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-EQZGTXEB26"
+    ></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-EQZGTXEB26');
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-EQZGTXEB26");
     </script>
+    <!-- #endregion -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <link
@@ -34,7 +41,7 @@
   </head>
 
   <body>
-    <!-- Google Tag Manager (noscript) -->
+    <!-- #region Google Tag Manager (noscript) -->
     <noscript
       ><iframe
         src="https://www.googletagmanager.com/ns.html?id=GTM-P8QLZVZ7"
@@ -43,7 +50,8 @@
         style="display: none; visibility: hidden"
       ></iframe
     ></noscript>
-    <!-- End Google Tag Manager (noscript) -->
+    <!-- #endregion -->
+    <!--  #region Mobile Search Screen  -->
     <div
       id="mobileSearchScreen"
       class="mobile-search-screen"
@@ -145,8 +153,8 @@
         </div>
       </div>
     </div>
-
-    <!-- Mobile Conversation Filter Screen -->
+    <!-- #endregion -->
+    <!-- #region Mobile Conversation Filter Screen -->
     <div
       id="mobileConvoFilterScreen"
       class="mobile-filter-screen"
@@ -182,8 +190,8 @@
       </div>
       <div id="mobileConvoFilterList" class="mobile-filter-list"></div>
     </div>
-
-    <!-- Mobile Actor Filter Screen -->
+    <!-- #endregion -->
+    <!-- #region Mobile Actor Filter Screen -->
     <div
       id="mobileActorFilterScreen"
       class="mobile-filter-screen"
@@ -223,8 +231,8 @@
         searches.
       </div>
     </div>
-
-    <!-- Mobile Type Filter Bottom Sheet -->
+    <!-- #endregion -->
+    <!-- #region Mobile Type Filter Bottom Sheet -->
     <div
       id="mobileTypeFilterSheet"
       class="mobile-bottom-sheet"
@@ -254,14 +262,15 @@
         <button class="mobile-apply-btn" id="mobileTypeApply">Apply</button>
       </div>
     </div>
+    <!-- #endregion -->
     <main>
-      <!-- Conversation Sidebar -->
+      <!-- #region Conversation Sidebar (Tablet) -->
       <div id="convoSidebar" class="sidebar sidebar-left"></div>
-
-      <!-- History Sidebar -->
+      <!-- #endregion -->
+      <!-- #region History Sidebar (Mobile/Tablet) -->
       <div id="historySidebar" class="sidebar sidebar-right"></div>
-
-      <!-- Sidebar Toggle Buttons -->
+      <!-- #endregion -->
+      <!-- #region Sidebar Toggle Buttons (Mobile/Tablet) -->
       <button
         id="convoSidebarToggle"
         class="sidebar-toggle-btn sidebar-toggle-left"
@@ -292,8 +301,8 @@
           ></div>
         </span>
       </button>
-
-      <!-- Mobile Header Bar -->
+      <!-- #endregion -->
+      <!-- #region Mobile Header Bar -->
       <div id="mobileHeader" class="mobile-header">
         <button id="mobileSidebarToggle" class="mobile-menu-btn">
           <div
@@ -329,15 +338,15 @@
           ></div>
         </button>
       </div>
-
-      <!-- Mobile Navigation Overlay -->
+      <!-- #endregion -->
+      <!-- #region Mobile Navigation Overlay -->
       <div
         id="mobileNavOverlay"
         class="mobile-nav-overlay"
         style="display: none"
       ></div>
-
-      <!-- Mobile Navigation Panel -->
+      <!-- #endregion -->
+      <!-- #region Mobile Navigation Panel -->
       <div id="mobileNavPanel" class="mobile-nav-panel" style="display: none">
         <nav class="mobile-nav-content">
           <ul class="mobile-nav-list">
@@ -389,14 +398,15 @@
           </div>
         </nav>
       </div>
-
-      <!-- Blurred Sidebar Overlay -->
+      <!-- #endregion -->
+      <!-- #region Blurred Sidebar Overlay -->
       <div
         id="sidebarOverlay"
         class="sidebar-overlay"
         style="display: none"
       ></div>
-
+      <!-- #endregion -->
+      <!-- #region Desktop Header -->
       <div class="header-container">
         <div>
           <h1>Disco Browser</h1>
@@ -430,7 +440,8 @@
           </a>
         </div>
       </div>
-
+      <!-- #endregion -->
+      <!-- #region Desktop Search Bar -->
       <section id="controls" class="control-bar">
         <div id="search-bar" class="search-controls mobile-hide">
           <div class="search-input-wrapper">
@@ -538,8 +549,7 @@
               </div>
             </div>
           </div>
-
-          <!-- Advanced Search Options Row -->
+          <!-- #region Advanced Search Options Row -->
           <div
             id="advancedSearchRow"
             class="advanced-search-row search-controls"
@@ -606,6 +616,7 @@
               </div>
             </div>
           </div>
+          <!-- #endregion -->
           <button
             id="clearFiltersBtn"
             type="button"
@@ -618,8 +629,9 @@
         <div id="searchLoader" class="loader hidden"></div>
         <div class="muted-text mobile-hide"></div>
       </section>
-
+      <!-- #endregion -->
       <div id="browser" class="browser-grid">
+        <!-- #region Conversation Section -->
         <section id="convoSection" class="section convo-section card">
           <div>
             <div class="sidebar-header">
@@ -713,6 +725,8 @@
             <div class="loader"></div>
           </div>
         </section>
+        <!-- #endregion -->
+        <!-- #region Entries Section -->
         <section id="entries-section" class="section entries-section">
           <!-- Homepage (shown by default) -->
           <div id="homePageContainer" class="card home-page-card">
@@ -888,6 +902,8 @@
             </div>
           </div>
         </section>
+        <!-- #endregion -->
+        <!-- #region History Section -->
         <section id="historySection" class="section history-section card">
           <div
             style="
@@ -940,10 +956,10 @@
             <span id="backStatus" class="muted-text history-steps-count"></span>
           </div>
         </section>
+        <!-- #endregion -->
       </div>
     </main>
-
-    <!-- Conversation Types Modal for mobile and table -->
+    <!-- #region Conversation Types Modal for mobile and table -->
     <div
       id="conversationTypesModalOverlay"
       class="modal-overlay"
@@ -987,8 +1003,8 @@
         </div>
       </div>
     </div>
-
-    <!-- Settings Modal -->
+    <!-- #endregion -->
+    <!-- #region Settings Modal -->
     <div id="settingsModalOverlay" class="modal-overlay" style="display: none">
       <div
         class="modal settings-modal"
@@ -1097,6 +1113,7 @@
         </div>
       </div>
     </div>
+    <!-- #endregion -->
     <script type="module" src="js/main.js"></script>
   </body>
 </html>

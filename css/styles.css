@@ -85,23 +85,6 @@ main {
     overflow-y: scroll;
 }
 
-main::-webkit-scrollbar {
-    width: 10px;
-}
-
-main::-webkit-scrollbar-track {
-    background: var(--bg);
-}
-
-main::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb-bg);
-    border-radius: 4px;
-}
-
-main::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover-bg);
-}
-
 .header-container {
     display: flex;
     align-items: center;
@@ -534,11 +517,6 @@ section {
 
 .checkbox-list {
     padding: 4px;
-}
-
-
-.checkbox-list::-webkit-scrollbar-track {
-    background: var(--card-bg);
 }
 
 .filter-disclaimer {
@@ -1187,44 +1165,10 @@ section {
     gap: 8px;
 }
 
-.scrolling-card::-webkit-scrollbar {
-    width: 8px;
-}
-
-.scrolling-card::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.scrolling-card::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb-bg);
-    border-radius: 4px;
-}
-
-.scrolling-card::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover-bg)
-}
-
 .home-page-card {
     padding: 24px;
     max-width: 100%;
     overflow-y: auto;
-}
-
-.home-page-card::-webkit-scrollbar {
-    width: 8px;
-}
-
-.home-page-card::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.home-page-card::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb-bg);
-    border-radius: 4px;
-}
-
-.home-page-card::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover-bg);
 }
 
 .home-page-card h2 {
@@ -2706,27 +2650,4 @@ body.animations-disabled * {
     align-items: center;
     gap: 6px;
     font-size: 13px;
-}
-
-/* Conversation tree scrollbar styling (horizontal + vertical) */
-#convoList {
-    overflow: auto;
-}
-
-#convoList::-webkit-scrollbar {
-    height: 10px;
-    width: 10px;
-}
-
-#convoList::-webkit-scrollbar-track {
-    background: var(--bg);
-}
-
-#convoList::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb-bg);
-    border-radius: 5px;
-}
-
-#convoList::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover-bg);
 }
