@@ -131,8 +131,8 @@
         </button>
       </div>
 
-      <div class="mobile-search-options">
-        <label class="mobile-option-toggle">
+      <div class="mobile-search-options toggle-wrapper">
+        <label class="toggle-input-label">
           <input type="checkbox" id="mobileWholeWordsCheckbox" />
           <span class="toggle-slider"></span>
           <span class="toggle-label">Whole Words</span>
@@ -180,7 +180,7 @@
         placeholder="Search conversations..."
       />
       <div class="mobile-filter-actions">
-        <label class="mobile-checkbox-item">
+        <label class="mobile-checkbox-item checkbox-label">
           <input type="checkbox" id="mobileConvoSelectAll" />
           <span>Select All</span>
         </label>
@@ -217,7 +217,7 @@
         placeholder="Search actors..."
       />
       <div class="mobile-filter-actions">
-        <label class="mobile-checkbox-item">
+        <label class="mobile-checkbox-item checkbox-label">
           <input type="checkbox" id="mobileActorSelectAll" />
           <span>Select All</span>
         </label>
@@ -242,19 +242,19 @@
       <div class="bottom-sheet-content">
         <h4>Filter by Type</h4>
         <div class="mobile-type-options">
-          <label class="mobile-checkbox-item">
+          <label class="mobile-checkbox-item checkbox-label">
             <input type="checkbox" data-type="all" checked />
             <span>All</span>
           </label>
-          <label class="mobile-checkbox-item type-flow">
+          <label class="mobile-checkbox-item checkbox-label type-flow">
             <input type="checkbox" data-type="flow" />
             <span>Flow</span>
           </label>
-          <label class="mobile-checkbox-item type-orb">
+          <label class="mobile-checkbox-item checkbox-label type-orb">
             <input type="checkbox" data-type="orb" />
             <span>Orb</span>
           </label>
-          <label class="mobile-checkbox-item type-task">
+          <label class="mobile-checkbox-item checkbox-label type-task">
             <input type="checkbox" data-type="task" />
             <span>Task</span>
           </label>
@@ -464,11 +464,13 @@
             </button>
           </div>
           <div class="advanced-search-wrapper">
+            <div class="toggle-wrapper">
             <label class="toggle-input-label toggle-wrapper">
               <input type="checkbox" id="advancedSearchToggle" />
               <span class="toggle-slider"></span>
               <span class="toggle-label">Advanced Search</span>
             </label>
+            </div>
           </div>
           <div id="actor-filter-wrapper" class="filter-dropdown-wrapper">
             <button
@@ -496,7 +498,7 @@
                 placeholder="e.g. Kim Kitsuragi"
               />
               <div class="filter-actions">
-                <label class="checkbox-item select-all">
+                <label class="checkbox-item select-all  checkbox-label">
                   <input type="checkbox" id="selectAllActors" />
                   <span>Select All</span>
                 </label>
@@ -528,21 +530,21 @@
             </button>
             <div id="typeFilterDropdown" class="filter-dropdown">
               <div class="filter-actions">
-                <label class="checkbox-item select-all">
+                <label class="checkbox-item select-all checkbox-label">
                   <input type="checkbox" id="selectAllTypes" checked />
                   <span>Select All</span>
                 </label>
               </div>
               <div id="typeCheckboxList" class="checkbox-list">
-                <label class="checkbox-item type-flow">
+                <label class="checkbox-item checkbox-label type-flow">
                   <input type="checkbox" data-type="flow" checked />
                   <span>Flow</span>
                 </label>
-                <label class="checkbox-item type-orb">
+                <label class="checkbox-item checkbox-label type-orb">
                   <input type="checkbox" data-type="orb" checked />
                   <span>Orb</span>
                 </label>
-                <label class="checkbox-item type-task">
+                <label class="checkbox-item checkbox-label type-task">
                   <input type="checkbox" data-type="task" checked />
                   <span>Task</span>
                 </label>
@@ -582,7 +584,7 @@
                 </button>
                 <div id="variableSearchDropdown" class="filter-dropdown">
                   <div class="filter-actions">
-                    <label class="checkbox-item select-all">
+                    <label class="checkbox-item  checkbox-label select-all">
                       <input
                         type="checkbox"
                         id="selectAllVariableSearch"
@@ -593,7 +595,7 @@
                     </label>
                   </div>
                   <div id="variableSearchCheckboxList" class="checkbox-list">
-                    <label class="checkbox-item">
+                    <label class="checkbox-item checkbox-label">
                       <input
                         type="checkbox"
                         id="includeVariablesCheckbox"
@@ -602,7 +604,7 @@
                       />
                       <span>Variables</span>
                     </label>
-                    <label class="checkbox-item">
+                    <label class="checkbox-item checkbox-label">
                       <input
                         type="checkbox"
                         id="includeDialogueCheckbox"
@@ -1028,7 +1030,7 @@
         </div>
         <div class="modal-body settings-body">
           <div class="settings-section">
-            <label class="settings-checkbox">
+            <label class="settings-checkbox checkbox-label">
               <input type="checkbox" id="resetDesktopLayoutCheckbox" />
               <span class="checkbox-custom"></span>
               <span class="checkbox-label">Reset desktop layout</span>
@@ -1039,7 +1041,7 @@
             </p>
           </div>
           <div class="settings-section">
-            <label class="settings-checkbox">
+            <label class="settings-checkbox checkbox-label">
               <input type="checkbox" id="disableColumnResizingCheckbox" />
               <span class="checkbox-custom"></span>
               <span class="checkbox-label">Disable column resizing</span>
@@ -1049,7 +1051,7 @@
             </p>
           </div>
           <div class="settings-section">
-            <label class="settings-checkbox">
+            <label class="settings-checkbox checkbox-label">
               <input type="checkbox" id="alwaysShowMoreDetailsCheckbox" />
               <span class="checkbox-custom"></span>
               <span class="checkbox-label">Always show more details</span>
@@ -1060,7 +1062,7 @@
             </p>
           </div>
           <div class="settings-section">
-            <label class="settings-checkbox">
+            <label class="settings-checkbox checkbox-label">
               <input type="checkbox" id="showHiddenCheckbox" />
               <span class="checkbox-custom"></span>
               <span class="checkbox-label">Show hidden</span>
@@ -1070,7 +1072,7 @@
             </p>
           </div>
           <div class="settings-section">
-            <label class="settings-checkbox">
+            <label class="settings-checkbox checkbox-label">
               <input type="checkbox" id="turnOffAnimationsCheckbox" />
               <span class="checkbox-custom"></span>
               <span class="checkbox-label">Turn off animations</span>
@@ -1080,7 +1082,7 @@
             </p>
           </div>
           <div class="settings-section">
-            <label class="settings-checkbox">
+            <label class="settings-checkbox checkbox-label">
               <input type="checkbox" id="enableAdvancedSearchCheckbox" />
               <span class="checkbox-custom"></span>
               <span class="checkbox-label">Enable Advanced Search</span>
@@ -1090,7 +1092,7 @@
             </p>
           </div>
           <div class="settings-section">
-            <label class="settings-checkbox">
+            <label class="settings-checkbox checkbox-label">
               <input type="checkbox" id="useOriginalTitlesCheckbox" />
               <span class="checkbox-custom"></span>
               <span class="checkbox-label"
