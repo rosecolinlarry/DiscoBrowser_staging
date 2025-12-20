@@ -65,7 +65,7 @@
             data-icon-size="30px"
           ></div>
         </button>
-        <div class="mobile-search-input-wrapper">
+        <div class="mobile-search-header">
           <label for="mobileSearchInput" class="search-input-label"
             >Search</label
           >
@@ -304,7 +304,7 @@
       <!-- #endregion -->
       <!-- #region Mobile Header Bar -->
       <div id="mobileHeader" class="mobile-header">
-        <button id="mobileSidebarToggle" class="mobile-menu-btn button-icon">
+        <button id="mobileSidebarToggle" class="button-icon">
           <div
             class="icon-placeholder"
             data-icon-template="icon-left-panel-open-template"
@@ -386,14 +386,14 @@
               href="https://github.com/rosecolinlarry/DiscoBrowser"
               target="_blank"
               rel="noopener noreferrer"
-              class="mobile-github-link"
+              class="github-link"
             >
               <div
                 class="icon-placeholder"
                 data-icon-template="icon-github-template"
                 data-icon-size="20px"
               ></div>
-              <span>View on GitHub</span>
+              <span >View on GitHub</span>
             </a>
           </div>
         </nav>
@@ -414,7 +414,7 @@
         <div style="display: flex; gap: 8px; align-items: center">
           <button
             id="settingsBtn"
-            class="icon-only-btn"
+            class="button-icon"
             title="Open settings"
             aria-label="Open settings"
           >
@@ -646,13 +646,13 @@
                 >
               </h3>
               <div id="convoSidebarClose">
-                <span class="sidebar-close">
+                <button class="sidebar-close button-icon">
                   <div
                     class="icon-placeholder"
                     data-icon-template="icon-close-template"
-                    data-icon-size="16px"
+                    data-icon-size="24px"
                   ></div>
-                </span>
+                </button>
               </div>
             </div>
           </div>
@@ -876,8 +876,8 @@
                     data-icon-size="24px"
                     style="display: inline-flex; width: 24px; height: 24px"
                   ></div>
+                    <span style="font-size: medium">View on GitHub</span>
                 </a>
-                <span style="font-size: medium">View on GitHub</span>
               </div>
             </div>
           </div>
@@ -916,13 +916,13 @@
           >
             <h4>History</h4>
             <div id="historySidebarClose">
-              <span class="sidebar-close">
+              <button class="sidebar-close button-icon">
                 <div
                   class="icon-placeholder"
                   data-icon-template="icon-close-template"
-                  data-icon-size="16px"
+                  data-icon-size="24px"
                 ></div>
-              </span>
+              </button>
             </div>
           </div>
           <div
@@ -977,13 +977,13 @@
           <h3 id="conversationTypesModalTitle">Conversation Types</h3>
           <button
             id="conversationTypesModalClose"
-            class="modal-close"
+            class="modal-close button-icon"
             aria-label="Close"
           >
             <div
               class="icon-placeholder"
               data-icon-template="icon-close-template"
-              data-icon-size="16px"
+              data-icon-size="24px"
             ></div>
           </button>
         </div>
@@ -1018,13 +1018,13 @@
           <h3 id="settingsModalTitle">Settings</h3>
           <button
             id="settingsModalClose"
-            class="modal-close"
+            class="modal-close button-icon"
             aria-label="Close"
           >
             <div
               class="icon-placeholder"
               data-icon-template="icon-close-template"
-              data-icon-size="16px"
+              data-icon-size="24px"
             ></div>
           </button>
         </div>
