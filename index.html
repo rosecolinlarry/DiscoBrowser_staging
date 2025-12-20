@@ -58,7 +58,7 @@
       style="display: none"
     >
       <div class="mobile-search-header">
-        <button id="mobileSearchBack" class="mobile-back-btn">
+        <button id="mobileSearchBack" class="button-icon">
           <div
             class="icon-placeholder"
             data-icon-template="icon-back-template"
@@ -75,15 +75,15 @@
             type="text"
             placeholder="Search text..."
           />
-          <button class="clear-search-icon" id="mobileSearchClearIcon">
+          <button class="button-icon search-icon-btn" id="mobileSearchClearIcon" style="padding: 8px;" >
             <div
               class="icon-placeholder"
               data-icon-template="icon-close-template"
-              data-icon-size="30px"
+              data-icon-size="24px"
             ></div>
           </button>
         </div>
-        <button id="mobileSearchIconBtn" class="mobile-search-icon-btn">
+        <button id="mobileSearchIconBtn" class="button-icon">
           <div
             class="icon-placeholder"
             data-icon-template="icon-search-template"
@@ -92,7 +92,7 @@
         </button>
       </div>
 
-      <div class="mobile-search-filters">
+      <div class="search-controls">
         <button class="button-chip" id="mobileConvoFilter">
           <span>Conversation</span>
           <span class="filter-value" id="mobileConvoFilterValue">All</span>
@@ -161,7 +161,7 @@
       style="display: none"
     >
       <div class="mobile-filter-header">
-        <button class="mobile-back-btn" id="mobileConvoFilterBack">
+        <button class="button-icon" id="mobileConvoFilterBack">
           <div
             class="icon-placeholder"
             data-icon-template="icon-back-template"
@@ -198,7 +198,7 @@
       style="display: none"
     >
       <div class="mobile-filter-header">
-        <button class="mobile-back-btn" id="mobileActorFilterBack">
+        <button class="button-icon" id="mobileActorFilterBack">
           <div
             class="icon-placeholder"
             data-icon-template="icon-back-template"
@@ -271,7 +271,7 @@
       <div id="historySidebar" class="sidebar sidebar-right"></div>
       <!-- #endregion -->
       <!-- #region Sidebar Toggle Buttons (Mobile/Tablet) -->
-      <button
+      <div
         id="convoSidebarToggle"
         class="sidebar-toggle-btn sidebar-toggle-left"
         style="display: none"
@@ -285,8 +285,8 @@
           ></div>
         </span>
         <span class="toggle-label">Conversations</span>
-      </button>
-      <button
+      </div>
+      <div
         id="historySidebarToggle"
         class="sidebar-toggle-btn sidebar-toggle-right"
         style="display: none"
@@ -300,7 +300,7 @@
             data-icon-size="18px"
           ></div>
         </span>
-      </button>
+      </div>
       <!-- #endregion -->
       <!-- #region Mobile Header Bar -->
       <div id="mobileHeader" class="mobile-header">
