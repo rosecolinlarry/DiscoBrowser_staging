@@ -75,7 +75,11 @@
             type="text"
             placeholder="Search text..."
           />
-          <button class="button-icon search-icon-btn" id="mobileSearchClearIcon" style="padding: 8px;" >
+          <button
+            class="button-icon search-icon-btn"
+            id="mobileSearchClearIcon"
+            style="padding: 8px"
+          >
             <div
               class="icon-placeholder"
               data-icon-template="icon-close-template"
@@ -184,9 +188,7 @@
           <input type="checkbox" id="mobileConvoSelectAll" />
           <span>Select All</span>
         </label>
-        <button id="mobileConvoAddToSelection">
-          Add to Selection
-        </button>
+        <button id="mobileConvoAddToSelection">Add to Selection</button>
       </div>
       <div id="mobileConvoFilterList" class="mobile-filter-list"></div>
     </div>
@@ -221,9 +223,7 @@
           <input type="checkbox" id="mobileActorSelectAll" />
           <span>Select All</span>
         </label>
-        <button id="mobileActorAddToSelection">
-          Add to Selection
-        </button>
+        <button id="mobileActorAddToSelection">Add to Selection</button>
       </div>
       <div id="mobileActorFilterList" class="mobile-filter-list"></div>
       <div class="mobile-filter-disclaimer">
@@ -339,71 +339,77 @@
         </button>
       </div>
       <!-- #endregion -->
-      <!-- #region Mobile Navigation Overlay -->
-      <div
-        id="mobileNavOverlay"
-        class="mobile-nav-overlay"
-        style="display: none"
-      ></div>
-      <!-- #endregion -->
-      <!-- #region Mobile Navigation Panel -->
-      <div id="mobileNavPanel" class="mobile-nav-panel" style="display: none">
-        <nav class="mobile-nav-content">
-          <ul class="mobile-nav-list">
-            <li>
-              <a href="#" id="mobileNavHome" class="mobile-nav-item">
+      <!-- #region Mobile Navigation Sidebar (Mobile/Tablet) -->
+      <div id="mobileNavPanel" class="sidebar sidebar-right">
+        <section class="section card">
+          <div class="sidebar-header">
+            <h3>Menu</h3>
+            <div id="navSidebarClose">
+              <button class="sidebar-close button-icon">
                 <div
                   class="icon-placeholder"
-                  data-icon-template="icon-home-template"
-                  data-icon-size="20px"
+                  data-icon-template="icon-close-template"
+                  data-icon-size="24px"
                 ></div>
-                Home
-              </a>
-            </li>
-            <li>
-              <a href="#" id="mobileNavSettings" class="mobile-nav-item">
-                <div
-                  class="icon-placeholder"
-                  data-icon-template="icon-settings-template"
-                  data-icon-size="20px"
-                ></div>
-                Settings
-              </a>
-            </li>
-            <li>
-              <a href="#" id="mobileNavSearch" class="mobile-nav-item">
-                <div
-                  class="icon-placeholder"
-                  data-icon-template="icon-search-template"
-                  data-icon-size="20px"
-                ></div>
-                Search
-              </a>
-            </li>
-          </ul>
-          <div class="mobile-nav-footer">
-            <a
-              href="https://github.com/rosecolinlarry/DiscoBrowser"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="github-link"
-            >
-              <div
-                class="icon-placeholder"
-                data-icon-template="icon-github-template"
-                data-icon-size="20px"
-              ></div>
-              <span >View on GitHub</span>
-            </a>
+              </button>
+            </div>
           </div>
-        </nav>
+          <nav class="mobile-nav-content">
+            <ul class="mobile-nav-list">
+              <li>
+                <a href="#" id="mobileNavHome" class="mobile-nav-item">
+                  <div
+                    class="icon-placeholder"
+                    data-icon-template="icon-home-template"
+                    data-icon-size="20px"
+                  ></div>
+                  Home
+                </a>
+              </li>
+              <li>
+                <a href="#" id="mobileNavSettings" class="mobile-nav-item">
+                  <div
+                    class="icon-placeholder"
+                    data-icon-template="icon-settings-template"
+                    data-icon-size="20px"
+                  ></div>
+                  Settings
+                </a>
+              </li>
+              <li>
+                <a href="#" id="mobileNavSearch" class="mobile-nav-item">
+                  <div
+                    class="icon-placeholder"
+                    data-icon-template="icon-search-template"
+                    data-icon-size="20px"
+                  ></div>
+                  Search
+                </a>
+              </li>
+            </ul>
+            <div class="mobile-nav-footer">
+              <a
+                href="https://github.com/rosecolinlarry/DiscoBrowser"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="github-link"
+              >
+                <div
+                  class="icon-placeholder"
+                  data-icon-template="icon-github-template"
+                  data-icon-size="20px"
+                ></div>
+                <span>View on GitHub</span>
+              </a>
+            </div>
+          </nav>
+        </section>
       </div>
       <!-- #endregion -->
       <!-- #region Blurred Sidebar Overlay -->
       <div
         id="sidebarOverlay"
         class="sidebar-overlay"
-        style="display: none"
       ></div>
       <!-- #endregion -->
       <!-- #region Desktop Header -->
@@ -465,11 +471,11 @@
           </div>
           <div class="advanced-search-wrapper">
             <div class="toggle-wrapper">
-            <label class="toggle-input-label toggle-wrapper">
-              <input type="checkbox" id="advancedSearchToggle" />
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">Advanced Search</span>
-            </label>
+              <label class="toggle-input-label toggle-wrapper">
+                <input type="checkbox" id="advancedSearchToggle" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Advanced Search</span>
+              </label>
             </div>
           </div>
           <div id="actor-filter-wrapper" class="filter-dropdown-wrapper">
@@ -498,7 +504,7 @@
                 placeholder="e.g. Kim Kitsuragi"
               />
               <div class="filter-actions">
-                <label class="checkbox-item select-all  checkbox-label">
+                <label class="checkbox-item select-all checkbox-label">
                   <input type="checkbox" id="selectAllActors" />
                   <span>Select All</span>
                 </label>
@@ -584,7 +590,7 @@
                 </button>
                 <div id="variableSearchDropdown" class="filter-dropdown">
                   <div class="filter-actions">
-                    <label class="checkbox-item  checkbox-label select-all">
+                    <label class="checkbox-item checkbox-label select-all">
                       <input
                         type="checkbox"
                         id="selectAllVariableSearch"
@@ -639,11 +645,13 @@
             <div class="sidebar-header">
               <h3>
                 Conversations
-                <span
-                  class="help-icon"
-                  title="Conversation Types:&#10;• FLOW - Conversations with NPCs&#10;• ORB - Thoughts from interacting with the environment&#10;• TASK - Player's quest log"
-                  >?</span
-                >
+                <button id="helpIcon" class="button-icon help-button-icon">
+                  <div
+                    class="icon-placeholder"
+                    data-icon-template="icon-help-template"
+                    data-icon-size="20px"
+                  ></div>
+                </button>
               </h3>
               <div id="convoSidebarClose">
                 <button class="sidebar-close button-icon">
@@ -656,7 +664,7 @@
               </div>
             </div>
           </div>
-          <div id="convoFilterContainer" class="convo-filter-container">
+          <div id="convoFilterContainer">
             <div class="filter-search-row">
               <label for="convoSearchInput" class="search-input-label"
                 >Filter</label
@@ -876,7 +884,7 @@
                     data-icon-size="24px"
                     style="display: inline-flex; width: 24px; height: 24px"
                   ></div>
-                    <span style="font-size: medium">View on GitHub</span>
+                  <span style="font-size: medium">View on GitHub</span>
                 </a>
               </div>
             </div>
@@ -907,14 +915,8 @@
         <!-- #endregion -->
         <!-- #region History Section -->
         <section id="historySection" class="section history-section card">
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            "
-          >
-            <h4>History</h4>
+          <div class="sidebar-header">
+            <h3>History</h3>
             <div id="historySidebarClose">
               <button class="sidebar-close button-icon">
                 <div
@@ -965,7 +967,6 @@
     <div
       id="conversationTypesModalOverlay"
       class="modal-overlay"
-      style="display: none"
     >
       <div
         class="modal"
@@ -1007,7 +1008,7 @@
     </div>
     <!-- #endregion -->
     <!-- #region Settings Modal -->
-    <div id="settingsModalOverlay" class="modal-overlay" style="display: none">
+    <div id="settingsModalOverlay" class="modal-overlay">
       <div
         class="modal settings-modal"
         role="dialog"
@@ -1108,9 +1109,7 @@
             <button id="restoreDefaultSettingsBtn">
               Restore Default Settings
             </button>
-            <button id="saveSettingsBtn">
-              Save Settings
-            </button>
+            <button id="saveSettingsBtn">Save Settings</button>
           </div>
         </div>
       </div>

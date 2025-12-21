@@ -11,9 +11,7 @@ injectIconTemplates();
 
 const searchInput = $("search");
 const searchBtn = $("searchBtn");
-const actorFilterBtn = $("actorFilterBtn");
 const actorFilterLabel = $("actorFilterLabel");
-const actorFilterDropdown = $("actorFilterDropdown");
 const actorSearchInput = $("actorSearch");
 const actorCheckboxList = $("actorCheckboxList");
 const selectAllActors = $("selectAllActors");
@@ -22,7 +20,6 @@ const typeFilterBtn = $("typeFilterBtn");
 const typeFilterLabel = $("typeFilterLabel");
 const typeFilterDropdown = $("typeFilterDropdown");
 const typeCheckboxList = $("typeCheckboxList");
-const variableSearchCheckboxList = $("variableSearchCheckboxList");
 const selectAllTypes = $("selectAllTypes");
 const searchLoader = $("searchLoader");
 const convoListEl = $("convoList");
@@ -83,11 +80,7 @@ const mobileActorFilterScreen = $("mobileActorFilterScreen");
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
 const mobileWholeWordsCheckbox = $("mobileWholeWordsCheckbox");
 const mobileNavBtn = $("mobileNavBtn");
-const mobileNavOverlay = $("mobileNavOverlay");
 const mobileNavPanel = $("mobileNavPanel");
-const mobileNavHome = $("mobileNavHome");
-const mobileNavSettings = $("mobileNavSettings");
-const mobileNavSearch = $("mobileNavSearch");
 const mobileSidebarToggle = $("mobileSidebarToggle");
 const mobileClearSearchBtn = $("mobileSearchClearIcon");
 
@@ -637,9 +630,6 @@ async function boot() {
   setupMobileSidebar();
   setUpSidebarToggles();
 
-  // Setup mobile navigation panel
-  setupMobileNavigation();
-
   // Setup mobile search
   setupMobileSearch();
   setupClearSearchInput();
@@ -832,7 +822,9 @@ function toggleElementVisibilityById(id, showElement) {
 function setUpSidebarToggles() {
   convoSidebarToggle.addEventListener("click", openConversationSection);
   historySidebarToggle.addEventListener("click", openHistorySidebar);
+  mobileNavBtn.addEventListener("click", openMobileNavSidebar);
   sidebarOverlay.addEventListener("click", closeAllSidebars);
+  sidebarOverlay.addEventListener("click", closeAllModals);
 }
 
 function setupConversationFilter() {
@@ -1760,55 +1752,6 @@ function updateBackButtonState() {
       backStatus.textContent = "(none)";
     }
   }
-}
-
-// Modal: Conversation Types on mobile
-function setupConversationTypesModal() {
-  const helpIcon = document.querySelector(".help-icon");
-  const overlay = document.getElementById("conversationTypesModalOverlay");
-  const closeBtn = document.getElementById("conversationTypesModalClose");
-  if (!helpIcon || !overlay || !closeBtn) return;
-
-  const openModal = () => {
-    // Only on mobile or tablet
-    if (!mobileMediaQuery.matches && !tabletMediaQuery.matches) return;
-    overlay.style.display = "flex";
-    helpIcon.classList.add("active");
-  };
-
-  const closeModal = () => {
-    overlay.style.display = "none";
-    helpIcon.classList.remove("active");
-  };
-
-  helpIcon.addEventListener("click", (e) => {
-    // On mobile or tablet, show modal instead of relying on title tooltip
-    if (mobileMediaQuery.matches || tabletMediaQuery.matches) {
-      e.preventDefault();
-      e.stopPropagation();
-      openModal();
-    }
-  });
-
-  // Backdrop click to close
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      closeModal();
-    }
-  });
-
-  // Close button
-  closeBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    closeModal();
-  });
-
-  // ESC key to close
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && overlay.style.display !== "none") {
-      closeModal();
-    }
-  });
 }
 
 // Browser History Management
@@ -2759,53 +2702,55 @@ function setupMobileSidebar() {
   }
 }
 
-function setupMobileNavigation() {
-  if (!mobileNavBtn || !mobileNavPanel || !mobileNavOverlay) return;
+function openMobileNavSidebar() {
+  if (mobileNavPanel) {
+    mobileNavPanel.classList.add("open");
+    mobileNavPanel.style.display = "";
+    closeConversationSection();
+  }
+  if (mobileNavPanel) {
+    mobileNavPanel.addEventListener("click", closeMobileNavSidebar);
+  }
+  if (sidebarOverlay) {
+    sidebarOverlay.style.display = "block";
+  }
+}
 
-  // Open navigation panel
-  mobileNavBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    mobileNavOverlay.style.display = "block";
-    mobileNavPanel.style.display = "flex";
+function closeMobileNavSidebar() {
+  if (mobileNavPanel) {
+    mobileNavPanel.classList.remove("open");
+  }
+  if (sidebarOverlay) {
+    sidebarOverlay.style.display = "none";
+  }
+}
+
+function setupConversationTypesModal() {
+  const helpIcon = $("helpIcon")
+  const modal = $("conversationTypesModalOverlay");
+  const closeBtn = modal.querySelector(".modal-close")
+  const openModal = () => {
+    modal.classList.add("open");
+  };
+
+  const closeModal = () => {
+    modal.classList.remove("open");
+  };
+
+  helpIcon.addEventListener("click", openModal)
+  closeBtn.addEventListener("click", closeModal);
+  modal.addEventListener('click', (e) => {
+    if(e.target == modal) {
+      closeModal();
+    }
+  })
+
+  // ESC key to close
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.style.display !== "none") {
+      closeModal();
+    }
   });
-
-  // Close navigation panel when clicking overlay
-  mobileNavOverlay.addEventListener("click", () => {
-    mobileNavOverlay.style.display = "none";
-    mobileNavPanel.style.display = "none";
-  });
-
-  // Home navigation
-  if (mobileNavHome) {
-    mobileNavHome.addEventListener("click", (e) => {
-      e.preventDefault();
-      goBackHomeWithBrowserHistory();
-      mobileNavOverlay.style.display = "none";
-      mobileNavPanel.style.display = "none";
-    });
-  }
-
-  // Settings navigation
-  if (mobileNavSettings) {
-    mobileNavSettings.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (settingsBtn) settingsBtn.click();
-      mobileNavOverlay.style.display = "none";
-      mobileNavPanel.style.display = "none";
-    });
-  }
-
-  // Search navigation
-  if (mobileNavSearch) {
-    mobileNavSearch.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (mobileSearchTrigger) {
-        mobileSearchTrigger.click();
-      }
-      mobileNavOverlay.style.display = "none";
-      mobileNavPanel.style.display = "none";
-    });
-  }
 }
 
 function updateMobileNavButtons() {
@@ -2828,6 +2773,13 @@ function updateMobileNavButtons() {
 function closeAllSidebars() {
   closeConversationSection();
   closeHistorySidebar();
+  closeMobileNavSidebar();
+}
+
+function closeAllModals() {
+  console.log("Close all modals")
+  const modals = document.querySelectorAll(".modal-overlay.open")
+  modals.forEach(modal => modal.classList.remove("open"))
 }
 
 function performMobileSearch(resetSearch = true) {

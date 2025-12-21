@@ -443,46 +443,21 @@ label {
   right: var(--handle-right-pos, calc(280px + 6px));
 }
 /* #endregion */
-/* #region Help Icon */
-.help-icon {
-  width: 18px;
-  height: 18px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  color: var(--teal);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-  user-select: none;
-  transition: all 0.2s;
-}
-
-.help-icon:hover,
-.help-icon.active {
-  background: var(--panel);
-  border-color: var(--teal);
-  box-shadow: var(--accent-glow);
-  transform: scale(1.1);
-}
-/* #endregion */
 /* #region Modal styles */
 .modal-overlay {
+  display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
-  display: none;
   /* toggled via inline style */
   z-index: 1000;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  &.open {
+    display: flex;
+  }
 }
 
 .modal {
@@ -518,6 +493,14 @@ button.button-icon.modal-close {
   color: var(--muted);
   font-size: 18px;
   cursor: pointer;
+}
+
+button.button-icon.help-button-icon {
+  padding: 4px 8px 4px 2px;
+  display: inline;
+  svg {
+    transform: translateY(3px);
+  }
 }
 
 .modal-type-list {
@@ -642,6 +625,7 @@ button.button-icon.modal-close {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin: 8px 0;
 }
 
 .filter-controls-row .radio-button-group {
@@ -657,20 +641,6 @@ button.button-icon.modal-close {
   background: rgba(255, 255, 255, 0.02);
   border-top: 1px solid var(--card-border);
   line-height: 1.4;
-}
-
-.convo-filter-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.02),
-    rgba(255, 255, 255, 0.01)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
 }
 
 /* #region Advanced Search UI */
@@ -1319,6 +1289,7 @@ a {
 
 .sidebar-overlay {
   position: fixed;
+  display: none;
   top: 0;
   left: 0;
   right: 0;
@@ -1326,6 +1297,9 @@ a {
   background: rgba(0, 0, 0, 0.5);
   z-index: 150;
   backdrop-filter: blur(2px);
+  &.open {
+    display: flex;
+  }
 }
 
 .sidebar-right {
@@ -1527,19 +1501,6 @@ a {
     position: sticky;
     top: 0;
     z-index: 10;
-  }
-
-  .history-section {
-    padding: 16px;
-
-    h4 {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-    }
-
-    .chat-log {
-      margin: 0;
-    }
   }
 
   .browser-grid {
@@ -1772,56 +1733,12 @@ a {
     flex-shrink: 0;
   }
 
-  /* Mobile Navigation Panel */
-  .mobile-nav-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 999;
-    animation: fadeIn 0.2s ease-out;
-  }
-
-  .mobile-nav-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 280px;
-    height: 100vh;
-    background: var(--panel);
-    z-index: 1000;
-    animation: slideInRight 0.3s ease-out;
-    display: flex;
-    flex-direction: column;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
-  }
-
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
+  /* Mobile Navigation Panel and Filter*/
   .mobile-nav-content {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
     height: 100%;
-    padding: 16px 0;
   }
 
   .mobile-nav-list {
