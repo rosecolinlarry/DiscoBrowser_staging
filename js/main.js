@@ -1547,24 +1547,6 @@ function loadEntriesForConversation(convoId, resetHistory = false) {
   entryListHeaderEl.textContent = "Next Dialogue Options";
   entryListEl.innerHTML = "";
 
-  if (convoType === "orb" || convoType === "task") {
-    // Orbs and tasks don't have dialogue options - make the section compact
-    entryListEl.classList.add("compact");
-    // Expand the current entry container to use more space
-    if (currentEntryContainerEl) {
-      currentEntryContainerEl.classList.add("expanded");
-    }
-    const message = document.createElement("div");
-    message.className = "hint-text";
-    message.style.fontStyle = "italic";
-    message.style.padding = "12px";
-    message.innerHTML = `This is ${
-      convoType === "orb" ? "an" : "a"
-    } <strong>${convoType.toUpperCase()}</strong> and does not have dialogue options.`;
-    entryListEl.appendChild(message);
-    return;
-  }
-
   // For flows, remove compact class and expanded class
   entryListEl.classList.remove("compact");
   if (currentEntryContainerEl) {
@@ -2240,12 +2222,6 @@ function searchDialogues(q, resetSearch = true) {
         const cid = UI.getParsedIntOrDefault(r.conversationid);
         const eid = UI.getParsedIntOrDefault(r.id);
 
-        // Check if this is an orb or task (conversationid === id means it's from dialogues table)
-        if (cid === eid) {
-          // This is an orb or task, just load the conversation root
-          loadEntriesForConversation(cid, true);
-          highlightConversationInTree(cid);
-        } else {
           // This is a regular flow entry or alternate
           navigationHistory = [{ convoId: cid, entryId: null }];
           // If this is an alternate, pass the condition and alternate line
@@ -2255,7 +2231,6 @@ function searchDialogues(q, resetSearch = true) {
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
           navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
           highlightConversationInTree(cid);
-        }
 
         document.querySelector(".selected")?.scrollIntoView(true);
       });
@@ -2722,24 +2697,14 @@ function performMobileSearch(resetSearch = true) {
       );
 
       div.addEventListener("click", () => {
-        // Check if this is an orb/task (cid === eid means conversation root for orbs/tasks)
         const cid = UI.getParsedIntOrDefault(r.conversationid);
         const eid = r.id;
-
-        if (cid === eid) {
-          // This is an orb or task - load the conversation root
-
-          loadEntriesForConversation(cid, true);
-        } else {
-          // This is a regular dialogue entry or alternate
-          // If this is an alternate, pass the condition and alternate line
 
           const alternateCondition = r.isAlternate
             ? r.alternatecondition
             : null;
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
           navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
-        }
 
         // Close mobile search and return to main view
         closeMobileSearchScreen();
