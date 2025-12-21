@@ -191,7 +191,7 @@ section {
 }
 .browser-grid {
   display: grid;
-  grid-template-columns: 352px 1fr 280px;
+  grid-template-columns: 485px 1fr 280px;
   gap: 12px;
   grid-column: 1;
   grid-row: 3;

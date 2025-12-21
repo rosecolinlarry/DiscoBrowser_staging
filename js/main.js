@@ -158,6 +158,9 @@ let isMobileLoadingMore = false;
 let currentAppState = "home"; // 'home', 'conversation', 'search'
 let isHandlingPopState = false;
 
+// Browser Grid
+const browserGrid = $("browser");
+
 // Settings state
 const SETTINGS_STORAGE_KEY = "discobrowser_settings";
 let appSettings = {
@@ -171,6 +174,9 @@ let appSettings = {
   includeVariables: true,
   includeDialogue: true,
 };
+
+const defaultColumns = "352px 1fr 280px";
+const STORAGE_KEY = "discobrowser_grid_columns";
 
 // Settings management functions
 function loadSettingsFromStorage() {
@@ -221,7 +227,7 @@ function applySettings() {
   updateAnimationsToggle();
   // Advanced search UI visibility
   updateAdvancedSearchUi();
-
+  updateResizeHandles();
   // Apply column resizing toggle - handled in initializeResizableGrid
   // Apply show hidden toggle - handled when building tree
   // Apply reset desktop layout - this is a one-time action, not persistent
@@ -335,11 +341,9 @@ function setupSettingsModal() {
 
       // Handle reset layout if checked
       if (appSettings.resetDesktopLayout) {
-        const browserGrid = $("browser");
-        const defaultColumns = "352px 1fr 280px";
         browserGrid.style.gridTemplateColumns = defaultColumns;
         updateHandlePositions();
-        localStorage.removeItem("discobrowser_grid_columns");
+        localStorage.removeItem(STORAGE_KEY);
         appSettings.resetDesktopLayout = false;
         resetDesktopLayoutCheckbox.checked = false;
       }
@@ -470,7 +474,11 @@ function updateResizeHandles() {
   const leftHandle = document.querySelector(".resize-handle-left");
   const rightHandle = document.querySelector(".resize-handle-right");
 
-  if (appSettings.disableColumnResizing) {
+  if (
+    appSettings.disableColumnResizing ||
+    mobileMediaQuery.matches ||
+    tabletMediaQuery.matches
+  ) {
     if (leftHandle) leftHandle.classList.add("disabled");
     if (rightHandle) rightHandle.classList.add("disabled");
   } else {
@@ -480,8 +488,7 @@ function updateResizeHandles() {
 }
 
 function updateHandlePositions() {
-  const browserGrid = $("browser");
-  const columns = (browserGrid.style.gridTemplateColumns || "352px 1fr 280px")
+  const columns = (browserGrid.style.gridTemplateColumns || defaultColumns)
     .split(" ")
     .map((s) => s.trim());
   const col1 = columns[0];
@@ -652,21 +659,14 @@ async function boot() {
   setupSettingsModal();
 }
 
-function initializeResizableGrid() {
-  const browserGrid = $("browser");
-  if (!browserGrid || !desktopMediaQuery.matches) return;
+function updateResizableGrid() {
+  if (!browserGrid || !desktopMediaQuery.matches) {
+      browserGrid.style.removeProperty("gridTemplateColumns")
+  };
+}
 
-  const convoSection = browserGrid.querySelector(".convo-section");
-  const entriesSection = browserGrid.querySelector(".entries-section");
-  const historySection = browserGrid.children[2];
-
-  if (!convoSection || !entriesSection || !historySection) return;
-
-  // Store grid column widths in local storage
-  const STORAGE_KEY = "discobrowser_grid_columns";
-  const defaultColumns = "352px 1fr 280px";
-  const savedColumns = localStorage.getItem(STORAGE_KEY);
-
+function applySavedColumns(savedColumns) {
+  
   if (savedColumns) {
     try {
       const columns = JSON.parse(savedColumns);
@@ -679,6 +679,21 @@ function initializeResizableGrid() {
     // Set default columns on first load / hard refresh
     browserGrid.style.gridTemplateColumns = defaultColumns;
   }
+}
+
+function initializeResizableGrid() {
+  if (!browserGrid || !desktopMediaQuery.matches) return;
+
+  const convoSection = browserGrid.querySelector(".convo-section");
+  const entriesSection = browserGrid.querySelector(".entries-section");
+  const historySection = browserGrid.children[2];
+
+  if (!convoSection || !entriesSection || !historySection) return;
+
+  // Store grid column widths in local storage
+  const savedColumns = localStorage.getItem(STORAGE_KEY);
+  
+  applySavedColumns(savedColumns)
 
   // Create resize handles
   const leftHandle = document.createElement("div");
@@ -695,7 +710,7 @@ function initializeResizableGrid() {
 
   // Helper function to update handle positions
   function updateHandlePositions() {
-    const columns = (browserGrid.style.gridTemplateColumns || "352px 1fr 280px")
+    const columns = (browserGrid.style.gridTemplateColumns || defaultColumns)
       .split(" ")
       .map((s) => s.trim());
     const col1 = columns[0];
@@ -713,13 +728,19 @@ function initializeResizableGrid() {
     rightHandle.classList.add("disabled");
   }
 
+  setUpResizeHandleLeft(leftHandle);
+  setUpResizeHandleRight(rightHandle);
+  setupResetButton()
+}
+
+function setUpResizeHandleLeft (leftHandle) {
   // Left handle: resize convo and entries sections
   leftHandle.addEventListener("mousedown", (e) => {
     if (appSettings.disableColumnResizing) return;
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
-      browserGrid.style.gridTemplateColumns || "352px 1fr 280px"
+      browserGrid.style.gridTemplateColumns || defaultColumns
     )
       .split(" ")
       .map((s) => s.trim());
@@ -746,14 +767,16 @@ function initializeResizableGrid() {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
   });
+}
 
+function setUpResizeHandleRight(rightHandle) {
   // Right handle: resize entries and history sections
   rightHandle.addEventListener("mousedown", (e) => {
     if (appSettings.disableColumnResizing) return;
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
-      browserGrid.style.gridTemplateColumns || "352px 1fr 280px"
+      browserGrid.style.gridTemplateColumns || defaultColumns
     )
       .split(" ")
       .map((s) => s.trim());
@@ -780,11 +803,12 @@ function initializeResizableGrid() {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
   });
+}
 
-  // Add reset layout button handler
+function setupResetButton() {
+    // Add reset layout button handler
   if (resetLayoutBtn) {
     resetLayoutBtn.addEventListener("click", () => {
-      const defaultColumns = "352px 1fr 280px";
       browserGrid.style.gridTemplateColumns = defaultColumns;
       updateHandlePositions();
       localStorage.removeItem(STORAGE_KEY);
@@ -795,6 +819,7 @@ function initializeResizableGrid() {
 function handleMediaQueryChange() {
   closeAllSidebars();
   closeMobileSearchScreen();
+  closeAllModals();
   if (desktopMediaQuery.matches) {
     toggleElementVisibilityById("historySidebarToggle", false);
     toggleElementVisibilityById("convoSidebarToggle", false);
@@ -2726,9 +2751,9 @@ function closeMobileNavSidebar() {
 }
 
 function setupConversationTypesModal() {
-  const helpIcon = $("helpIcon")
+  const helpIcon = $("helpIcon");
   const modal = $("conversationTypesModalOverlay");
-  const closeBtn = modal.querySelector(".modal-close")
+  const closeBtn = modal.querySelector(".modal-close");
   const openModal = () => {
     modal.classList.add("open");
   };
@@ -2737,13 +2762,13 @@ function setupConversationTypesModal() {
     modal.classList.remove("open");
   };
 
-  helpIcon.addEventListener("click", openModal)
+  helpIcon.addEventListener("click", openModal);
   closeBtn.addEventListener("click", closeModal);
-  modal.addEventListener('click', (e) => {
-    if(e.target == modal) {
+  modal.addEventListener("click", (e) => {
+    if (e.target == modal) {
       closeModal();
     }
-  })
+  });
 
   // ESC key to close
   document.addEventListener("keydown", (e) => {
@@ -2771,15 +2796,16 @@ function updateMobileNavButtons() {
 }
 
 function closeAllSidebars() {
-  closeConversationSection();
-  closeHistorySidebar();
-  closeMobileNavSidebar();
+  const modals = document.querySelectorAll(".sidebar.open");
+  modals.forEach((modal) => modal.classList.remove("open"));
+  if (sidebarOverlay) {
+    sidebarOverlay.style.display = "none";
+  }
 }
 
 function closeAllModals() {
-  console.log("Close all modals")
-  const modals = document.querySelectorAll(".modal-overlay.open")
-  modals.forEach(modal => modal.classList.remove("open"))
+  const modals = document.querySelectorAll(".modal-overlay.open");
+  modals.forEach((modal) => modal.classList.remove("open"));
 }
 
 function performMobileSearch(resetSearch = true) {
