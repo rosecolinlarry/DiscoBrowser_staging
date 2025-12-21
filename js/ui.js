@@ -147,7 +147,7 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
   entryOverviewEl.innerHTML = "";
   entryOverviewEl.className = "entry-item current-item";
 
-  const displayTitle = getStringOrDefault(conversation.displayTitle, "(no title)");
+  const title = getStringOrDefault(conversation.title, "(no title)");
   const description = getStringOrDefault(
     conversation.description,
     "<i>No conversation description.</i>"
@@ -161,7 +161,7 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
       <div class="card-meta">${typeBadge}</div>
     </div>
     <div class="card-body">
-      <div><strong>Title:</strong> ${displayTitle}</div>
+      <div><strong>Title:</strong> ${title}</div>
       <div class="dialogue-text">${description}</div>
     </div>`;
   processExternalLinks(entryOverviewEl);

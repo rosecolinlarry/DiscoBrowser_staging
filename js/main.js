@@ -98,7 +98,6 @@ const disableColumnResizingCheckbox = $("disableColumnResizingCheckbox");
 const alwaysShowMoreDetailsCheckbox = $("alwaysShowMoreDetailsCheckbox");
 const showHiddenCheckbox = $("showHiddenCheckbox");
 const turnOffAnimationsCheckbox = $("turnOffAnimationsCheckbox");
-const useOriginalTitlesCheckbox = $("useOriginalTitlesCheckbox");
 const saveSettingsBtn = $("saveSettingsBtn");
 const restoreDefaultSettingsBtn = $("restoreDefaultSettingsBtn");
 
@@ -158,8 +157,7 @@ let appSettings = {
   disableColumnResizing: false,
   showHidden: false,
   turnOffAnimations: false,
-  alwaysShowMoreDetails: false,
-  useOriginalTitles: false,
+  alwaysShowMoreDetails: false
 };
 
 const defaultColumns = "352px 1fr 280px";
@@ -183,21 +181,17 @@ function getConversationsForTree() {
   if (appSettings.showHidden) {
     // Also include hidden conversations
     const hiddenConvos = DB.execRows(
-      `SELECT id, displayTitle, type FROM conversations WHERE isHidden == 1 ORDER BY displayTitle;`
+      `SELECT id, title, type FROM conversations WHERE isHidden == 1 ORDER BY title;`
     );
     const merged = [...allConvos, ...hiddenConvos];
     return merged.map((c) => ({
       ...c,
-      displayTitle: appSettings.useOriginalTitles
-        ? c.title || c.displayTitle
-        : c.displayTitle,
+      title: c.title,
     }));
   }
   return allConvos.map((c) => ({
     ...c,
-    displayTitle: appSettings.useOriginalTitles
-      ? c.title || c.displayTitle
-      : c.displayTitle,
+    title: c.title,
   }));
 }
 
@@ -236,8 +230,6 @@ function updateSettingsUI() {
   if (showHiddenCheckbox) showHiddenCheckbox.checked = appSettings.showHidden;
   if (turnOffAnimationsCheckbox)
     turnOffAnimationsCheckbox.checked = appSettings.turnOffAnimations;
-  if (useOriginalTitlesCheckbox)
-    useOriginalTitlesCheckbox.checked = appSettings.useOriginalTitles;
 }
 
 function setupSettingsModal() {
@@ -279,8 +271,6 @@ function setupSettingsModal() {
       appSettings.showHidden = showHiddenCheckbox?.checked || false;
       appSettings.turnOffAnimations =
         turnOffAnimationsCheckbox?.checked || false;
-      appSettings.useOriginalTitles =
-        useOriginalTitlesCheckbox?.checked || false;
 
       // Apply settings
       applySettings();
@@ -321,7 +311,6 @@ function setupSettingsModal() {
         showHidden: false,
         turnOffAnimations: false,
         alwaysShowMoreDetails: false,
-        useOriginalTitles: false,
       };
       updateSettingsUI();
     });
@@ -831,7 +820,7 @@ function filterConversationTree() {
         const id = Number(idStr);
         return {
           id,
-          displayTitle: convoTitleById[id],
+          title: convoTitleById[id],
           type: convoTypeById[id] || "flow",
         };
       })
@@ -895,21 +884,21 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
 
       // Text filter
       if (searchText) {
-        const titleMatch = convo.displayTitle
+        const titleMatch = convo.title
           .toLowerCase()
           .includes(searchText);
         const idMatch = cid.toString().includes(searchText);
         if (titleMatch || idMatch) {
           matches.push({
             convoId: cid,
-            title: convo.displayTitle,
+            title: convo.title,
             type: convo.type || "flow",
           });
         }
       } else {
         matches.push({
           convoId: cid,
-          title: convo.displayTitle,
+          title: convo.title,
           type: convo.type || "flow",
         });
       }
@@ -2059,7 +2048,7 @@ async function showEntryDetails(
     checks,
     parents,
     children,
-    conversationTitle: convoRow.displayTitle,
+    conversationTitle: convoRow.title,
     conversationDescription: convoRow.description,
     conversationActorId: convoRow.actor,
     conversationActorName: convoActorName,
@@ -2840,7 +2829,7 @@ function setupMobileConvoFilter() {
       const isChecked = tempSelectedConvoIds.has(convo.id);
       item.innerHTML = `
         <input type="checkbox" ${isChecked ? "checked" : ""} />
-        <span>${convo.displayTitle || `Conversation ${convo.id}`}</span>
+        <span>${convo.title || `Conversation ${convo.id}`}</span>
       `;
       item.addEventListener("click", (e) => {
         if (e.target.tagName !== "INPUT") {
@@ -2894,7 +2883,7 @@ function setupMobileConvoFilter() {
 
     const filtered = allConvos.filter((c) => {
       return (
-        (c.displayTitle || "").toLowerCase().includes(query) ||
+        (c.title || "").toLowerCase().includes(query) ||
         c.id.toString().includes(query)
       );
     });
@@ -2913,7 +2902,7 @@ function updateMobileConvoFilterLabel() {
     const allConvos = DB.getAllConversations();
     const convo = allConvos.find((c) => c.id === convoId);
     mobileConvoFilterValue.textContent = convo
-      ? convo.displayTitle || `#${convo.id}`
+      ? convo.title || `#${convo.id}`
       : "1 Convo";
   } else {
     mobileConvoFilterValue.textContent = `${mobileSelectedConvoIds.size} Convos`;
