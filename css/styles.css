@@ -191,7 +191,7 @@ section {
 }
 .browser-grid {
   display: grid;
-  grid-template-columns: 280px 1fr 280px;
+  grid-template-columns: 352px 1fr 280px;
   gap: 12px;
   grid-column: 1;
   grid-row: 3;
@@ -296,6 +296,7 @@ label {
 
 .search-input {
   flex: 1;
+  box-sizing: border-box;
   padding: 8px 40px 8px 12px;
   border: 1px solid var(--card-border);
   background: var(--card-bg);
@@ -303,6 +304,7 @@ label {
   border-radius: 4px;
   font-size: 13px;
   outline: none;
+  height: 39px;
 }
 
 .search-input::placeholder {
@@ -583,11 +585,11 @@ button.button-icon.help-button-icon {
   background: var(--card-bg);
   border-color: var(--teal);
   color: var(--teal);
+  transform: unset;
 }
 
 .filter-dropdown-button .dropdown-arrow {
   margin-left: 8px;
-  font-size: 10px;
   color: var(--teal);
 }
 

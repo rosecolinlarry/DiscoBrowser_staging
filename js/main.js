@@ -336,7 +336,7 @@ function setupSettingsModal() {
       // Handle reset layout if checked
       if (appSettings.resetDesktopLayout) {
         const browserGrid = $("browser");
-        const defaultColumns = "280px 1fr 280px";
+        const defaultColumns = "352px 1fr 280px";
         browserGrid.style.gridTemplateColumns = defaultColumns;
         updateHandlePositions();
         localStorage.removeItem("discobrowser_grid_columns");
@@ -481,7 +481,7 @@ function updateResizeHandles() {
 
 function updateHandlePositions() {
   const browserGrid = $("browser");
-  const columns = (browserGrid.style.gridTemplateColumns || "280px 1fr 280px")
+  const columns = (browserGrid.style.gridTemplateColumns || "352px 1fr 280px")
     .split(" ")
     .map((s) => s.trim());
   const col1 = columns[0];
@@ -664,7 +664,7 @@ function initializeResizableGrid() {
 
   // Store grid column widths in local storage
   const STORAGE_KEY = "discobrowser_grid_columns";
-  const defaultColumns = "280px 1fr 280px";
+  const defaultColumns = "352px 1fr 280px";
   const savedColumns = localStorage.getItem(STORAGE_KEY);
 
   if (savedColumns) {
@@ -695,7 +695,7 @@ function initializeResizableGrid() {
 
   // Helper function to update handle positions
   function updateHandlePositions() {
-    const columns = (browserGrid.style.gridTemplateColumns || "280px 1fr 280px")
+    const columns = (browserGrid.style.gridTemplateColumns || "352px 1fr 280px")
       .split(" ")
       .map((s) => s.trim());
     const col1 = columns[0];
@@ -719,7 +719,7 @@ function initializeResizableGrid() {
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
-      browserGrid.style.gridTemplateColumns || "280px 1fr 280px"
+      browserGrid.style.gridTemplateColumns || "352px 1fr 280px"
     )
       .split(" ")
       .map((s) => s.trim());
@@ -753,7 +753,7 @@ function initializeResizableGrid() {
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
-      browserGrid.style.gridTemplateColumns || "280px 1fr 280px"
+      browserGrid.style.gridTemplateColumns || "352px 1fr 280px"
     )
       .split(" ")
       .map((s) => s.trim());
@@ -784,7 +784,7 @@ function initializeResizableGrid() {
   // Add reset layout button handler
   if (resetLayoutBtn) {
     resetLayoutBtn.addEventListener("click", () => {
-      const defaultColumns = "280px 1fr 280px";
+      const defaultColumns = "352px 1fr 280px";
       browserGrid.style.gridTemplateColumns = defaultColumns;
       updateHandlePositions();
       localStorage.removeItem(STORAGE_KEY);
