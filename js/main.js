@@ -99,18 +99,8 @@ const alwaysShowMoreDetailsCheckbox = $("alwaysShowMoreDetailsCheckbox");
 const showHiddenCheckbox = $("showHiddenCheckbox");
 const turnOffAnimationsCheckbox = $("turnOffAnimationsCheckbox");
 const useOriginalTitlesCheckbox = $("useOriginalTitlesCheckbox");
-const enableAdvancedSearchCheckbox = $("enableAdvancedSearchCheckbox");
 const saveSettingsBtn = $("saveSettingsBtn");
 const restoreDefaultSettingsBtn = $("restoreDefaultSettingsBtn");
-// Advanced search UI
-const advancedSearchToggle = $("advancedSearchToggle");
-const advancedSearchRow = $("advancedSearchRow");
-const variableSearchBtn = $("variableSearchBtn");
-const variableSearchDropdown = $("variableSearchDropdown");
-const variableSearchLabel = $("variableSearchLabel");
-const selectAllVariableSearch = $("selectAllVariableSearch");
-const includeVariablesCheckbox = $("includeVariablesCheckbox");
-const includeDialogueCheckbox = $("includeDialogueCheckbox");
 
 // Clear filters button
 const clearFiltersBtn = $("clearFiltersBtn");
@@ -170,9 +160,6 @@ let appSettings = {
   turnOffAnimations: false,
   alwaysShowMoreDetails: false,
   useOriginalTitles: false,
-  enableAdvancedSearch: true,
-  includeVariables: true,
-  includeDialogue: true,
 };
 
 const defaultColumns = "352px 1fr 280px";
@@ -225,8 +212,6 @@ function saveSettingsToStorage() {
 function applySettings() {
   // Apply animations toggle
   updateAnimationsToggle();
-  // Advanced search UI visibility
-  updateAdvancedSearchUi();
   updateResizeHandles();
   // Apply column resizing toggle - handled in initializeResizableGrid
   // Apply show hidden toggle - handled when building tree
@@ -238,20 +223,6 @@ function updateAnimationsToggle() {
     document.body.classList.add("animations-disabled");
   } else {
     document.body.classList.remove("animations-disabled");
-  }
-}
-
-function updateAdvancedSearchUi() {
-  if (advancedSearchRow && !mobileMediaQuery.matches) {
-    advancedSearchRow.style.display = appSettings.enableAdvancedSearch
-      ? ""
-      : "none";
-  }
-  if (advancedSearchToggle) {
-    advancedSearchToggle.checked = appSettings.enableAdvancedSearch;
-  }
-  if (enableAdvancedSearchCheckbox) {
-    enableAdvancedSearchCheckbox.checked = appSettings.enableAdvancedSearch;
   }
 }
 
@@ -267,23 +238,6 @@ function updateSettingsUI() {
     turnOffAnimationsCheckbox.checked = appSettings.turnOffAnimations;
   if (useOriginalTitlesCheckbox)
     useOriginalTitlesCheckbox.checked = appSettings.useOriginalTitles;
-  if (enableAdvancedSearchCheckbox)
-    enableAdvancedSearchCheckbox.checked = appSettings.enableAdvancedSearch;
-  if (advancedSearchToggle)
-    advancedSearchToggle.checked = appSettings.enableAdvancedSearch;
-  if (advancedSearchRow)
-    advancedSearchRow.style.display =
-      appSettings.enableAdvancedSearch && !mobileMediaQuery.matches
-        ? ""
-        : "none";
-  if (includeVariablesCheckbox)
-    includeVariablesCheckbox.checked = appSettings.includeVariables;
-  if (includeDialogueCheckbox)
-    includeDialogueCheckbox.checked = appSettings.includeDialogue;
-  if (selectAllVariableSearch)
-    selectAllVariableSearch.checked =
-      appSettings.includeDialogue && appSettings.includeVariables;
-  updateVariableSearchLabel();
 }
 
 function setupSettingsModal() {
@@ -327,13 +281,6 @@ function setupSettingsModal() {
         turnOffAnimationsCheckbox?.checked || false;
       appSettings.useOriginalTitles =
         useOriginalTitlesCheckbox?.checked || false;
-      appSettings.enableAdvancedSearch =
-        enableAdvancedSearchCheckbox?.checked ?? true;
-      appSettings.includeVariables = includeVariablesCheckbox?.checked ?? true;
-      appSettings.includeDialogue = includeDialogueCheckbox?.checked ?? true;
-      appSettings.selectAllVariableSearch =
-        selectAllVariableSearch?.checked ||
-        (includeVariablesCheckbox?.checked && includeDialogueCheckbox?.checked);
 
       // Apply settings
       applySettings();
@@ -375,99 +322,10 @@ function setupSettingsModal() {
         turnOffAnimations: false,
         alwaysShowMoreDetails: false,
         useOriginalTitles: false,
-        includeVariables: true,
-        includeDialogue: true,
       };
       updateSettingsUI();
     });
   }
-
-  // Advanced search toggle show/hide
-  if (advancedSearchToggle && advancedSearchRow) {
-    advancedSearchToggle.addEventListener("change", () => {
-      appSettings.enableAdvancedSearch = !!advancedSearchToggle.checked;
-      applySettings();
-      saveSettingsToStorage();
-    });
-  }
-
-  // Settings modal Advanced Search toggle sync
-  if (enableAdvancedSearchCheckbox) {
-    enableAdvancedSearchCheckbox.addEventListener("change", (e) => {
-      appSettings.enableAdvancedSearch = !!e.target.checked;
-      applySettings();
-      saveSettingsToStorage();
-    });
-  }
-
-  // Variable search checkboxes update label and save settings
-  if (includeVariablesCheckbox) {
-    includeVariablesCheckbox.addEventListener("change", (e) => {
-      updateVariableSearchLabel(e);
-      saveSettingsToStorage();
-    });
-  }
-  if (includeDialogueCheckbox) {
-    includeDialogueCheckbox.addEventListener("change", (e) => {
-      updateVariableSearchLabel(e);
-      saveSettingsToStorage();
-    });
-  }
-  if (selectAllVariableSearch) {
-    selectAllVariableSearch.addEventListener("change", (e) => {
-      updateVariableSearchLabel(e);
-      saveSettingsToStorage();
-    });
-  }
-}
-
-function selectAllVariableSearchOptions(checked) {
-  includeVariablesCheckbox.checked = checked;
-  includeDialogueCheckbox.checked = checked;
-  selectAllVariableSearch.checked = checked;
-  selectAllVariableSearch.indeterminate = false;
-  selectAllVariableSearch.dispatchEvent(new Event("change"));
-}
-
-function updateVariableSearchLabel(e) {
-  let text = "Include Variables";
-  let includeVars =
-    includeVariablesCheckbox?.checked ?? appSettings.includeVariables ?? true;
-  let includeDial =
-    includeDialogueCheckbox?.checked ?? appSettings.includeDialogue ?? true;
-  let includeAll =
-    selectAllVariableSearch?.checked ??
-    (appSettings.includeDialogue && appSettings.includeVariables) ??
-    true;
-
-  if (e && e.target === selectAllVariableSearch) {
-    includeAll = selectAllVariableSearch.checked;
-    includeVars = includeAll;
-    includeDial = includeAll;
-  } else if (e && e.target === includeVariablesCheckbox) {
-    includeVars = includeVariablesCheckbox?.checked ?? true;
-    includeAll = includeVars && includeDial;
-  } else if (e && e.target === includeDialogueCheckbox) {
-    includeDial = includeDialogueCheckbox?.checked ?? true;
-    includeAll = includeVars && includeDial;
-  }
-  selectAllVariableSearch.checked = includeAll;
-  selectAllVariableSearch.indeterminate = includeVars !== includeDial;
-  includeDialogueCheckbox.checked = includeDial;
-  includeVariablesCheckbox.checked = includeVars;
-
-  appSettings.includeVariables = includeVars;
-  appSettings.includeDialogue = includeDial;
-
-  text =
-    includeVars && includeDial
-      ? "Include Variables"
-      : includeVars
-      ? "Variables only"
-      : includeDial
-      ? "Dialogue only"
-      : "None";
-  if (variableSearchLabel) variableSearchLabel.textContent = text;
 }
 
 function updateResizeHandles() {
@@ -1561,9 +1419,6 @@ function setupClearFiltersButton() {
       wholeWordsCheckbox.checked = false;
     }
 
-    // Reset include variables filter - select all
-    selectAllVariableSearchOptions(true);
-
     // Trigger search with cleared filters
     triggerSearch();
   });
@@ -2316,39 +2171,6 @@ function searchDialogues(q, resetSearch = true) {
     const { results: res, total } = response;
     currentSearchTotal = total;
 
-    // Advanced search: include/only variables via dropdown selection
-    let variableResults = [];
-    if (appSettings.includeVariables) {
-      const varResp = DB.searchVariables(
-        currentSearchQuery,
-        searchResultLimit,
-        currentSearchOffset,
-        wholeWordsCheckbox?.checked || false
-      );
-      variableResults = varResp.results;
-      if (!appSettings.includeDialogue) {
-        // Render variables only
-        entryListHeaderEl.textContent = "Search Results (Variables)";
-        entryListEl.innerHTML = "";
-        variableResults.forEach((v) => {
-          const div = document.createElement("div");
-          div.className = "card-item result-item";
-          const title = document.createElement("div");
-          title.className = "card-title";
-          title.textContent = v.name || `(variable #${v.id})`;
-          const body = document.createElement("div");
-          body.className = "card-body";
-          body.textContent = v.description || "(no description)";
-          div.appendChild(title);
-          div.appendChild(body);
-          entryListEl.appendChild(div);
-        });
-        isLoadingMore = false;
-        searchLoader?.classList.add("hidden");
-        return;
-      }
-    }
-
     // Filter by conversation type if not all types selected
     let filteredResults = res;
     if (selectedTypeIds.size > 0 && selectedTypeIds.size < 3) {
@@ -2439,27 +2261,6 @@ function searchDialogues(q, resetSearch = true) {
       });
       entryListEl.appendChild(div);
     });
-
-    // Include variables appended (when include mode)
-    if (
-      appSettings.includeVariables &&
-      appSettings.includeDialogue &&
-      variableResults.length
-    ) {
-      variableResults.forEach((v) => {
-        const div = document.createElement("div");
-        div.className = "card-item result-item";
-        const title = document.createElement("div");
-        title.className = "card-title";
-        title.textContent = v.name || `(variable #${v.id})`;
-        const body = document.createElement("div");
-        body.className = "card-body";
-        body.textContent = v.description || "(no description)";
-        div.appendChild(title);
-        div.appendChild(body);
-        entryListEl.appendChild(div);
-      });
-    }
 
     // Update offset for next load (based on database results, not filtered)
     currentSearchOffset += res.length;
@@ -2830,17 +2631,6 @@ function performMobileSearch(resetSearch = true) {
   isMobileLoadingMore = true;
 
   try {
-    // Advanced search: include/only variables via dropdown selection
-    let variableResults = [];
-    if (appSettings.includeVariables) {
-      const varResp = DB.searchVariables(
-        currentSearchQuery,
-        searchResultLimit,
-        currentSearchOffset,
-        wholeWordsCheckbox?.checked || false
-      );
-      variableResults = varResp.results;
-    }
 
     const response = DB.searchDialogues(
       mobileSearchQuery,
@@ -2878,8 +2668,7 @@ function performMobileSearch(resetSearch = true) {
 
     if (
       resetSearch &&
-      filteredResults.length === 0 &&
-      variableResults.length === 0
+      filteredResults.length === 0
     ) {
       mobileSearchResults.innerHTML =
         '<div class="mobile-search-prompt">No results found</div>';
@@ -2903,37 +2692,6 @@ function performMobileSearch(resetSearch = true) {
       }
       mobileSearchCount.style.display = "block";
     }
-
-    // Append variables to results if includeVariables && includeDialogue
-    variableResults.forEach((v) => {
-      const hasQuotedPhrases = /"[^"]+"/g.test(mobileSearchQuery);
-      const highlightedName = UI.highlightTerms(
-        v.name || "",
-        mobileSearchQuery,
-        hasQuotedPhrases
-      );
-      const highlightedDesc = UI.highlightTerms(
-        v.description || "",
-        mobileSearchQuery,
-        hasQuotedPhrases
-      );
-
-      const div = document.createElement("div");
-      div.className = "card-item result-item";
-      div.style.cursor = "default";
-
-      const title = document.createElement("div");
-      title.className = "card-title";
-      title.innerHTML = highlightedName || "(variable)";
-
-      const body = document.createElement("div");
-      body.className = "card-body";
-      body.innerHTML = highlightedDesc || "(no description)";
-
-      div.appendChild(title);
-      div.appendChild(body);
-      mobileSearchResults.appendChild(div);
-    });
 
     filteredResults.forEach((r) => {
       // Check if query contains any quoted phrases

@@ -65,7 +65,7 @@
             data-icon-size="30px"
           ></div>
         </button>
-        <div class="mobile-search-header">
+        <div class="search-input-wrapper">
           <label for="mobileSearchInput" class="search-input-label"
             >Search</label
           >
@@ -466,14 +466,12 @@
               ></div>
             </button>
           </div>
-          <div class="advanced-search-wrapper">
-            <div class="toggle-wrapper">
-              <label class="toggle-input-label toggle-wrapper">
-                <input type="checkbox" id="advancedSearchToggle" />
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">Advanced Search</span>
-              </label>
-            </div>
+          <div class="toggle-wrapper">
+            <label class="toggle-input-label">
+              <input type="checkbox" id="wholeWordsCheckbox" />
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Whole Words</span>
+            </label>
           </div>
           <div id="actor-filter-wrapper" class="filter-dropdown-wrapper">
             <button
@@ -554,74 +552,6 @@
               </div>
             </div>
           </div>
-          <!-- #region Advanced Search Options Row -->
-          <div
-            id="advancedSearchRow"
-            class="advanced-search-row search-controls"
-            style="display: none"
-          >
-            <div class="advanced-search-options">
-              <div class="toggle-wrapper">
-                <label class="toggle-input-label">
-                  <input type="checkbox" id="wholeWordsCheckbox" />
-                  <span class="toggle-slider"></span>
-                  <span class="toggle-label">Whole Words</span>
-                </label>
-              </div>
-              <div id="variable-search-wrapper" class="filter-dropdown-wrapper">
-                <button
-                  id="variableSearchBtn"
-                  class="filter-dropdown-button"
-                  type="button"
-                >
-                  <span id="variableSearchLabel" class="filter-label"
-                    >Include Variables</span
-                  >
-                  <span class="dropdown-arrow">
-                    <div
-                      class="icon-placeholder"
-                      data-icon-template="icon-arrow-drop-down-template"
-                      data-icon-size="18px"
-                    ></div>
-                  </span>
-                </button>
-                <div id="variableSearchDropdown" class="filter-dropdown">
-                  <div class="filter-actions">
-                    <label class="checkbox-item checkbox-label select-all">
-                      <input
-                        type="checkbox"
-                        id="selectAllVariableSearch"
-                        data-include="all"
-                        checked
-                      />
-                      <span>Select All</span>
-                    </label>
-                  </div>
-                  <div id="variableSearchCheckboxList" class="checkbox-list">
-                    <label class="checkbox-item checkbox-label">
-                      <input
-                        type="checkbox"
-                        id="includeVariablesCheckbox"
-                        data-include="variables"
-                        checked
-                      />
-                      <span>Variables</span>
-                    </label>
-                    <label class="checkbox-item checkbox-label">
-                      <input
-                        type="checkbox"
-                        id="includeDialogueCheckbox"
-                        data-include="dialogue"
-                        checked
-                      />
-                      <span>Dialogue</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- #endregion -->
           <button
             id="clearFiltersBtn"
             type="button"
@@ -1074,16 +1004,6 @@
             </label>
             <p class="settings-description">
               Disables all animations throughout the application.
-            </p>
-          </div>
-          <div class="settings-section">
-            <label class="settings-checkbox checkbox-label">
-              <input type="checkbox" id="enableAdvancedSearchCheckbox" />
-              <span class="checkbox-custom"></span>
-              <span class="checkbox-label">Enable Advanced Search</span>
-            </label>
-            <p class="settings-description">
-              Show the Advanced Search options below the main search.
             </p>
           </div>
           <div class="settings-section">

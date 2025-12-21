@@ -145,7 +145,7 @@ body::-webkit-scrollbar-thumb:hover {
     background-color: var(--card-bg);
     color: #fff;
   }
-
+  
   &:hover {
     background-color: var(--card-bg);
     border-color: var(--teal);
@@ -644,14 +644,6 @@ button.button-icon.help-button-icon {
   border-top: 1px solid var(--card-border);
   line-height: 1.4;
 }
-
-/* #region Advanced Search UI */
-.advanced-search-options {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-/* #endregion */
 
 /* #endregion */
 /* #region Conversation Tree */
@@ -1434,10 +1426,6 @@ a {
   }
 
   .filter-dropdown-wrapper {
-    display: none;
-  }
-
-  .advanced-search-row {
     display: none;
   }
 

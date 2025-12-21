@@ -540,7 +540,6 @@ export function clearCaches() {
   entryCache.clear();
 }
 
-// Advanced search: variables
 export function searchVariables(q, limit = 1000, offset = 0, wholeWords = false) {
   const raw = (q || "").trim();
   if (!raw) {
