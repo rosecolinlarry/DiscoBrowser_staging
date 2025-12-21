@@ -79,10 +79,15 @@ const mobileConvoFilterScreen = $("mobileConvoFilterScreen");
 const mobileActorFilterScreen = $("mobileActorFilterScreen");
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
 const mobileWholeWordsCheckbox = $("mobileWholeWordsCheckbox");
-const mobileNavBtn = $("mobileNavBtn");
-const mobileNavPanel = $("mobileNavPanel");
 const mobileSidebarToggle = $("mobileSidebarToggle");
 const mobileClearSearchBtn = $("mobileSearchClearIcon");
+
+// Mobile nav menu buttons
+const mobileNavPanel = $("mobileNavPanel");
+const mobileNavBtn = $("mobileNavBtn");
+const mobileNavHome = $("mobileNavHome");
+const mobileNavSettings = $("mobileNavSettings");
+const mobileNavSearch = $("mobileNavSearch");
 
 // Tree control elements
 const expandAllBtn = $("expandAllBtn");
@@ -157,7 +162,7 @@ let appSettings = {
   disableColumnResizing: false,
   showHidden: false,
   turnOffAnimations: false,
-  alwaysShowMoreDetails: false
+  alwaysShowMoreDetails: false,
 };
 
 const defaultColumns = "352px 1fr 280px";
@@ -232,15 +237,22 @@ function updateSettingsUI() {
     turnOffAnimationsCheckbox.checked = appSettings.turnOffAnimations;
 }
 
+function openSettingsModal(e) {
+    e.stopPropagation();
+    updateSettingsUI();
+    settingsModalOverlay.style.display = "flex";
+}
+
+function setupMobileNavMenu() {
+  mobileNavHome.addEventListener('click', goBackHomeWithBrowserHistory);
+  mobileNavSettings.addEventListener('click', openSettingsModal);
+  mobileNavSearch.addEventListener("click", openMobileSearchScreen);
+}
+
 function setupSettingsModal() {
   // Open settings modal
-  if (settingsBtn) {
-    settingsBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      updateSettingsUI();
-      settingsModalOverlay.style.display = "flex";
-    });
-  }
+  
+    settingsBtn.addEventListener("click", openSettingsModal);
 
   // Close settings modal
   if (settingsModalClose) {
@@ -488,6 +500,9 @@ async function boot() {
   setupMobileSearch();
   setupClearSearchInput();
 
+  // Set up mobile side menu
+  setupMobileNavMenu();
+
   // Initialize mobile filter labels
   updateMobileConvoFilterLabel();
   updateMobileActorFilterLabel();
@@ -508,12 +523,11 @@ async function boot() {
 
 function updateResizableGrid() {
   if (!browserGrid || !desktopMediaQuery.matches) {
-      browserGrid.style.removeProperty("gridTemplateColumns")
-  };
+    browserGrid.style.removeProperty("gridTemplateColumns");
+  }
 }
 
 function applySavedColumns(savedColumns) {
-  
   if (savedColumns) {
     try {
       const columns = JSON.parse(savedColumns);
@@ -539,8 +553,8 @@ function initializeResizableGrid() {
 
   // Store grid column widths in local storage
   const savedColumns = localStorage.getItem(STORAGE_KEY);
-  
-  applySavedColumns(savedColumns)
+
+  applySavedColumns(savedColumns);
 
   // Create resize handles
   const leftHandle = document.createElement("div");
@@ -577,10 +591,10 @@ function initializeResizableGrid() {
 
   setUpResizeHandleLeft(leftHandle);
   setUpResizeHandleRight(rightHandle);
-  setupResetButton()
+  setupResetButton();
 }
 
-function setUpResizeHandleLeft (leftHandle) {
+function setUpResizeHandleLeft(leftHandle) {
   // Left handle: resize convo and entries sections
   leftHandle.addEventListener("mousedown", (e) => {
     if (appSettings.disableColumnResizing) return;
@@ -653,7 +667,7 @@ function setUpResizeHandleRight(rightHandle) {
 }
 
 function setupResetButton() {
-    // Add reset layout button handler
+  // Add reset layout button handler
   if (resetLayoutBtn) {
     resetLayoutBtn.addEventListener("click", () => {
       browserGrid.style.gridTemplateColumns = defaultColumns;
@@ -884,9 +898,7 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
 
       // Text filter
       if (searchText) {
-        const titleMatch = convo.title
-          .toLowerCase()
-          .includes(searchText);
+        const titleMatch = convo.title.toLowerCase().includes(searchText);
         const idMatch = cid.toString().includes(searchText);
         if (titleMatch || idMatch) {
           matches.push({
@@ -2211,15 +2223,13 @@ function searchDialogues(q, resetSearch = true) {
         const cid = UI.getParsedIntOrDefault(r.conversationid);
         const eid = UI.getParsedIntOrDefault(r.id);
 
-          // This is a regular flow entry or alternate
-          navigationHistory = [{ convoId: cid, entryId: null }];
-          // If this is an alternate, pass the condition and alternate line
-          const alternateCondition = r.isAlternate
-            ? r.alternatecondition
-            : null;
-          const alternateLine = r.isAlternate ? r.dialoguetext : null;
-          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
-          highlightConversationInTree(cid);
+        // This is a regular flow entry or alternate
+        navigationHistory = [{ convoId: cid, entryId: null }];
+        // If this is an alternate, pass the condition and alternate line
+        const alternateCondition = r.isAlternate ? r.alternatecondition : null;
+        const alternateLine = r.isAlternate ? r.dialoguetext : null;
+        navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+        highlightConversationInTree(cid);
 
         document.querySelector(".selected")?.scrollIntoView(true);
       });
@@ -2358,6 +2368,15 @@ function setupClearSearchInput() {
   });
 }
 
+function openMobileSearchScreen() {
+  // Push browser history state for mobile search
+  if (!isHandlingPopState) {
+    pushHistoryState("search");
+  }
+  mobileSearchScreen.style.display = "flex";
+  mobileSearchInput.focus();
+}
+
 function setupMobileSearch() {
   // Open mobile search screen
   mobileSearchInput.addEventListener("input", () => {
@@ -2366,16 +2385,7 @@ function setupMobileSearch() {
     }
   });
 
-  if (mobileSearchTrigger) {
-    mobileSearchTrigger.addEventListener("click", () => {
-      // Push browser history state for mobile search
-      if (!isHandlingPopState) {
-        pushHistoryState("search");
-      }
-      mobileSearchScreen.style.display = "flex";
-      mobileSearchInput.focus();
-    });
-  }
+  mobileSearchTrigger.addEventListener("click", openMobileSearchScreen);
 
   // Close mobile search screen
   if (mobileSearchBack) {
@@ -2595,7 +2605,6 @@ function performMobileSearch(resetSearch = true) {
   isMobileLoadingMore = true;
 
   try {
-
     const response = DB.searchDialogues(
       mobileSearchQuery,
       searchResultLimit,
@@ -2630,10 +2639,7 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchFilteredCount = 0;
     }
 
-    if (
-      resetSearch &&
-      filteredResults.length === 0
-    ) {
+    if (resetSearch && filteredResults.length === 0) {
       mobileSearchResults.innerHTML =
         '<div class="mobile-search-prompt">No results found</div>';
       if (mobileSearchCount) {
@@ -2689,11 +2695,9 @@ function performMobileSearch(resetSearch = true) {
         const cid = UI.getParsedIntOrDefault(r.conversationid);
         const eid = r.id;
 
-          const alternateCondition = r.isAlternate
-            ? r.alternatecondition
-            : null;
-          const alternateLine = r.isAlternate ? r.dialoguetext : null;
-          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+        const alternateCondition = r.isAlternate ? r.alternatecondition : null;
+        const alternateLine = r.isAlternate ? r.dialoguetext : null;
+        navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
 
         // Close mobile search and return to main view
         closeMobileSearchScreen();
