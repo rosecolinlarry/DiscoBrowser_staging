@@ -124,7 +124,7 @@ export function appendHistoryItem(
 
 export function renderCurrentEntry(entryOverviewEl, title, dialoguetext, convoType = 'flow') {
   dialoguetext = getStringOrDefault(dialoguetext, "<i>No dialogue.</i>");
-  title = getStringOrDefault(parseSpeakerFromTitle(title), "<i>No title.</i>");
+  title = getStringOrDefault(parseSpeakerFromTitle(title), "Untitled");
   
   const typeBadge = convoType !== 'flow'
     ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>`
@@ -135,7 +135,7 @@ export function renderCurrentEntry(entryOverviewEl, title, dialoguetext, convoTy
 
   entryOverviewEl.innerHTML = `
     <div class="card-header">
-      <div class="card-title"><strong class="speaker">${title}</strong></div>
+      <div class="card-title conversation-title">${title}</div>
       <div class="card-meta">${typeBadge}</div>
     </div>
     <div class="card-body dialogue-text">${dialoguetext}</div>`;
@@ -157,7 +157,7 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
 
   entryOverviewEl.innerHTML = `
     <div class="card-header">
-      <div class="card-title"><strong class="speaker">Conversation #${conversation.id}</strong></div>
+      <div class="card-title conversation-title">Conversation #${conversation.id}</div>
       <div class="card-meta">${typeBadge}</div>
     </div>
     <div class="card-body">
