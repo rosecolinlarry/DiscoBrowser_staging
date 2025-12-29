@@ -793,7 +793,6 @@ button.button-icon.help-button-icon {
 }
 
 .tree .toggle {
-  display: inline-block;
   text-align: center;
   color: var(--teal);
   font-weight: 700;
@@ -1250,7 +1249,7 @@ h1 {
 
 h1:hover {
   color: #cbfff3;
-  text-shadow: rgba(74, 198, 169, 0.9) 0px 0px 10px;
+  text-shadow: rgba(74, 198, 169, 0.9) 0 0 10px;
   transform: scale(1.02);
 }
 
@@ -2516,6 +2515,7 @@ a {
   width: 20px;
   height: 20px;
   border: 2px solid var(--muted);
+  box-sizing: border-box;
   border-radius: 4px;
   background: transparent;
   transition: all 0.2s ease;

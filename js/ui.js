@@ -123,9 +123,7 @@ export function appendHistoryItem(
 }
 
 export function renderCurrentEntry(entryOverviewEl, convoId, entryId, title, dialoguetext, convoType = 'flow') {
-  // TODO KA if no dialogue, use title?
   dialoguetext = getStringOrDefault(dialoguetext, "<i>No dialogue.</i>");
-  // TODO KA use title text for convo level things, speaker otherwise?
   title = getStringOrDefault(parseSpeakerFromTitle(title), "Untitled");
   const typeBadge = convoType !== 'flow'
     ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>`
@@ -183,6 +181,15 @@ export function parseSpeakerFromTitle(title) {
   )
     return splitTitle[0].trim();
   return title;
+}
+
+// TODO KA implement conversation details
+export function renderConvoDetails(containerEl, data) {
+  containerEl.innerHTML = "";
+  const wrapper = document.createElement("div");
+  wrapper.appendChild(createConvoTable(data));
+  // wrapper.appendChild(createConvoMetaTable(data));
+  containerEl.appendChild(wrapper);
 }
 
 // TODO KA implement speaker colors and is hidden
@@ -373,7 +380,47 @@ function createConvoTable(data) {
     ["Actor Id", data.conversationActorId],
     ["Actor name", data.conversationActorName],
     ["Conversant Id", data.conversationConversantId],
-    ["Conversant name", data.conversationConversantName], // TODO KA Implement is Hidden
+    ["Conversant name", data.conversationConversantName],
+    ["Conversation Type", data.type],
+    ["Conversation Is Hidden", data.isHidden],
+    ["Total Entries", data.totalEntries],
+  ];
+
+  section.appendChild(buildTable(rows));
+  return section;
+}
+
+function createTaskTable(data) {
+  const section = createDetailsSectionHeader("Task");
+  
+  // type
+  // isHidden
+  // totalEntries
+
+  // id
+  // title
+  // onUse
+  // overrideDialogueCondition
+  // alternateOrbText
+  // checkType
+  // condition
+  // instruction
+  // placement
+  // difficulty
+  // displayConditionMain
+  // doneConditionMain
+  // cancelConditionMain
+  // taskReward
+  // taskTimed
+  // totalSubtasks
+  const rows = [
+    ["Conversation Id", data.convoId],
+    ["Conversation Title", data.conversationTitle],
+    ["Description", data.conversationDescription],
+    ["Actor Id", data.conversationActorId],
+    ["Actor name", data.conversationActorName],
+    ["Conversant Id", data.conversationConversantId],
+    ["Conversant name", data.conversationConversantName],
   ];
 
   section.appendChild(buildTable(rows));

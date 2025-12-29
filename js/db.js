@@ -114,33 +114,33 @@ export function getActorNameById(actorId) {
 }
 
 export function getConversationById(convoId, showHidden) {
-  if (convoId && showHidden) {
-    return execRowsFirstOrDefault(
-      `SELECT id, title, description, actor, conversant, type, isHidden 
-        FROM conversations 
-        WHERE id=${convoId};`
-    );
+  // Get the conversation's task related fields
+  let convoSQL = `SELECT  
+      id, title, onUse, overrideDialogueCondition, alternateOrbText
+      , checkType, condition, instruction
+      , placement, difficulty, description, actor, conversant
+      , displayConditionMain, doneConditionMain, cancelConditionMain, taskReward, taskTimed
+      , type, isHidden, totalEntries, totalSubtasks
+    FROM conversations WHERE `;
+  if (!showHidden) {
+    convoSQL += "isHidden != 1 AND ";
   }
-  else if(convoId) {
-    return execRowsFirstOrDefault(
-      `SELECT id, title, description, actor, conversant, type, isHidden 
-        FROM conversations 
-        WHERE id=${convoId} AND isHidden != 1;`
-    );
+  convoSQL += `id=${convoId}`;
+  if (convoId) {
+    return execRowsFirstOrDefault(convoSQL);
   }
 }
 
 /* Load dentries for a conversation (summary listing) */
 export function getEntriesForConversation(convoId, showHidden) {
-  if(showHidden) {
-  return execRows(`
+  if (showHidden) {
+    return execRows(`
     SELECT id, title, dialoguetext, actor, isHidden
       FROM dentries
       WHERE conversationid=${convoId}
       ORDER BY id;
   `);
-  }
-  else {
+  } else {
     return execRows(`
     SELECT id, title, dialoguetext, actor, isHidden
       FROM dentries
@@ -216,11 +216,12 @@ export function getEntriesBulk(pairs = [], showHidden) {
   const results = [];
   for (const [convoId, entryIds] of groupByConvoId.entries()) {
     const entryIdList = entryIds.map((i) => String(i)).join(",");
-    
-    let query = "SELECT id, title, dialoguetext, actor, isHidden FROM dentries ";
+
+    let query =
+      "SELECT id, title, dialoguetext, actor, isHidden FROM dentries ";
     query += `WHERE conversationId=${convoId} `;
-    if(!showHidden) {
-      query += `AND isHidden != 1 `
+    if (!showHidden) {
+      query += `AND isHidden != 1 `;
     }
 
     query += `AND id IN (${entryIdList});`;
@@ -270,7 +271,10 @@ export function searchDialogues(
   }
 
   // Remove variable and function tokens from the string we parse for quoted phrases / words
-  const processedRaw = raw.replace(variableTokenRegex, " ").replace(functionTokenRegex, " ").trim();
+  const processedRaw = raw
+    .replace(variableTokenRegex, " ")
+    .replace(functionTokenRegex, " ")
+    .trim();
 
   // Parse query for quoted phrases and regular words from the processed raw string
   const quotedPhrases = [];
@@ -288,7 +292,9 @@ export function searchDialogues(
   let where = "";
 
   // Helper: escape single quotes
-  function esc(s) { return s.replace(/'/g, "''"); }
+  function esc(s) {
+    return s.replace(/'/g, "''");
+  }
 
   // Helper: build conditions for a set of columns using parsed tokens
   function buildConditionsForColumns(columns) {
@@ -297,19 +303,25 @@ export function searchDialogues(
     // quoted phrases
     quotedPhrases.forEach((phrase) => {
       const safe = esc(phrase);
-      conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
+      conds.push(
+        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`
+      );
     });
 
     // variables
     variableTokens.forEach((token) => {
       const safe = esc(token);
-      conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
+      conds.push(
+        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`
+      );
     });
 
     // functions
     functionTokens.forEach((token) => {
       const safe = esc(token);
-      conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
+      conds.push(
+        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`
+      );
     });
 
     // words (support wholeWords)
@@ -331,10 +343,12 @@ export function searchDialogues(
             parts.push(`${col} LIKE '%(${safeC}${safe}${safeC})%'`);
             parts.push(`${col} LIKE '%(${safe})%'`);
           });
-          conds.push(`(${parts.join(' OR ')})`);
+          conds.push(`(${parts.join(" OR ")})`);
         });
       } else {
-        conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
+        conds.push(
+          `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`
+        );
       }
     });
 
@@ -342,10 +356,15 @@ export function searchDialogues(
   }
 
   // Build dentries WHERE clause using shared helper
-  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
-    const conditions = buildConditionsForColumns(['dialoguetext', 'title']);
+  if (
+    quotedPhrases.length > 0 ||
+    words.length > 0 ||
+    variableTokens.length > 0 ||
+    functionTokens.length > 0
+  ) {
+    const conditions = buildConditionsForColumns(["dialoguetext", "title"]);
     if (conditions.length > 0) {
-      where = conditions.join(' AND ');
+      where = conditions.join(" AND ");
     }
   }
 
@@ -380,8 +399,8 @@ export function searchDialogues(
   }
 
   // Hide hidden dialogues
-  if(!showHidden) {
-    const hideHiddenFilter = "isHidden != 1"
+  if (!showHidden) {
+    const hideHiddenFilter = "isHidden != 1";
     where = where ? `${where} AND ${hideHiddenFilter}` : hideHiddenFilter;
   }
 
@@ -404,15 +423,25 @@ export function searchDialogues(
       ORDER BY conversationid, id 
       ${limitClause};`;
   const dentriesResults = execRows(dentriesSQL);
-  
+
   // Also search dialogues table for orbs and tasks (they use description as dialogue text)
   let dialoguesWhere = "";
 
   // Build dialogues WHERE clause using shared helper
-  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
-    const dialoguesConditions = buildConditionsForColumns(['description', 'title']);
+  if (
+    quotedPhrases.length > 0 ||
+    words.length > 0 ||
+    variableTokens.length > 0 ||
+    functionTokens.length > 0
+  ) {
+    const dialoguesConditions = buildConditionsForColumns([
+      "description",
+      "title",
+    ]);
     if (dialoguesConditions.length > 0) {
-      dialoguesWhere = `${dialoguesConditions.join(' AND ')} AND type IN ('orb', 'task')`;
+      dialoguesWhere = `${dialoguesConditions.join(
+        " AND "
+      )} AND type IN ('orb', 'task')`;
     } else {
       dialoguesWhere = `type IN ('orb', 'task')`;
     }
@@ -442,15 +471,14 @@ export function searchDialogues(
     dialoguesWhere += ` AND id IN (${convoList})`;
   }
 
-  if(!showHidden) {
-    dialoguesWhere += " AND isHidden != 1"
+  if (!showHidden) {
+    dialoguesWhere += " AND isHidden != 1";
   }
 
   // Get count for dialogues
   const dialoguesCountSQL = `SELECT COUNT(*) as count FROM conversations WHERE ${dialoguesWhere};`;
   const dialoguesCount = execRowsFirstOrDefault(dialoguesCountSQL)?.count || 0;
 
-  // TODO KA Set id to null to make it clear it is a conversation and not try to look it up the normal way?
   const dialoguesSQL = `
     SELECT id as conversationid, null as id, description as dialoguetext, title, actor, isHidden 
       FROM conversations 
@@ -462,9 +490,14 @@ export function searchDialogues(
   // Also search alternates table for alternate dialogue lines
   let alternatesWhere = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
-    const alternatesConditions = buildConditionsForColumns(['alternateline']);
-    alternatesWhere = alternatesConditions.join(' AND ');
+  if (
+    quotedPhrases.length > 0 ||
+    words.length > 0 ||
+    variableTokens.length > 0 ||
+    functionTokens.length > 0
+  ) {
+    const alternatesConditions = buildConditionsForColumns(["alternateline"]);
+    alternatesWhere = alternatesConditions.join(" AND ");
   }
 
   // Handle multiple actor IDs for alternates (join with dentries to get actor)
@@ -551,7 +584,12 @@ export function clearCaches() {
   entryCache.clear();
 }
 
-export function searchVariables(q, limit = 1000, offset = 0, wholeWords = false) {
+export function searchVariables(
+  q,
+  limit = 1000,
+  offset = 0,
+  wholeWords = false
+) {
   const raw = (q || "").trim();
   if (!raw) {
     return { results: [], total: 0 };
@@ -578,9 +616,13 @@ export function searchVariables(q, limit = 1000, offset = 0, wholeWords = false)
   words.forEach((word) => {
     const safe = word.replace(/'/g, "''");
     if (wholeWords) {
-      conditions.push(`(name LIKE '% ${safe} %' OR description LIKE '% ${safe} %' OR name='${safe}' OR description='${safe}')`);
+      conditions.push(
+        `(name LIKE '% ${safe} %' OR description LIKE '% ${safe} %' OR name='${safe}' OR description='${safe}')`
+      );
     } else {
-      conditions.push(`(name LIKE '%${safe}%' OR description LIKE '%${safe}%')`);
+      conditions.push(
+        `(name LIKE '%${safe}%' OR description LIKE '%${safe}%')`
+      );
     }
   });
 
@@ -594,11 +636,11 @@ export function searchVariables(q, limit = 1000, offset = 0, wholeWords = false)
   const countSQL = `SELECT COUNT(*) as count FROM variables WHERE ${where};`;
   const total = execRowsFirstOrDefault(countSQL)?.count || 0;
   const sql = `SELECT id, name, description FROM variables WHERE ${where} ORDER BY name ${limitClause};`;
-  const results = execRows(sql).map(v => ({
+  const results = execRows(sql).map((v) => ({
     variable: true,
     id: v.id,
     name: v.name,
-    description: v.description
+    description: v.description,
   }));
   return { results, total };
 }
