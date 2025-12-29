@@ -22,6 +22,7 @@ export function createCardItem(titleText, convoId, entryId, contentText, allowHt
   convoId = getParsedIntOrDefault(convoId, null)
   entryId = getParsedIntOrDefault(entryId, null)
   const titleId = `${convoId || ""}:${entryId || ""}`
+  // TODO KA use title text for convo level things, speaker otherwise?
   titleText = parseSpeakerFromTitle(getStringOrDefault(titleText))
   titleText = `${titleId} ${titleText}`
   contentText = getStringOrDefault(contentText)
@@ -124,6 +125,7 @@ export function appendHistoryItem(
 
 export function renderCurrentEntry(entryOverviewEl, title, dialoguetext, convoType = 'flow') {
   dialoguetext = getStringOrDefault(dialoguetext, "<i>No dialogue.</i>");
+  // TODO KA use title text for convo level things, speaker otherwise?
   title = getStringOrDefault(parseSpeakerFromTitle(title), "Untitled");
   
   const typeBadge = convoType !== 'flow'
@@ -157,12 +159,12 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
 
   entryOverviewEl.innerHTML = `
     <div class="card-header">
-      <div class="card-title conversation-title">Conversation #${conversation.id}</div>
+      <div class="card-title conversation-title">${title}</div>
       <div class="card-meta">${typeBadge}</div>
     </div>
     <div class="card-body">
-      <div><strong>Title:</strong> ${title}</div>
-      <div class="dialogue-text">${description}</div>
+      <div class="conversation-id">Conversation #${conversation.id}</div>
+      <div class="conversation-description">${description}</div>
     </div>`;
   processExternalLinks(entryOverviewEl);
 }
@@ -349,7 +351,7 @@ function createEntryTable(data) {
     ["Entry Id", data.entryId],
     ["Entry Title", data.title],
     ["Entry Actor Id", data.actorId],
-    ["Entry Actor Name", data.actorName],
+    ["Entry Actor Name", data.actorName], // TODO KA Add is hidden here
   ];
 
   tableDiv.appendChild(buildTable(rows));
@@ -365,7 +367,7 @@ function createConvoTable(data) {
     ["Actor Id", data.conversationActorId],
     ["Actor name", data.conversationActorName],
     ["Conversant Id", data.conversationConversantId],
-    ["Conversant name", data.conversationConversantName],
+    ["Conversant name", data.conversationConversantName], // TODO KA Add is hidden here
   ];
 
   section.appendChild(buildTable(rows));

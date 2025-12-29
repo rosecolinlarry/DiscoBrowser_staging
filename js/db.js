@@ -90,7 +90,7 @@ export function prepareAndAll(stmtSql, params = []) {
 /* Conversations list */
 export function getAllConversations() {
   return execRows(
-    `SELECT id, title, type FROM conversations WHERE isHidden == 0 ORDER BY title;`
+    `SELECT id, title, type FROM conversations WHERE isHidden != 1 ORDER BY title;`
   );
 }
 
@@ -113,20 +113,29 @@ export function getActorNameById(actorId) {
   return actor?.name;
 }
 
-export function getConversationById(convoId) {
-  if (convoId) {
+// TODO KA Restrict to visible if showHidden is false
+export function getConversationById(convoId, showHidden) {
+  if (convoId && showHidden) {
     return execRowsFirstOrDefault(
-      `SELECT id, title, description, actor, conversant, type 
+      `SELECT id, title, description, actor, conversant, type, isHidden 
         FROM conversations 
         WHERE id=${convoId};`
+    );
+  }
+  else if(convoId) {
+    return execRowsFirstOrDefault(
+      `SELECT id, title, description, actor, conversant, type, isHidden 
+        FROM conversations 
+        WHERE id=${convoId} AND isHidden != 1;`
     );
   }
 }
 
 /* Load dentries for a conversation (summary listing) */
 export function getEntriesForConversation(convoId) {
+  // TODO KA implement is hidden
   return execRows(`
-    SELECT id, title, dialoguetext, actor
+    SELECT id, title, dialoguetext, actor, isHidden
       FROM dentries
       WHERE conversationid=${convoId}
       ORDER BY id;
@@ -137,7 +146,7 @@ export function getEntriesForConversation(convoId) {
 export function getEntry(convoId, entryId) {
   return execRowsFirstOrDefault(
     `SELECT de.id, de.title, de.dialoguetext, de.actor, de.hasCheck,de.hasAlts
-    , de.sequence, de.conditionstring, de.userscript, c.difficulty as difficultypass
+    , de.sequence, de.conditionstring, de.userscript, de.isHidden, c.difficulty as difficultypass
           FROM dentries de
         LEFT JOIN checks c ON c.dialogueid = de.id AND c.conversationid = de.conversationid
         LEFT JOIN modifiers m ON m.dialogueid = de.id AND m.conversationid = de.conversationid
@@ -199,8 +208,9 @@ export function getEntriesBulk(pairs = []) {
   const results = [];
   for (const [convoId, entryIds] of groupByConvoId.entries()) {
     const entryIdList = entryIds.map((i) => String(i)).join(",");
+    // TODO KA implement is hidden
     const rows = execRows(
-      `SELECT id, title, dialoguetext, actor 
+      `SELECT id, title, dialoguetext, actor, isHidden 
         FROM dentries 
         WHERE conversationid=${convoId} 
         AND id IN (${entryIdList});`
@@ -219,6 +229,7 @@ export function getEntriesBulk(pairs = []) {
 }
 
 /** Search entry dialogues and conversation dialogues (orbs/tasks) */
+// TODO KA Exclude hidden
 export function searchDialogues(
   q,
   limit = 1000,
@@ -327,12 +338,14 @@ export function searchDialogues(
   const limitClause = ` LIMIT ${limit} OFFSET ${offset}`;
 
   // Get total counts first (without limit/offset)
+  // TODO KA implement is hidden
   const dentriesCountSQL = `SELECT COUNT(*) as count FROM dentries WHERE ${where};`;
   const dentriesCount = execRowsFirstOrDefault(dentriesCountSQL)?.count || 0;
 
   // Search dentries for flow conversations
+  // TODO KA implement is hidden
   const dentriesSQL = `
-    SELECT conversationid, id, dialoguetext, title, actor 
+    SELECT conversationid, id, dialoguetext, title, actor, isHidden 
       FROM dentries 
       WHERE ${where} 
       ORDER BY conversationid, id 
@@ -410,11 +423,12 @@ export function searchDialogues(
   }
 
   // Get count for dialogues
+  // TODO KA Exclude hidden
   const dialoguesCountSQL = `SELECT COUNT(*) as count FROM conversations WHERE ${dialoguesWhere};`;
   const dialoguesCount = execRowsFirstOrDefault(dialoguesCountSQL)?.count || 0;
 
   const dialoguesSQL = `
-    SELECT id as conversationid, id, description as dialoguetext, title, actor 
+    SELECT id as conversationid, id, description as dialoguetext, title, actor, isHidden 
       FROM conversations 
       WHERE ${dialoguesWhere} 
       ORDER BY id 

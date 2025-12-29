@@ -186,7 +186,7 @@ function getConversationsForTree() {
   if (appSettings.showHidden) {
     // Also include hidden conversations
     const hiddenConvos = DB.execRows(
-      `SELECT id, title, type FROM conversations WHERE isHidden == 1 ORDER BY title;`
+      `SELECT id, title, type, isHidden FROM conversations WHERE isHidden == 1 ORDER BY title;`
     );
     const merged = [...allConvos, ...hiddenConvos];
     return merged.map((c) => ({
@@ -2050,6 +2050,7 @@ async function showEntryDetails(
   let convoActorName = DB.getActorNameById(convoRow.actor);
   let convoConversantActorName = DB.getActorNameById(convoRow.conversant);
 
+  // TODO KA implement is hidden
   const payload = {
     convoId: convoId,
     entryId: entryId,
@@ -2865,12 +2866,12 @@ function setupMobileConvoFilter() {
   }
 
   // Initial render
-  allConvos = DB.getAllConversations();
+  allConvos = getConversationsForTree();
   renderConvoList(allConvos);
 
   // Expose refresh function
   window.refreshMobileConvoList = () => {
-    allConvos = DB.getAllConversations();
+    allConvos = getConversationsForTree();
 
     tempSelectedConvoIds = new Set(mobileSelectedConvoIds);
     searchInput.value = "";
@@ -2903,7 +2904,7 @@ function updateMobileConvoFilterLabel() {
     mobileConvoFilterValue.textContent = "All";
   } else if (mobileSelectedConvoIds.size === 1) {
     const convoId = Array.from(mobileSelectedConvoIds)[0];
-    const allConvos = DB.getAllConversations();
+    const allConvos = getConversationsForTree();
     const convo = allConvos.find((c) => c.id === convoId);
     mobileConvoFilterValue.textContent = convo
       ? convo.title || `#${convo.id}`
