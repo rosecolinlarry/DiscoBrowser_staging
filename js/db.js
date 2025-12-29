@@ -281,77 +281,71 @@ export function searchDialogues(
   }
 
   // Remove quoted phrases from processedRaw to get remaining words
-  const remainingText = processedRaw.replace(/"[^"]+"/g, "").trim();
+  const remainingText = processedRaw.replace(/"[^\"]+"/g, "").trim();
   const words = remainingText ? remainingText.split(/\s+/) : [];
 
   // Build WHERE clause - only include text search if query is provided
   let where = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
-    const conditions = []; 
+  // Helper: escape single quotes
+  function esc(s) { return s.replace(/'/g, "''"); }
 
-    // Add conditions for each quoted phrase (exact phrase matching)
+  // Helper: build conditions for a set of columns using parsed tokens
+  function buildConditionsForColumns(columns) {
+    const conds = [];
+
+    // quoted phrases
     quotedPhrases.forEach((phrase) => {
-      const safe = phrase.replace(/'/g, "''");
-      conditions.push(
-        `(dialoguetext LIKE '%${safe}%' OR title LIKE '%${safe}%')`
-      );
+      const safe = esc(phrase);
+      conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
     });
 
-    // Add conditions for any Variable["..."] tokens we extracted (match entire token)
+    // variables
     variableTokens.forEach((token) => {
-      const safe = token.replace(/'/g, "''");
-      conditions.push(
-        `(dialoguetext LIKE '%${safe}%' OR title LIKE '%${safe}%')`
-      );
+      const safe = esc(token);
+      conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
     });
 
-    // Add conditions for any extracted function-like tokens (CheckItem(...), HasShirt(), once(1), etc.)
+    // functions
     functionTokens.forEach((token) => {
-      const safe = token.replace(/'/g, "''");
-      conditions.push(`(dialoguetext LIKE '%${safe}%' OR title LIKE '%${safe}%')`);
+      const safe = esc(token);
+      conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
     });
 
-    // TODO KA Support Variable["yard.cuno_authority_establishing_dominance"], currently
-    // the quotes in the variable brackets cause it not to match because it is hitting the brackets
-    // Add conditions for each word
+    // words (support wholeWords)
     words.forEach((word) => {
-      const safe = word.replace(/'/g, "''");
+      const safe = esc(word);
       if (wholeWords) {
-        // Use word boundaries: space, punctuation, or start/end of string
-        allowedWordBarriers.forEach((c) => {
-          const safeC = c.replace(/'/g, "''"); // Escape single quotes in barriers
-          conditions.push(`(
-          dialoguetext LIKE '% ${safe} %' OR 
-          dialoguetext LIKE '${safeC}${safe} %' OR 
-          dialoguetext LIKE '% ${safe}${safeC}' OR 
-          dialoguetext LIKE '${safeC}${safe}${safeC}' OR 
-          dialoguetext LIKE '${safe}' OR 
-          dialoguetext LIKE '%[${safeC}${safe}${safeC}]%' OR 
-          dialoguetext LIKE '%[${safe}]%' OR 
-          dialoguetext LIKE '%(${safeC}${safe}${safeC})%' OR 
-          dialoguetext LIKE '%(${safe})%' OR 
-          title LIKE '% ${safe} %' OR 
-          title LIKE '${safeC}${safe} %' OR 
-          title LIKE '% ${safe}${safeC}' OR 
-          title LIKE '${safeC}${safe}${safeC}' OR 
-          title LIKE '${safe}' OR
-          title LIKE '%[${safeC}${safe}${safeC}]%' OR 
-          title LIKE '%[${safe}]%' OR
-          title LIKE '%(${safeC}${safe}${safeC})%' OR 
-          title LIKE '%(${safe})%' 
-        )`);
+        // For each column, build a grouped clause covering the allowed barriers
+        columns.forEach((col) => {
+          const parts = [];
+          allowedWordBarriers.forEach((c) => {
+            const safeC = esc(c);
+            parts.push(`${col} LIKE '% ${safe} %'`);
+            parts.push(`${col} LIKE '${safeC}${safe} %'`);
+            parts.push(`${col} LIKE '% ${safe}${safeC}'`);
+            parts.push(`${col} LIKE '${safeC}${safe}${safeC}'`);
+            parts.push(`${col} LIKE '${safe}'`);
+            parts.push(`${col} LIKE '%[${safeC}${safe}${safeC}]%'`);
+            parts.push(`${col} LIKE '%[${safe}]%'`);
+            parts.push(`${col} LIKE '%(${safeC}${safe}${safeC})%'`);
+            parts.push(`${col} LIKE '%(${safe})%'`);
+          });
+          conds.push(`(${parts.join(' OR ')})`);
         });
       } else {
-        conditions.push(
-          `(dialoguetext LIKE '%${safe}%' OR title LIKE '%${safe}%')`
-        );
+        conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(' OR ')})`);
       }
     });
 
-    // All phrases and words must be present (AND logic)
+    return conds;
+  }
+
+  // Build dentries WHERE clause using shared helper
+  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
+    const conditions = buildConditionsForColumns(['dialoguetext', 'title']);
     if (conditions.length > 0) {
-      where = conditions.join(" AND ");
+      where = conditions.join(' AND ');
     }
   }
 
@@ -417,70 +411,14 @@ export function searchDialogues(
   // Also search dialogues table for orbs and tasks (they use description as dialogue text)
   let dialoguesWhere = "";
 
+  // Build dialogues WHERE clause using shared helper
   if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
-    const dialoguesConditions = []; 
-
-    // Add conditions for each quoted phrase
-    quotedPhrases.forEach((phrase) => {
-      const safe = phrase.replace(/'/g, "''");
-      dialoguesConditions.push(
-        `(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`
-      );
-    });
-
-    // Add conditions for any Variable["..."] tokens we extracted
-    variableTokens.forEach((token) => {
-      const safe = token.replace(/'/g, "''");
-      dialoguesConditions.push(
-        `(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`
-      );
-    });
-
-    // Add conditions for function-like tokens
-    functionTokens.forEach((token) => {
-      const safe = token.replace(/'/g, "''");
-      dialoguesConditions.push(`(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`);
-    });
-
-    // Add conditions for each word
-    words.forEach((word) => {
-      const safe = word.replace(/'/g, "''");
-      if (wholeWords) {
-        allowedWordBarriers.forEach((c) => {
-          const safeC = c.replace(/'/g, "''"); // Escape single quotes in barriers
-          dialoguesConditions.push(`(
-          description LIKE '% ${safe} %' OR 
-          description LIKE '${safeC}${safe} %' OR 
-          description LIKE '% ${safe}${safeC}' OR 
-          description LIKE '${safeC}${safe}${safeC}' OR 
-          description LIKE '${safe}' OR 
-          description LIKE '%[${safeC}${safe}${safeC}]%' OR 
-          description LIKE '%[${safe}]%' OR 
-          description LIKE '%(${safeC}${safe}${safeC})%' OR 
-          description LIKE '%(${safe})%' OR 
-          title LIKE '% ${safe} %' OR 
-          title LIKE '${safeC}${safe} %' OR 
-          title LIKE '% ${safe}${safeC}' OR 
-          title LIKE '${safeC}${safe}${safeC}' OR 
-          title LIKE '${safe}' OR
-          title LIKE '%[${safeC}${safe}${safeC}]%' OR 
-          title LIKE '%[${safe}]%' OR
-          title LIKE '${safe}' OR
-          title LIKE '%(${safeC}${safe}${safeC})%' OR 
-          title LIKE '%(${safe})%' 
-            )`);
-        });
-      } else {
-        dialoguesConditions.push(
-          `(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`
-        );
-      }
-    });
-
-    // All phrases and words must be present (AND logic) and must be orb or task
-    dialoguesWhere = `${dialoguesConditions.join(
-      " AND "
-    )} AND type IN ('orb', 'task')`;
+    const dialoguesConditions = buildConditionsForColumns(['description', 'title']);
+    if (dialoguesConditions.length > 0) {
+      dialoguesWhere = `${dialoguesConditions.join(' AND ')} AND type IN ('orb', 'task')`;
+    } else {
+      dialoguesWhere = `type IN ('orb', 'task')`;
+    }
   } else {
     dialoguesWhere = `type IN ('orb', 'task')`;
   }
@@ -530,50 +468,8 @@ export function searchDialogues(
   let alternatesWhere = "";
 
   if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
-    const alternatesConditions = []; 
-
-    // Add conditions for each quoted phrase
-    quotedPhrases.forEach((phrase) => {
-      const safe = phrase.replace(/'/g, "''");
-      alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
-    });
-
-    // Add conditions for any Variable["..."] tokens we extracted
-    variableTokens.forEach((token) => {
-      const safe = token.replace(/'/g, "''");
-      alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
-    });
-
-    // Add conditions for any extracted function-like tokens
-    functionTokens.forEach((token) => {
-      const safe = token.replace(/'/g, "''");
-      alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
-    });
-
-    // Add conditions for each word
-    words.forEach((word) => {
-      const safe = word.replace(/'/g, "''");
-      if (wholeWords) {
-        allowedWordBarriers.forEach((c) => {
-          const safeC = c.replace(/'/g, "''"); // Escape single quotes in barriers
-          alternatesConditions.push(`(
-          alternateline LIKE '% ${safe} %' OR 
-          alternateline LIKE '${safeC}${safe} %' OR 
-          alternateline LIKE '% ${safe}${safeC}%' OR 
-          alternateline LIKE '${safeC}${safe}${safeC}' OR 
-          alternateline LIKE '%[${safe}]%' OR
-          alternateline LIKE '[${safeC}${safe}${safeC}]' OR 
-          alternateline LIKE '(${safeC}${safe}${safeC})' OR 
-          alternateline LIKE '%(${safe})%'
-        )`);
-        });
-      } else {
-        alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
-      }
-    });
-
-    // All phrases and words must be present (AND logic)
-    alternatesWhere = alternatesConditions.join(" AND ");
+    const alternatesConditions = buildConditionsForColumns(['alternateline']);
+    alternatesWhere = alternatesConditions.join(' AND ');
   }
 
   // Handle multiple actor IDs for alternates (join with dentries to get actor)
