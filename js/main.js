@@ -5,7 +5,7 @@ import { buildTitleTree, renderTree } from "./treeBuilder.js";
 import { $ } from "./ui.js";
 import * as UI from "./ui.js";
 import { injectIconTemplates } from "./icons.js";
-import { injectUserSettingsTemplate } from "./userSettings.js";
+import { injectUserSettingsTemplate, setCurrentUserSettings, loadSettingsFromStorage, saveSettingsToStorage } from "./userSettings.js";
 
 // Inject user settings template as soon as the module loads
 injectUserSettingsTemplate();
@@ -171,19 +171,6 @@ let appSettings = {
 const defaultColumns = "352px 1fr 280px";
 const STORAGE_KEY = "discobrowser_grid_columns";
 
-// Settings management functions
-function loadSettingsFromStorage() {
-  try {
-    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      appSettings = { ...appSettings, ...parsed };
-    }
-  } catch (e) {
-    console.error("Failed to load settings from storage", e);
-  }
-}
-
 function getConversationsForTree() {
   const allConvos = DB.getAllConversations();
   if (appSettings.showHidden) {
@@ -203,13 +190,6 @@ function getConversationsForTree() {
   }));
 }
 
-function saveSettingsToStorage() {
-  try {
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
-  } catch (e) {
-    console.error("Failed to save settings to storage", e);
-  }
-}
 
 function applySettings() {
   // Apply animations toggle
@@ -228,21 +208,9 @@ function updateAnimationsToggle() {
   }
 }
 
-function updateSettingsUI() {
-  if (resetDesktopLayoutCheckbox)
-    resetDesktopLayoutCheckbox.checked = appSettings.resetDesktopLayout;
-  if (disableColumnResizingCheckbox)
-    disableColumnResizingCheckbox.checked = appSettings.disableColumnResizing;
-  if (alwaysShowMoreDetailsCheckbox)
-    alwaysShowMoreDetailsCheckbox.checked = appSettings.alwaysShowMoreDetails;
-  if (showHiddenCheckbox) showHiddenCheckbox.checked = appSettings.showHidden;
-  if (turnOffAnimationsCheckbox)
-    turnOffAnimationsCheckbox.checked = appSettings.turnOffAnimations;
-}
-
 function openSettingsModal(e) {
     e.stopPropagation();
-    updateSettingsUI();
+    setCurrentUserSettings();
     settingsModalOverlay.style.display = "flex";
 }
 
@@ -312,7 +280,7 @@ function setupSettingsModal() {
       }
 
       // Save and close modal
-      saveSettingsToStorage();
+      saveSettingsToStorage(appSettings);
       settingsModalOverlay.style.display = "none";
     });
   }
@@ -327,7 +295,7 @@ function setupSettingsModal() {
         turnOffAnimations: false,
         alwaysShowMoreDetails: false,
       };
-      updateSettingsUI();
+      setCurrentUserSettings();
     });
   }
 }

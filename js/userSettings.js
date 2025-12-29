@@ -1,16 +1,19 @@
 import { $ } from "./ui.js";
 
-const settingsModalClose = $("settingsModalClose");
-const resetDesktopLayoutCheckbox = $("resetDesktopLayoutCheckbox");
-const disableColumnResizingCheckbox = $("disableColumnResizingCheckbox");
-const alwaysShowMoreDetailsCheckbox = $("alwaysShowMoreDetailsCheckbox");
-const showHiddenCheckbox = $("showHiddenCheckbox");
-const turnOffAnimationsCheckbox = $("turnOffAnimationsCheckbox");
-const restoreDefaultSettingsBtn = $("restoreDefaultSettingsBtn");
-const saveSettingsBtn = $("saveSettingsBtn");
-
 // Settings state
 const SETTINGS_STORAGE_KEY = "discobrowser_settings";
+
+const resetDesktopLayoutCheckboxId = "resetDesktopLayoutCheckbox";
+const disableColumnResizingCheckboxId = "disableColumnResizingCheckbox";
+const alwaysShowMoreDetailsCheckboxId = "alwaysShowMoreDetailsCheckbox";
+const showHiddenCheckboxId = "showHiddenCheckbox";
+const turnOffAnimationsCheckboxId = "turnOffAnimationsCheckbox";
+
+const settingsModalCloseId = "settingsModalClose";
+const restoreDefaultSettingsBtnId = "restoreDefaultSettingsBtn";
+const saveSettingsBtnId = "saveSettingsBtn";
+
+// Default app settings
 let appSettings = {
   resetDesktopLayout: false,
   disableColumnResizing: false,
@@ -101,9 +104,79 @@ const template = `
           </div>
         </div>
       </div>
-  `
+  `;
 
 export function injectUserSettingsTemplate() {
-  const container = $("settingsModalOverlay")
-  container.innerHTML = template
+  const container = $("settingsModalOverlay");
+  container.innerHTML = template;
+}
+
+export function getCurrentUserSettings() {
+  // Get settings from checkbox values
+  const currentCheckboxValues = {
+    resetDesktopLayout: $(resetDesktopLayoutCheckboxId)?.checked ?? false,
+    disableColumnResizing: $(disableColumnResizingCheckboxId)?.checked ?? false,
+    showHidden: $(alwaysShowMoreDetailsCheckboxId)?.checked ?? false,
+    turnOffAnimations: $(showHiddenCheckboxId)?.checked ?? false,
+    alwaysShowMoreDetails: $(turnOffAnimationsCheckboxId)?.checked ?? false,
+  };
+  return currentCheckboxValues;
+}
+export function updateCurrentUserSettings() {
+  // Update settings from checkbox values
+  appSettings = getCurrentUserSettings();
+}
+
+export function setCurrentUserSettings(appSettings) {
+  // Update checkbox values from settings
+  if(!appSettings) {
+    // Get app settings from storage
+    loadSettingsFromStorage();
+  }
+  const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId)
+  if(resetDesktopLayoutCheckbox) {
+    resetDesktopLayoutCheckbox.checked = appSettings?.resetDesktopLayout;
+  }
+  const disableColumnResizingCheckbox = $(disableColumnResizingCheckboxId)
+  if(disableColumnResizingCheckbox) {
+    disableColumnResizingCheckbox.checked = appSettings?.disableColumnResizing;
+  }
+  const alwaysShowMoreDetailsCheckbox = $(alwaysShowMoreDetailsCheckboxId)
+  if(alwaysShowMoreDetailsCheckbox) {
+    alwaysShowMoreDetailsCheckbox.checked = appSettings?.alwaysShowMoreDetails;
+  }
+  const showHiddenCheckbox = $(showHiddenCheckboxId)
+  if(showHiddenCheckbox) {
+    showHiddenCheckbox.checked = appSettings?.showHidden;
+  }
+  const turnOffAnimationsCheckbox = $(turnOffAnimationsCheckboxId)
+  if(turnOffAnimationsCheckbox) {
+    turnOffAnimationsCheckbox.checked = appSettings?.turnOffAnimations;
+  }
+}
+
+export function loadSettingsFromStorage() {
+  try {
+    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      appSettings = { ...appSettings, ...parsed };
+      return appSettings;
+    }
+  } catch (e) {
+    console.error("Failed to load settings from storage", e);
+  }
+}
+
+export function saveSettingsToStorage(appSettings) {
+  try {
+    if(!appSettings) {
+      // Get app settings from current checkbox values
+      appSettings = getCurrentUserSettings();
+      updateCurrentUserSettings();
+    }
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
+  } catch (e) {
+    console.error("Failed to save settings to storage", e);
+  }
 }
