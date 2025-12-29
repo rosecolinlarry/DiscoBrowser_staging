@@ -253,23 +253,34 @@ export function searchDialogues(
 ) {
   const raw = (q || "").trim();
 
-  // Parse query for quoted phrases and regular words
+  // Extract Variable["..."] / Variable['...'] tokens so internal quotes don't break parsing
+  const variableTokens = [];
+  const variableTokenRegex = /Variable\[\s*(['"])(.*?)\1\s*\]/g;
+  let vmatch;
+  // Use raw for scanning so we capture tokens even if they're inside quoted phrases
+  while ((vmatch = variableTokenRegex.exec(raw)) !== null) {
+    variableTokens.push(vmatch[0]);
+  }
+  // Remove variable tokens from the string we parse for quoted phrases / words
+  const processedRaw = raw.replace(variableTokenRegex, " ").trim();
+
+  // Parse query for quoted phrases and regular words from the processed raw string
   const quotedPhrases = [];
   const quotedPhrasesRegex = /"([^"]+)"/g;
   let match;
-  while ((match = quotedPhrasesRegex.exec(raw)) !== null) {
+  while ((match = quotedPhrasesRegex.exec(processedRaw)) !== null) {
     quotedPhrases.push(match[1]);
   }
 
-  // Remove quoted phrases from query to get remaining words
-  const remainingText = raw.replace(/"[^"]+"/g, "").trim();
+  // Remove quoted phrases from processedRaw to get remaining words
+  const remainingText = processedRaw.replace(/"[^"]+"/g, "").trim();
   const words = remainingText ? remainingText.split(/\s+/) : [];
 
   // Build WHERE clause - only include text search if query is provided
   let where = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0) {
-    const conditions = [];
+  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0) {
+    const conditions = []; 
 
     // Add conditions for each quoted phrase (exact phrase matching)
     quotedPhrases.forEach((phrase) => {
@@ -279,6 +290,16 @@ export function searchDialogues(
       );
     });
 
+    // Add conditions for any Variable["..."] tokens we extracted (match entire token)
+    variableTokens.forEach((token) => {
+      const safe = token.replace(/'/g, "''");
+      conditions.push(
+        `(dialoguetext LIKE '%${safe}%' OR title LIKE '%${safe}%')`
+      );
+    });
+
+    // TODO KA Support Variable["yard.cuno_authority_establishing_dominance"], currently
+    // the quotes in the variable brackets cause it not to match because it is hitting the brackets
     // Add conditions for each word
     words.forEach((word) => {
       const safe = word.replace(/'/g, "''");
@@ -292,11 +313,19 @@ export function searchDialogues(
           dialoguetext LIKE '% ${safe}${safeC}' OR 
           dialoguetext LIKE '${safeC}${safe}${safeC}' OR 
           dialoguetext LIKE '${safe}' OR 
+          dialoguetext LIKE '%[${safeC}${safe}${safeC}]%' OR 
+          dialoguetext LIKE '%[${safe}]%' OR 
+          dialoguetext LIKE '%(${safeC}${safe}${safeC})%' OR 
+          dialoguetext LIKE '%(${safe})%' OR 
           title LIKE '% ${safe} %' OR 
           title LIKE '${safeC}${safe} %' OR 
           title LIKE '% ${safe}${safeC}' OR 
           title LIKE '${safeC}${safe}${safeC}' OR 
-          title LIKE '${safe}'
+          title LIKE '${safe}' OR
+          title LIKE '%[${safeC}${safe}${safeC}]%' OR 
+          title LIKE '%[${safe}]%' OR
+          title LIKE '%(${safeC}${safe}${safeC})%' OR 
+          title LIKE '%(${safe})%' 
         )`);
         });
       } else {
@@ -367,16 +396,27 @@ export function searchDialogues(
       ORDER BY conversationid, id 
       ${limitClause};`;
   const dentriesResults = execRows(dentriesSQL);
+  
+  console.log("dentries")
+  console.log(dentriesSQL)
 
   // Also search dialogues table for orbs and tasks (they use description as dialogue text)
   let dialoguesWhere = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0) {
-    const dialoguesConditions = [];
+  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0) {
+    const dialoguesConditions = []; 
 
     // Add conditions for each quoted phrase
     quotedPhrases.forEach((phrase) => {
       const safe = phrase.replace(/'/g, "''");
+      dialoguesConditions.push(
+        `(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`
+      );
+    });
+
+    // Add conditions for any Variable["..."] tokens we extracted
+    variableTokens.forEach((token) => {
+      const safe = token.replace(/'/g, "''");
       dialoguesConditions.push(
         `(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`
       );
@@ -389,16 +429,25 @@ export function searchDialogues(
         allowedWordBarriers.forEach((c) => {
           const safeC = c.replace(/'/g, "''"); // Escape single quotes in barriers
           dialoguesConditions.push(`(
-          description LIKE '%${safeC}${safe}${safeC}%' OR 
-          description LIKE '% ${safe}${safeC}%' OR 
-          description LIKE '%${safeC}${safe} %' OR 
           description LIKE '% ${safe} %' OR 
+          description LIKE '${safeC}${safe} %' OR 
+          description LIKE '% ${safe}${safeC}' OR 
+          description LIKE '${safeC}${safe}${safeC}' OR 
           description LIKE '${safe}' OR 
-          title LIKE '%${safeC}${safe}${safeC}%' OR 
-          title LIKE '% ${safe}${safeC}%' OR 
-          title LIKE '%${safeC}${safe} %' OR 
-          title LIKE '% ${safe} %' OR
-          title LIKE '${safe}'
+          description LIKE '%[${safeC}${safe}${safeC}]%' OR 
+          description LIKE '%[${safe}]%' OR 
+          description LIKE '%(${safeC}${safe}${safeC})%' OR 
+          description LIKE '%(${safe})%' OR 
+          title LIKE '% ${safe} %' OR 
+          title LIKE '${safeC}${safe} %' OR 
+          title LIKE '% ${safe}${safeC}' OR 
+          title LIKE '${safeC}${safe}${safeC}' OR 
+          title LIKE '${safe}' OR
+          title LIKE '%[${safeC}${safe}${safeC}]%' OR 
+          title LIKE '%[${safe}]%' OR
+          title LIKE '${safe}' OR
+          title LIKE '%(${safeC}${safe}${safeC})%' OR 
+          title LIKE '%(${safe})%' 
             )`);
         });
       } else {
@@ -454,15 +503,24 @@ export function searchDialogues(
       ${limitClause};`;
   const dialoguesResults = execRows(dialoguesSQL);
 
+  console.log("dialoguesSql")
+  console.log(dialoguesSQL)
+
   // Also search alternates table for alternate dialogue lines
   let alternatesWhere = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0) {
-    const alternatesConditions = [];
+  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0) {
+    const alternatesConditions = []; 
 
     // Add conditions for each quoted phrase
     quotedPhrases.forEach((phrase) => {
       const safe = phrase.replace(/'/g, "''");
+      alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
+    });
+
+    // Add conditions for any Variable["..."] tokens we extracted
+    variableTokens.forEach((token) => {
+      const safe = token.replace(/'/g, "''");
       alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
     });
 
@@ -477,7 +535,10 @@ export function searchDialogues(
           alternateline LIKE '${safeC}${safe} %' OR 
           alternateline LIKE '% ${safe}${safeC}%' OR 
           alternateline LIKE '${safeC}${safe}${safeC}' OR 
-          alternateline LIKE '%${safe}%'
+          alternateline LIKE '%[${safe}]%' OR
+          alternateline LIKE '[${safeC}${safe}${safeC}]' OR 
+          alternateline LIKE '(${safeC}${safe}${safeC})' OR 
+          alternateline LIKE '%(${safe})%'
         )`);
         });
       } else {
@@ -546,6 +607,9 @@ export function searchDialogues(
       ...r,
       isAlternate: true,
     }));
+
+    console.log("alternatesSQL")
+    console.log(alternatesSQL)
   }
 
   // Calculate total count
