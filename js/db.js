@@ -106,14 +106,13 @@ export function getActorNameById(actorId) {
     return "";
   }
   const actor = execRowsFirstOrDefault(
-    `SELECT id, name
+    `SELECT id, name, color
         FROM actors
         WHERE id='${actorId}'`
   );
-  return actor?.name;
+  return actor;
 }
 
-// TODO KA Restrict to visible if showHidden is false
 export function getConversationById(convoId, showHidden) {
   if (convoId && showHidden) {
     return execRowsFirstOrDefault(
@@ -132,14 +131,23 @@ export function getConversationById(convoId, showHidden) {
 }
 
 /* Load dentries for a conversation (summary listing) */
-export function getEntriesForConversation(convoId) {
-  // TODO KA implement is hidden
+export function getEntriesForConversation(convoId, showHidden) {
+  if(showHidden) {
   return execRows(`
     SELECT id, title, dialoguetext, actor, isHidden
       FROM dentries
       WHERE conversationid=${convoId}
       ORDER BY id;
   `);
+  }
+  else {
+    return execRows(`
+    SELECT id, title, dialoguetext, actor, isHidden
+      FROM dentries
+      WHERE conversationid=${convoId} AND isHidden != 1
+      ORDER BY id;
+  `);
+  }
 }
 
 /* Fetch a single entry row (core fields) */
@@ -196,7 +204,7 @@ export function getParentsChildren(convoId, entryId) {
 }
 
 /* Fetch destination entries batched (for link lists) */
-export function getEntriesBulk(pairs = []) {
+export function getEntriesBulk(pairs = [], showHidden) {
   // pairs = [{convo, id}, ...] -> batch by convo to use IN
   if (!pairs.length) return [];
   const groupByConvoId = new Map();
@@ -208,13 +216,17 @@ export function getEntriesBulk(pairs = []) {
   const results = [];
   for (const [convoId, entryIds] of groupByConvoId.entries()) {
     const entryIdList = entryIds.map((i) => String(i)).join(",");
-    // TODO KA implement is hidden
-    const rows = execRows(
-      `SELECT id, title, dialoguetext, actor, isHidden 
-        FROM dentries 
-        WHERE conversationid=${convoId} 
-        AND id IN (${entryIdList});`
-    );
+    
+    let query = "SELECT id, title, dialoguetext, actor, isHidden FROM dentries ";
+    query += `WHERE conversationId=${convoId} `;
+    if(!showHidden) {
+      query += `AND isHidden != 1 `
+    }
+
+    query += `AND id IN (${entryIdList});`;
+
+    const rows = execRows(query);
+
     rows.forEach((r) => {
       results.push({
         convo: convoId,
@@ -229,7 +241,6 @@ export function getEntriesBulk(pairs = []) {
 }
 
 /** Search entry dialogues and conversation dialogues (orbs/tasks) */
-// TODO KA Exclude hidden
 export function searchDialogues(
   q,
   limit = 1000,
@@ -237,7 +248,8 @@ export function searchDialogues(
   filterStartInput = true,
   offset = 0,
   conversationIds = null,
-  wholeWords = false
+  wholeWords = false,
+  showHidden
 ) {
   const raw = (q || "").trim();
 
@@ -330,6 +342,12 @@ export function searchDialogues(
     where = where ? `${where} AND ${startFilter}` : startFilter;
   }
 
+  // Hide hidden dialogues
+  if(!showHidden) {
+    const hideHiddenFilter = "isHidden != 1"
+    where = where ? `${where} AND ${hideHiddenFilter}` : hideHiddenFilter;
+  }
+
   // If still no where clause, default to all (except start input if filtered)
   if (!where) {
     where = "1=1";
@@ -338,12 +356,10 @@ export function searchDialogues(
   const limitClause = ` LIMIT ${limit} OFFSET ${offset}`;
 
   // Get total counts first (without limit/offset)
-  // TODO KA implement is hidden
   const dentriesCountSQL = `SELECT COUNT(*) as count FROM dentries WHERE ${where};`;
   const dentriesCount = execRowsFirstOrDefault(dentriesCountSQL)?.count || 0;
 
   // Search dentries for flow conversations
-  // TODO KA implement is hidden
   const dentriesSQL = `
     SELECT conversationid, id, dialoguetext, title, actor, isHidden 
       FROM dentries 
@@ -422,8 +438,11 @@ export function searchDialogues(
     dialoguesWhere += ` AND id IN (${convoList})`;
   }
 
+  if(!showHidden) {
+    dialoguesWhere += " AND isHidden != 1"
+  }
+
   // Get count for dialogues
-  // TODO KA Exclude hidden
   const dialoguesCountSQL = `SELECT COUNT(*) as count FROM conversations WHERE ${dialoguesWhere};`;
   const dialoguesCount = execRowsFirstOrDefault(dialoguesCountSQL)?.count || 0;
 

@@ -181,6 +181,7 @@ export function parseSpeakerFromTitle(title) {
   return title;
 }
 
+// TODO KA implement speaker colors and is hidden
 export function renderEntryDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
@@ -351,7 +352,8 @@ function createEntryTable(data) {
     ["Entry Id", data.entryId],
     ["Entry Title", data.title],
     ["Entry Actor Id", data.actorId],
-    ["Entry Actor Name", data.actorName], // TODO KA Add is hidden here
+    ["Entry Actor Name", data.actorName],
+    ["Entry Is Hidden", data.isHidden],
   ];
 
   tableDiv.appendChild(buildTable(rows));
@@ -367,7 +369,7 @@ function createConvoTable(data) {
     ["Actor Id", data.conversationActorId],
     ["Actor name", data.conversationActorName],
     ["Conversant Id", data.conversationConversantId],
-    ["Conversant name", data.conversationConversantName], // TODO KA Add is hidden here
+    ["Conversant name", data.conversationConversantName], // TODO KA Implement is Hidden
   ];
 
   section.appendChild(buildTable(rows));

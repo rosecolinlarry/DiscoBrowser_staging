@@ -814,7 +814,8 @@ function filterConversationTree() {
   let searchText;
   if (!conversationTree) return;
   searchText = convoSearchInput?.value?.toLowerCase().trim() ?? "";
-
+  // TODO KA Support searching for hidden convos if show hidden is true
+  
   // If no text search is active
   if (!searchText) {
     // Show full tree when all types selected
@@ -1554,7 +1555,7 @@ function loadEntriesForConversation(convoId, resetHistory = false) {
     currentEntryContainerEl.classList.remove("expanded");
   }
 
-  const rows = DB.getEntriesForConversation(convoId);
+  const rows = DB.getEntriesForConversation(convoId, appSettings.showHidden);
   const filtered = rows.filter(
     (r) => (r.title || "").toLowerCase() !== "start"
   );
@@ -2016,7 +2017,7 @@ async function showEntryDetails(
   if (!DB || !entryDetailsEl) return;
 
   // Fetch core row early so it can be referenced by cached fallback values
-  const entry = DB.getEntry(convoId, entryId);
+  const coreRow = DB.getEntry(convoId, entryId);
 
   // Check cache only if viewing the original (no alternate selected)
   if (!selectedAlternateCondition && !selectedAlternateLine) {
@@ -2027,36 +2028,43 @@ async function showEntryDetails(
         selectedAlternateCondition: null,
         selectedAlternateLine: null,
         originalDialogueText:
-          cached.originalDialogueText || entry?.dialoguetext,
+          cached.originalDialogueText || coreRow?.dialoguetext,
         onNavigate: navigateToEntry,
       });
       return;
     }
   }
-  if (!entry) {
+  if (!coreRow) {
     entryDetailsEl.textContent = "(not found)";
     return;
   }
 
   // Fetch alternates, checks, parents/children
   const alternates =
-    entry.hasalts > 0 ? DB.getAlternates(convoId, entryId) : [];
-  const checks = entry.hascheck > 0 ? DB.getChecks(convoId, entryId) : [];
+    coreRow.hasalts > 0 ? DB.getAlternates(convoId, entryId) : [];
+  const checks = coreRow.hascheck > 0 ? DB.getChecks(convoId, entryId) : [];
   const { parents, children } = DB.getParentsChildren(convoId, entryId);
   // Get conversation data
   const convoRow = DB.getConversationById(convoId) || {};
-  // Get actor names
-  let entryActorName = DB.getActorNameById(entry.actor);
-  let convoActorName = DB.getActorNameById(convoRow.actor);
-  let convoConversantActorName = DB.getActorNameById(convoRow.conversant);
+  // Get actor
+  const entryActor = DB.getActorNameById(coreRow.actor);
+  const convoActor= DB.getActorNameById(convoRow.actor);
+  const convoConversantActor = DB.getActorNameById(convoRow.conversant);
+  // Get actor names and colors
+  let entryActorName = entryActor?.name;
+  let convoActorName = convoActor?.name;
+  let convoConversantActorName = convoConversantActor?.name;
+  let entryActorColor = entryActor?.color;
+  let convoActorColor = convoActor?.color;
+  let convoConversantActorColor = convoConversantActor?.color;
 
-  // TODO KA implement is hidden
   const payload = {
     convoId: convoId,
     entryId: entryId,
-    title: entry.title,
-    actorId: entry.actor,
+    title: coreRow.title,
+    actorId: coreRow.actor,
     actorName: entryActorName,
+    actorColor: entryActorColor,
     alternates,
     checks,
     parents,
@@ -2065,17 +2073,23 @@ async function showEntryDetails(
     conversationDescription: convoRow.description,
     conversationActorId: convoRow.actor,
     conversationActorName: convoActorName,
+    conversationActorColor: convoActorColor,
     conversationConversantId: convoRow.conversant,
     conversationConversantName: convoConversantActorName,
-    sequence: entry.sequence,
-    conditionstring: entry.conditionstring,
-    userscript: entry.userscript,
-    difficultypass: entry.difficultypass,
+    conversationConversantColor: convoConversantActorColor,
+    sequence: coreRow.sequence,
+    conditionstring: coreRow.conditionstring,
+    userscript: coreRow.userscript,
+    difficultypass: coreRow.difficultypass,
     selectedAlternateCondition: selectedAlternateCondition,
     selectedAlternateLine: selectedAlternateLine,
-    originalDialogueText: entry.dialoguetext,
+    originalDialogueText: coreRow.dialoguetext,
+    isHidden: coreRow.isHidden,
     onNavigate: navigateToEntry,
   };
+
+  console.log(coreRow)
+  console.log(payload)
 
   // Only cache the base data without alternate-specific info
   // This prevents stale alternate data from being served from cache
@@ -2149,7 +2163,8 @@ function searchDialogues(q, resetSearch = true) {
       true, // filterStartInput
       currentSearchOffset,
       undefined, // conversationIds
-      wholeWordsCheckbox?.checked || false // wholeWords
+      wholeWordsCheckbox?.checked || false, // wholeWords
+      appSettings.showHidden
     );
 
     const { results: res, total } = response;
@@ -2319,7 +2334,7 @@ function loadChildOptions(convoId, entryId) {
     for (const c of children)
       pairs.push({ convoId: c.d_convo, entryId: c.d_id });
 
-    const destRows = DB.getEntriesBulk(pairs);
+    const destRows = DB.getEntriesBulk(pairs, appSettings.showHidden);
     const destMap = new Map(destRows.map((r) => [`${r.convo}:${r.id}`, r]));
 
     for (const c of children) {
@@ -2613,7 +2628,8 @@ function performMobileSearch(resetSearch = true) {
       true,
       mobileSearchOffset,
       undefined, // conversationIds
-      mobileWholeWordsCheckbox?.checked || false // wholeWords
+      mobileWholeWordsCheckbox?.checked || false, // wholeWords
+      appSettings.showHidden
     );
     const { results, total } = response;
     mobileSearchTotal = total;
