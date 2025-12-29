@@ -5,7 +5,10 @@ import { buildTitleTree, renderTree } from "./treeBuilder.js";
 import { $ } from "./ui.js";
 import * as UI from "./ui.js";
 import { injectIconTemplates } from "./icons.js";
+import { injectUserSettingsTemplate } from "./userSettings.js";
 
+// Inject user settings template as soon as the module loads
+injectUserSettingsTemplate();
 // Inject icon templates as soon as the module loads
 injectIconTemplates();
 
