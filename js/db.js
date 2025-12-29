@@ -257,12 +257,20 @@ export function searchDialogues(
   const variableTokens = [];
   const variableTokenRegex = /Variable\[\s*(['"])(.*?)\1\s*\]/g;
   let vmatch;
-  // Use raw for scanning so we capture tokens even if they're inside quoted phrases
   while ((vmatch = variableTokenRegex.exec(raw)) !== null) {
     variableTokens.push(vmatch[0]);
   }
-  // Remove variable tokens from the string we parse for quoted phrases / words
-  const processedRaw = raw.replace(variableTokenRegex, " ").trim();
+
+  // Extract simple function-like tokens (e.g., CheckItem("x"), HasShirt(), once(1), CheckEquipped('y'))
+  const functionTokens = [];
+  const functionTokenRegex = /\b[A-Za-z_][A-Za-z0-9_]*\([^)]*\)/g;
+  let fmatch;
+  while ((fmatch = functionTokenRegex.exec(raw)) !== null) {
+    functionTokens.push(fmatch[0]);
+  }
+
+  // Remove variable and function tokens from the string we parse for quoted phrases / words
+  const processedRaw = raw.replace(variableTokenRegex, " ").replace(functionTokenRegex, " ").trim();
 
   // Parse query for quoted phrases and regular words from the processed raw string
   const quotedPhrases = [];
@@ -279,7 +287,7 @@ export function searchDialogues(
   // Build WHERE clause - only include text search if query is provided
   let where = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0) {
+  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
     const conditions = []; 
 
     // Add conditions for each quoted phrase (exact phrase matching)
@@ -296,6 +304,12 @@ export function searchDialogues(
       conditions.push(
         `(dialoguetext LIKE '%${safe}%' OR title LIKE '%${safe}%')`
       );
+    });
+
+    // Add conditions for any extracted function-like tokens (CheckItem(...), HasShirt(), once(1), etc.)
+    functionTokens.forEach((token) => {
+      const safe = token.replace(/'/g, "''");
+      conditions.push(`(dialoguetext LIKE '%${safe}%' OR title LIKE '%${safe}%')`);
     });
 
     // TODO KA Support Variable["yard.cuno_authority_establishing_dominance"], currently
@@ -403,7 +417,7 @@ export function searchDialogues(
   // Also search dialogues table for orbs and tasks (they use description as dialogue text)
   let dialoguesWhere = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0) {
+  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
     const dialoguesConditions = []; 
 
     // Add conditions for each quoted phrase
@@ -420,6 +434,12 @@ export function searchDialogues(
       dialoguesConditions.push(
         `(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`
       );
+    });
+
+    // Add conditions for function-like tokens
+    functionTokens.forEach((token) => {
+      const safe = token.replace(/'/g, "''");
+      dialoguesConditions.push(`(description LIKE '%${safe}%' OR title LIKE '%${safe}%')`);
     });
 
     // Add conditions for each word
@@ -509,7 +529,7 @@ export function searchDialogues(
   // Also search alternates table for alternate dialogue lines
   let alternatesWhere = "";
 
-  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0) {
+  if (quotedPhrases.length > 0 || words.length > 0 || variableTokens.length > 0 || functionTokens.length > 0) {
     const alternatesConditions = []; 
 
     // Add conditions for each quoted phrase
@@ -520,6 +540,12 @@ export function searchDialogues(
 
     // Add conditions for any Variable["..."] tokens we extracted
     variableTokens.forEach((token) => {
+      const safe = token.replace(/'/g, "''");
+      alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
+    });
+
+    // Add conditions for any extracted function-like tokens
+    functionTokens.forEach((token) => {
       const safe = token.replace(/'/g, "''");
       alternatesConditions.push(`alternateline LIKE '%${safe}%'`);
     });
