@@ -405,9 +405,6 @@ export function searchDialogues(
       ${limitClause};`;
   const dentriesResults = execRows(dentriesSQL);
   
-  console.log("dentries")
-  console.log(dentriesSQL)
-
   // Also search dialogues table for orbs and tasks (they use description as dialogue text)
   let dialoguesWhere = "";
 
@@ -453,16 +450,14 @@ export function searchDialogues(
   const dialoguesCountSQL = `SELECT COUNT(*) as count FROM conversations WHERE ${dialoguesWhere};`;
   const dialoguesCount = execRowsFirstOrDefault(dialoguesCountSQL)?.count || 0;
 
+  // TODO KA Set id to null to make it clear it is a conversation and not try to look it up the normal way?
   const dialoguesSQL = `
-    SELECT id as conversationid, id, description as dialoguetext, title, actor, isHidden 
+    SELECT id as conversationid, null as id, description as dialoguetext, title, actor, isHidden 
       FROM conversations 
       WHERE ${dialoguesWhere} 
       ORDER BY id 
       ${limitClause};`;
   const dialoguesResults = execRows(dialoguesSQL);
-
-  console.log("dialoguesSql")
-  console.log(dialoguesSQL)
 
   // Also search alternates table for alternate dialogue lines
   let alternatesWhere = "";
@@ -529,9 +524,6 @@ export function searchDialogues(
       ...r,
       isAlternate: true,
     }));
-
-    console.log("alternatesSQL")
-    console.log(alternatesSQL)
   }
 
   // Calculate total count

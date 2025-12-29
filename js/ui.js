@@ -22,7 +22,6 @@ export function createCardItem(titleText, convoId, entryId, contentText, allowHt
   convoId = getParsedIntOrDefault(convoId, null)
   entryId = getParsedIntOrDefault(entryId, null)
   const titleId = `${convoId || ""}:${entryId || ""}`
-  // TODO KA use title text for convo level things, speaker otherwise?
   titleText = parseSpeakerFromTitle(getStringOrDefault(titleText))
   titleText = `${titleId} ${titleText}`
   contentText = getStringOrDefault(contentText)
@@ -123,11 +122,11 @@ export function appendHistoryItem(
   return item;
 }
 
-export function renderCurrentEntry(entryOverviewEl, title, dialoguetext, convoType = 'flow') {
+export function renderCurrentEntry(entryOverviewEl, convoId, entryId, title, dialoguetext, convoType = 'flow') {
+  // TODO KA if no dialogue, use title?
   dialoguetext = getStringOrDefault(dialoguetext, "<i>No dialogue.</i>");
   // TODO KA use title text for convo level things, speaker otherwise?
   title = getStringOrDefault(parseSpeakerFromTitle(title), "Untitled");
-  
   const typeBadge = convoType !== 'flow'
     ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>`
     : '';
@@ -136,9 +135,12 @@ export function renderCurrentEntry(entryOverviewEl, title, dialoguetext, convoTy
   entryOverviewEl.className = "entry-item current-item";
 
   entryOverviewEl.innerHTML = `
+    <div class="card-meta">
+      <div class="dialogue-id">Conversation #${convoId} > Entry #${entryId}</div>
+      ${typeBadge}
+    </div>
     <div class="card-header">
-      <div class="card-title conversation-title">${title}</div>
-      <div class="card-meta">${typeBadge}</div>
+      <div class="card-title dialogue-title">${title}</div>
     </div>
     <div class="card-body dialogue-text">${dialoguetext}</div>`;
   processExternalLinks(entryOverviewEl);
@@ -158,12 +160,14 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
   const typeBadge = convoType !== 'flow' ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>` : '';
 
   entryOverviewEl.innerHTML = `
+    <div class="card-meta">
+      <div class="conversation-id">Conversation #${conversation.id}</div>
+      ${typeBadge}
+    </div>
     <div class="card-header">
       <div class="card-title conversation-title">${title}</div>
-      <div class="card-meta">${typeBadge}</div>
     </div>
     <div class="card-body">
-      <div class="conversation-id">Conversation #${conversation.id}</div>
       <div class="conversation-description">${description}</div>
     </div>`;
   processExternalLinks(entryOverviewEl);

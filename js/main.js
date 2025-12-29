@@ -814,8 +814,6 @@ function filterConversationTree() {
   let searchText;
   if (!conversationTree) return;
   searchText = convoSearchInput?.value?.toLowerCase().trim() ?? "";
-  // TODO KA Support searching for hidden convos if show hidden is true
-  
   // If no text search is active
   if (!searchText) {
     // Show full tree when all types selected
@@ -1793,7 +1791,7 @@ async function jumpToHistoryPoint(targetIndex) {
     const conversation = DB.getConversationById(currentConvoId);
     const convoType = conversation?.type || "flow";
 
-    UI.renderCurrentEntry(entryOverviewEl, title, dialoguetext, convoType);
+    UI.renderCurrentEntry(entryOverviewEl, cid, eid, title, dialoguetext, convoType);
 
     // Add current entry to history log (non-clickable)
     if (chatLogEl) {
@@ -1956,7 +1954,7 @@ async function navigateToEntry(
   const conversation = DB.getConversationById(convoId);
   const convoType = conversation?.type || "flow";
 
-  UI.renderCurrentEntry(entryOverviewEl, title, dialoguetext, convoType);
+  UI.renderCurrentEntry(entryOverviewEl, convoId, entryId, title, dialoguetext, convoType);
 
   currentConvoId = convoId;
   currentEntryId = entryId;
@@ -2087,9 +2085,6 @@ async function showEntryDetails(
     isHidden: coreRow.isHidden,
     onNavigate: navigateToEntry,
   };
-
-  console.log(coreRow)
-  console.log(payload)
 
   // Only cache the base data without alternate-specific info
   // This prevents stale alternate data from being served from cache
@@ -2244,6 +2239,14 @@ function searchDialogues(q, resetSearch = true) {
         // If this is an alternate, pass the condition and alternate line
         const alternateCondition = r.isAlternate ? r.alternatecondition : null;
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
+
+        // Search result is a conversation, go to conversation card not entry
+        if(cid && !eid) {
+          currentConvoId = cid;
+          jumpToConversationRoot();
+          return;
+        }
+
         navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
         highlightConversationInTree(cid);
 
@@ -2714,7 +2717,13 @@ function performMobileSearch(resetSearch = true) {
 
         const alternateCondition = r.isAlternate ? r.alternatecondition : null;
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
-        navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+        if(cid && !eid) {
+          currentConvoId = cid;
+          jumpToConversationRoot();
+        }
+        else {
+          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+        }
 
         // Close mobile search and return to main view
         closeMobileSearchScreen();
