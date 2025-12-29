@@ -989,7 +989,6 @@ function createFilteredLeafItem(match, searchText, tree) {
 }
 
 async function handleMoreDetailsClicked() {
-  // TODO KA add tracking for if the current entry is a convo or id
   if (moreDetailsEl.open) {
     if(currentConvoId && currentEntryId) {
       await showEntryDetails(
@@ -1999,11 +1998,9 @@ async function navigateToEntry(
   // Show details lazily only when expanded
   if (moreDetailsEl && moreDetailsEl.open) {
     // Clear cache to force reload when switching between alternate views
-    // TODO KA make sure this handles conversations
     if (sameEntry) {
       DB.clearCacheForEntry(convoId, entryId);
     }
-    // TODO KA move this to a shared helper
     if(convoId && entryId) {
       await showEntryDetails(
         convoId,
@@ -2017,6 +2014,7 @@ async function navigateToEntry(
     }
   }
 }
+
 /* Show convo detais */
 async function showConvoDetails(convoId) {
   if(!DB || !entryDetailsEl) return;
@@ -2036,7 +2034,7 @@ async function showConvoDetails(convoId) {
     cancelConditionMain: coreRow.cancelConditionMain,
     taskReward: coreRow.taskReward,
     taskTimed: coreRow.taskTimed,
-    totalSubtasks: coreRow.totalSubtasks, // TODO KA Do we want to move this to this section instead of convo overview?
+    totalSubtasks: coreRow.totalSubtasks,
   }
 
   UI.renderConvoDetails(entryDetailsEl, {

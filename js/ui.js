@@ -194,7 +194,6 @@ export function parseSpeakerFromTitle(title) {
   return title;
 }
 
-// TODO KA implement conversation details
 export function renderConvoDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
@@ -205,7 +204,6 @@ export function renderConvoDetails(containerEl, data) {
   containerEl.appendChild(wrapper);
 }
 
-// TODO KA implement speaker colors and is hidden
 export function renderEntryDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
@@ -404,8 +402,7 @@ function createConvoTable(data) {
     ["Instruction", data.instruction],
     ["Orb Placement", data.placement],
     ["Difficulty", data.difficulty],
-    ["Total Entries", data.totalEntries],
-    ["Total Subtasks", data.totalSubtasks], // TODO conditionally show? or put in task table?
+    ["Total Entries", data.totalEntries]
   ];
 
   section.appendChild(buildTable(rows));
