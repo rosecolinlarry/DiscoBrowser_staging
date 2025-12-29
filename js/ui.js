@@ -199,7 +199,9 @@ export function renderConvoDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
   wrapper.appendChild(createConvoTable(data));
-  // wrapper.appendChild(createConvoMetaTable(data));
+  if(data.type == 'task') {
+    wrapper.appendChild(createTaskTable(data.taskDetails));
+  }
   containerEl.appendChild(wrapper);
 }
 
@@ -403,7 +405,7 @@ function createConvoTable(data) {
     ["Orb Placement", data.placement],
     ["Difficulty", data.difficulty],
     ["Total Entries", data.totalEntries],
-    ["Total Subtasks", data.totalSubtasks], // TODO KA show these
+    ["Total Subtasks", data.totalSubtasks], // TODO conditionally show? or put in task table?
   ];
 
   section.appendChild(buildTable(rows));
@@ -411,21 +413,15 @@ function createConvoTable(data) {
 }
 
 function createTaskTable(data) {
-  const section = createDetailsSectionHeader("Task");
-  // displayConditionMain
-  // doneConditionMain
-  // cancelConditionMain
-  // taskReward
-  // taskTimed
-  // totalSubtasks
+  const section = createDetailsSectionHeader("Task Details");
+
   const rows = [
-    ["Conversation Id", data.convoId],
-    ["Conversation Title", data.conversationTitle],
-    ["Description", data.conversationDescription],
-    ["Actor Id", data.conversationActorId],
-    ["Actor name", data.conversationActorName],
-    ["Conversant Id", data.conversationConversantId],
-    ["Conversant name", data.conversationConversantName],
+    ["Display Condition", data.displayConditionMain],
+    ["Done Condition", data.doneConditionMain],
+    ["Cancel Condition", data.cancelConditionMain],
+    ["Reward", data.taskReward],
+    ["Is Timed", data.taskTimed ? 'Timed' : 'Not Timed'],
+    ["Total Subtasks", data.totalSubtasks]
   ];
 
   section.appendChild(buildTable(rows));

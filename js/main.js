@@ -2030,6 +2030,15 @@ async function showConvoDetails(convoId) {
   const convoActor= DB.getActorNameById(coreRow.actor);
   const convoConversantActor = DB.getActorNameById(coreRow.conversant);
 
+  let taskDetails = {
+    displayConditionMain: coreRow.displayConditionMain,
+    doneConditionMain: coreRow.doneConditionMain,
+    cancelConditionMain: coreRow.cancelConditionMain,
+    taskReward: coreRow.taskReward,
+    taskTimed: coreRow.taskTimed,
+    totalSubtasks: coreRow.totalSubtasks, // TODO KA Do we want to move this to this section instead of convo overview?
+  }
+
   UI.renderConvoDetails(entryDetailsEl, {
     convoId: coreRow.id,
     conversationTitle: coreRow.title,
@@ -2051,6 +2060,7 @@ async function showConvoDetails(convoId) {
     difficulty: coreRow.difficulty,
     totalEntries: coreRow.totalEntries,
     totalSubtasks: coreRow.totalSubtasks,
+    taskDetails: taskDetails
   })
 }
 
