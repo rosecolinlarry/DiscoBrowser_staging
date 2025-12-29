@@ -991,7 +991,6 @@ function createFilteredLeafItem(match, searchText, tree) {
 async function handleMoreDetailsClicked() {
   // TODO KA add tracking for if the current entry is a convo or id
   if (moreDetailsEl.open) {
-    console.log(`handleMoreDetailsClicked: ${currentConvoId}:${currentEntryId}`)
     if(currentConvoId && currentEntryId) {
       await showEntryDetails(
         currentConvoId,
@@ -1786,9 +1785,7 @@ async function jumpToHistoryPoint(targetIndex) {
 
     // Update the UI
     const coreRow = DB.getEntry(currentConvoId, currentEntryId);
-    const title = coreRow
-      ? coreRow.title
-      : `(line ${currentConvoId}:${currentEntryId})`;
+    const title = coreRow?.title;
     const dialoguetext = coreRow ? coreRow.dialoguetext : "";
 
     // Get conversation type
@@ -1815,8 +1812,6 @@ async function jumpToHistoryPoint(targetIndex) {
 
     // Show details if expanded
     if (moreDetailsEl && moreDetailsEl.open) {
-      // TODO KA add logic to verify this is an entry
-      console.log(`jumpToHistoryPoint: ${currentConvoId}:${currentEntryId}`)
       if(currentConvoId && currentEntryId) {
         await showEntryDetails(currentConvoId, currentEntryId);
       }
@@ -2005,7 +2000,6 @@ async function navigateToEntry(
   if (moreDetailsEl && moreDetailsEl.open) {
     // Clear cache to force reload when switching between alternate views
     // TODO KA make sure this handles conversations
-    console.log(`navigateToEntry: ${convoId}:${entryId}`)
     if (sameEntry) {
       DB.clearCacheForEntry(convoId, entryId);
     }
@@ -2047,16 +2041,17 @@ async function showConvoDetails(convoId) {
     type: coreRow.type,
     isHidden: coreRow.isHidden,
     totalEntries: coreRow.totalEntries,
+    onUse: coreRow.onUse,
+    overrideDialogueCondition: coreRow.overrideDialogueCondition,
+    alternateOrbText: coreRow.alternateOrbText,
+    checkType: coreRow.checkType,
+    condition: coreRow.condition,
+    instruction: coreRow.instruction,
+    placement: coreRow.placement,
+    difficulty: coreRow.difficulty,
+    totalEntries: coreRow.totalEntries,
+    totalSubtasks: coreRow.totalSubtasks,
   })
-
-  
-  // id, title, onUse, overrideDialogueCondition, alternateOrbText
-  // , checkType, condition, instruction
-  // , placement, difficulty, description, actor, conversant
-  // , displayConditionMain, doneConditionMain, cancelConditionMain, taskReward, taskTimed
-  // , type, isHidden, totalEntries, totalSubtasks
-
-  console.log(`showConvoDetails: ${convoId}`)
 }
 
 /* Show entry details (optimized) */
@@ -2137,9 +2132,19 @@ async function showEntryDetails(
     selectedAlternateLine: selectedAlternateLine,
     originalDialogueText: coreRow.dialoguetext,
     isHidden: coreRow.isHidden,
-    type: convoRow.type, // TODO KA Add this
-    isHidden: convoRow.isHidden, // TODO KA Add this
-    totalEntries: convoRow.totalEntries, // TODO KA Add this
+    type: convoRow.type,
+    isHidden: convoRow.isHidden,
+    totalEntries: convoRow.totalEntries,
+    onUse: convoRow.onUse,
+    overrideDialogueCondition: convoRow.overrideDialogueCondition,
+    alternateOrbText: convoRow.alternateOrbText,
+    checkType: convoRow.checkType,
+    condition: convoRow.condition,
+    instruction: convoRow.instruction,
+    placement: convoRow.placement,
+    difficulty: convoRow.difficulty,
+    totalEntries: convoRow.totalEntries,
+    totalSubtasks: convoRow.totalSubtasks,
     onNavigate: navigateToEntry,
   };
 

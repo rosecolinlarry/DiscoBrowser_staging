@@ -21,7 +21,14 @@ function processExternalLinks(element) {
 export function createCardItem(titleText, convoId, entryId, contentText, allowHtml = false, convoType = null) {
   convoId = getParsedIntOrDefault(convoId, null)
   entryId = getParsedIntOrDefault(entryId, null)
-  const titleId = `${convoId || ""}:${entryId || ""}`
+  // Result card id in title
+  let titleId = "";
+  if(convoId && entryId) {
+    titleId = `${entryId}.`
+  }
+  else if(convoId) {
+    titleId = `${convoId}.`
+  }
   titleText = parseSpeakerFromTitle(getStringOrDefault(titleText))
   titleText = `${titleId} ${titleText}`
   contentText = getStringOrDefault(contentText)
@@ -45,7 +52,11 @@ export function createCardItem(titleText, convoId, entryId, contentText, allowHt
   metaDiv.className = 'result-meta card-meta';
   const idSpan = document.createElement('span');
   idSpan.classList.add('muted-text', 'small-text')
-  idSpan.textContent = `${convoId || ''}:${entryId || ''}`;
+  idSpan.textContent = `${convoId}`;
+  // Muted text in top right corner of card. Includes both convo and entry id
+  if(entryId) {
+    idSpan.textContent += `:${entryId}`;
+  }
   metaDiv.appendChild(idSpan);
 
   // Type badge (if non-flow)
@@ -364,7 +375,7 @@ function createEntryTable(data) {
     ["Entry Title", data.title],
     ["Entry Actor Id", data.actorId],
     ["Entry Actor Name", data.actorName],
-    ["Entry Is Hidden", data.isHidden],
+    ["Entry Is Hidden", data.isHidden ? 'Hidden' : 'Visible'],
   ];
 
   tableDiv.appendChild(buildTable(rows));
@@ -382,8 +393,17 @@ function createConvoTable(data) {
     ["Conversant Id", data.conversationConversantId],
     ["Conversant name", data.conversationConversantName],
     ["Conversation Type", data.type],
-    ["Conversation Is Hidden", data.isHidden],
+    ["Conversation Is Hidden", data.isHidden ? 'Hidden' : 'Visible'],
+    ["On Use", data.onUse],
+    ["Override Dialogue Condition", data.overrideDialogueCondition],
+    ["Alternate Orb Text", data.alternateOrbText],
+    ["Check Type", data.checkType],
+    ["Conversation Condition", data.condition],
+    ["Instruction", data.instruction],
+    ["Orb Placement", data.placement],
+    ["Difficulty", data.difficulty],
     ["Total Entries", data.totalEntries],
+    ["Total Subtasks", data.totalSubtasks], // TODO KA show these
   ];
 
   section.appendChild(buildTable(rows));
@@ -392,21 +412,6 @@ function createConvoTable(data) {
 
 function createTaskTable(data) {
   const section = createDetailsSectionHeader("Task");
-  
-  // type
-  // isHidden
-  // totalEntries
-
-  // id
-  // title
-  // onUse
-  // overrideDialogueCondition
-  // alternateOrbText
-  // checkType
-  // condition
-  // instruction
-  // placement
-  // difficulty
   // displayConditionMain
   // doneConditionMain
   // cancelConditionMain
@@ -465,10 +470,13 @@ function createPlaceholderItem() {
   return item;
 }
 
-function buildTable(rows) {
+function buildTable(rows, hideNone = true) {
   const t = document.createElement("table");
   t.className = "details-table";
   rows.forEach(([label, value]) => {
+    if(hideNone && !value) {
+      return;
+    }
     const tr = document.createElement("tr");
     const th = document.createElement("th");
     const td = document.createElement("td");

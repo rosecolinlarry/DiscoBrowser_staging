@@ -441,13 +441,9 @@ export function searchDialogues(
     if (dialoguesConditions.length > 0) {
       dialoguesWhere = `${dialoguesConditions.join(
         " AND "
-      )} AND type IN ('orb', 'task')`;
-    } else {
-      dialoguesWhere = `type IN ('orb', 'task')`;
-    }
-  } else {
-    dialoguesWhere = `type IN ('orb', 'task')`;
-  }
+      )}`;
+    } 
+  } 
 
   // Handle multiple actor IDs for dialogues
   if (actorIds) {
