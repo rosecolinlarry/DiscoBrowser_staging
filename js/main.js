@@ -5,7 +5,8 @@ import { buildTitleTree, renderTree } from "./treeBuilder.js";
 import { $ } from "./ui.js";
 import * as UI from "./ui.js";
 import { injectIconTemplates } from "./icons.js";
-import { injectUserSettingsTemplate, setCurrentUserSettings, loadSettingsFromStorage, saveSettingsToStorage } from "./userSettings.js";
+import { injectUserSettingsTemplate, setCurrentUserSettings, resetCurrentUserSettings, loadSettingsFromStorage, saveSettingsToStorage, updateCurrentUserSettings} from "./userSettings.js";
+import * as appSettings from "./userSettings.js";
 
 // Inject user settings template as soon as the module loads
 injectUserSettingsTemplate();
@@ -158,22 +159,12 @@ let isHandlingPopState = false;
 // Browser Grid
 const browserGrid = $("browser");
 
-// Settings state
-const SETTINGS_STORAGE_KEY = "discobrowser_settings";
-let appSettings = {
-  resetDesktopLayout: false,
-  disableColumnResizing: false,
-  showHidden: false,
-  turnOffAnimations: false,
-  alwaysShowMoreDetails: false,
-};
-
-const defaultColumns = "352px 1fr 280px";
-const STORAGE_KEY = "discobrowser_grid_columns";
+export const defaultColumns = "352px 1fr 280px";
+export const STORAGE_KEY = "discobrowser_grid_columns";
 
 function getConversationsForTree() {
   const allConvos = DB.getAllConversations();
-  if (appSettings.showHidden) {
+  if (appSettings.showHidden()) {
     // Also include hidden conversations
     const hiddenConvos = DB.execRows(
       `SELECT id, title, type, isHidden FROM conversations WHERE isHidden == 1 ORDER BY title;`
@@ -191,9 +182,10 @@ function getConversationsForTree() {
 }
 
 
-function applySettings() {
+export function applySettings() {
   // Apply animations toggle
   updateAnimationsToggle();
+  updateHandlePositions();
   updateResizeHandles();
   // Apply column resizing toggle - handled in initializeResizableGrid
   // Apply show hidden toggle - handled when building tree
@@ -201,7 +193,7 @@ function applySettings() {
 }
 
 function updateAnimationsToggle() {
-  if (appSettings.turnOffAnimations) {
+  if (appSettings?.turnOffAnimations()) {
     document.body.classList.add("animations-disabled");
   } else {
     document.body.classList.remove("animations-disabled");
@@ -209,7 +201,6 @@ function updateAnimationsToggle() {
 }
 
 function openSettingsModal(e) {
-    e.stopPropagation();
     setCurrentUserSettings();
     settingsModalOverlay.style.display = "flex";
 }
@@ -244,32 +235,11 @@ function setupSettingsModal() {
   // Handle save settings
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener("click", () => {
-      // Update settings from checkbox values
-      appSettings.resetDesktopLayout =
-        resetDesktopLayoutCheckbox?.checked || false;
-      appSettings.disableColumnResizing =
-        disableColumnResizingCheckbox?.checked || false;
-      appSettings.alwaysShowMoreDetails =
-        alwaysShowMoreDetailsCheckbox?.checked || false;
-      appSettings.showHidden = showHiddenCheckbox?.checked || false;
-      appSettings.turnOffAnimations =
-        turnOffAnimationsCheckbox?.checked || false;
 
       // Apply settings
+      updateCurrentUserSettings();
       applySettings();
       saveSettingsToStorage();
-
-      // Handle reset layout if checked
-      if (appSettings.resetDesktopLayout) {
-        browserGrid.style.gridTemplateColumns = defaultColumns;
-        updateHandlePositions();
-        localStorage.removeItem(STORAGE_KEY);
-        appSettings.resetDesktopLayout = false;
-        resetDesktopLayoutCheckbox.checked = false;
-      }
-
-      // Update resize handles visibility/functionality
-      updateResizeHandles();
 
       // Rebuild tree to reflect hidden/title settings
       const convos = getConversationsForTree();
@@ -280,22 +250,15 @@ function setupSettingsModal() {
       }
 
       // Save and close modal
-      saveSettingsToStorage(appSettings);
       settingsModalOverlay.style.display = "none";
     });
   }
 
-  // Restore default settings
+  // Restore default settings and updates checkbox values.
+  // Does not immediately save, so user can backout and keep the original settings.
   if (restoreDefaultSettingsBtn) {
     restoreDefaultSettingsBtn.addEventListener("click", () => {
-      appSettings = {
-        resetDesktopLayout: false,
-        disableColumnResizing: false,
-        showHidden: false,
-        turnOffAnimations: false,
-        alwaysShowMoreDetails: false,
-      };
-      setCurrentUserSettings();
+      resetCurrentUserSettings();
     });
   }
 }
@@ -305,7 +268,7 @@ function updateResizeHandles() {
   const rightHandle = document.querySelector(".resize-handle-right");
 
   if (
-    appSettings.disableColumnResizing ||
+    appSettings?.disableColumnResizing() ||
     mobileMediaQuery.matches ||
     tabletMediaQuery.matches
   ) {
@@ -377,12 +340,11 @@ function setUpChatLogEvents() {
 async function boot() {
   // Initialize icons when DOM is ready
   document.addEventListener("DOMContentLoaded", initializeIcons);
-
-  setUpMediaQueries();
-
   // Load settings from localStorage
   loadSettingsFromStorage();
   applySettings();
+
+  setUpMediaQueries();
 
   const SQL = await loadSqlJs();
   await DB.initDatabase(SQL, "db/discobase.sqlite3");
@@ -555,7 +517,7 @@ function initializeResizableGrid() {
   updateHandlePositions();
 
   // Apply disabled state if column resizing is disabled
-  if (appSettings.disableColumnResizing) {
+  if (appSettings.disableColumnResizing()) {
     leftHandle.classList.add("disabled");
     rightHandle.classList.add("disabled");
   }
@@ -568,7 +530,7 @@ function initializeResizableGrid() {
 function setUpResizeHandleLeft(leftHandle) {
   // Left handle: resize convo and entries sections
   leftHandle.addEventListener("mousedown", (e) => {
-    if (appSettings.disableColumnResizing) return;
+    if (appSettings.disableColumnResizing()) return;
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
@@ -604,7 +566,7 @@ function setUpResizeHandleLeft(leftHandle) {
 function setUpResizeHandleRight(rightHandle) {
   // Right handle: resize entries and history sections
   rightHandle.addEventListener("mousedown", (e) => {
-    if (appSettings.disableColumnResizing) return;
+    if (appSettings.disableColumnResizing()) return;
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
@@ -1502,7 +1464,7 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   }
 
   // Auto-open More Details if setting enabled
-  if (moreDetailsEl && appSettings.alwaysShowMoreDetails) {
+  if (moreDetailsEl && appSettings.alwaysShowMoreDetails()) {
     moreDetailsEl.open = true;
     moreDetailsEl.style.display = "block";
   }
@@ -1526,7 +1488,7 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
     currentEntryContainerEl.classList.remove("expanded");
   }
 
-  const rows = DB.getEntriesForConversation(convoId, appSettings.showHidden);
+  const rows = DB.getEntriesForConversation(convoId, appSettings.showHidden());
   const filtered = rows.filter(
     (r) => (r.title || "").toLowerCase() !== "start"
   );
@@ -1867,7 +1829,7 @@ async function navigateToEntry(
   }
 
   // Auto-open More Details if setting enabled
-  if (moreDetailsEl && appSettings.alwaysShowMoreDetails) {
+  if (moreDetailsEl && appSettings.alwaysShowMoreDetails()) {
     moreDetailsEl.open = true;
     moreDetailsEl.style.display = "block";
   }
@@ -1990,7 +1952,7 @@ async function navigateToEntry(
 async function showConvoDetails(convoId) {
   if(!DB || !entryDetailsEl) return;
 
-  const coreRow = DB.getConversationById(convoId, appSettings.showHidden);
+  const coreRow = DB.getConversationById(convoId, appSettings.showHidden());
 
   if(!coreRow) {
     entryDetailsEl.textContent = "(not found)"
@@ -2200,7 +2162,7 @@ function searchDialogues(q, resetSearch = true) {
       currentSearchOffset,
       undefined, // conversationIds
       wholeWordsCheckbox?.checked || false, // wholeWords
-      appSettings.showHidden
+      appSettings.showHidden()
     );
 
     const { results: res, total } = response;
@@ -2378,7 +2340,7 @@ function loadChildOptions(convoId, entryId) {
     for (const c of children)
       pairs.push({ convoId: c.d_convo, entryId: c.d_id });
 
-    const destRows = DB.getEntriesBulk(pairs, appSettings.showHidden);
+    const destRows = DB.getEntriesBulk(pairs, appSettings.showHidden());
     const destMap = new Map(destRows.map((r) => [`${r.convo}:${r.id}`, r]));
 
     for (const c of children) {
@@ -2673,7 +2635,7 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchOffset,
       undefined, // conversationIds
       mobileWholeWordsCheckbox?.checked || false, // wholeWords
-      appSettings.showHidden
+      appSettings.showHidden()
     );
     const { results, total } = response;
     mobileSearchTotal = total;

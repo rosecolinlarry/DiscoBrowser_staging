@@ -1,4 +1,5 @@
 import { $ } from "./ui.js";
+import { defaultColumns, STORAGE_KEY, applySettings } from "./main.js";
 
 // Settings state
 const SETTINGS_STORAGE_KEY = "discobrowser_settings";
@@ -15,6 +16,14 @@ const saveSettingsBtnId = "saveSettingsBtn";
 
 // Default app settings
 let appSettings = {
+  resetDesktopLayout: false,
+  disableColumnResizing: false,
+  showHidden: false,
+  turnOffAnimations: false,
+  alwaysShowMoreDetails: false,
+};
+
+const DEFAULT_APP_SETTINGS = {
   resetDesktopLayout: false,
   disableColumnResizing: false,
   showHidden: false,
@@ -109,6 +118,35 @@ const template = `
 export function injectUserSettingsTemplate() {
   const container = $("settingsModalOverlay");
   container.innerHTML = template;
+  setUpUserSettingsHandlers();
+}
+
+function setUpUserSettingsHandlers() {
+  const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);
+
+  if(resetDesktopLayoutCheckbox) {
+    resetDesktopLayoutCheckbox.addEventListener("change", setResetDesktopLayout)
+  }
+  const disableColumnResizingCheckbox = $(disableColumnResizingCheckboxId);
+
+  if(disableColumnResizingCheckbox) {
+    disableColumnResizingCheckbox.addEventListener("change", setDisableColumnResizing)
+  }
+  const alwaysShowMoreDetailsCheckbox = $(alwaysShowMoreDetailsCheckboxId);
+
+  if(alwaysShowMoreDetailsCheckbox) {
+    alwaysShowMoreDetailsCheckbox.addEventListener("change", setAlwaysShowMoreDetails)
+  }
+  const showHiddenCheckbox = $(showHiddenCheckboxId);
+
+  if(showHiddenCheckbox) {
+    showHiddenCheckbox.addEventListener("change", setShowHidden)
+  }
+  const turnOffAnimationsCheckbox = $(turnOffAnimationsCheckboxId);
+
+  if(turnOffAnimationsCheckbox) {
+    turnOffAnimationsCheckbox.addEventListener("change", setTurnOffAnimations)
+  }
 }
 
 export function getCurrentUserSettings() {
@@ -116,43 +154,51 @@ export function getCurrentUserSettings() {
   const currentCheckboxValues = {
     resetDesktopLayout: $(resetDesktopLayoutCheckboxId)?.checked ?? false,
     disableColumnResizing: $(disableColumnResizingCheckboxId)?.checked ?? false,
-    showHidden: $(alwaysShowMoreDetailsCheckboxId)?.checked ?? false,
-    turnOffAnimations: $(showHiddenCheckboxId)?.checked ?? false,
-    alwaysShowMoreDetails: $(turnOffAnimationsCheckboxId)?.checked ?? false,
+    alwaysShowMoreDetails: $(alwaysShowMoreDetailsCheckboxId)?.checked ?? false,
+    showHidden: $(showHiddenCheckboxId)?.checked ?? false,
+    turnOffAnimations: $(turnOffAnimationsCheckboxId)?.checked ?? false,
   };
+  console.log('getCurrentUserSettings', currentCheckboxValues)
   return currentCheckboxValues;
 }
 export function updateCurrentUserSettings() {
   // Update settings from checkbox values
+  console.log('updateCurrentUserSettings -> Old', appSettings);
   appSettings = getCurrentUserSettings();
+  console.log('updateCurrentUserSettings -> New', appSettings);
 }
 
-export function setCurrentUserSettings(appSettings) {
+export function setCurrentUserSettings() {
   // Update checkbox values from settings
-  if(!appSettings) {
+  if (!appSettings) {
     // Get app settings from storage
     loadSettingsFromStorage();
   }
-  const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId)
-  if(resetDesktopLayoutCheckbox) {
+  const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);
+  if (resetDesktopLayoutCheckbox) {
     resetDesktopLayoutCheckbox.checked = appSettings?.resetDesktopLayout;
   }
-  const disableColumnResizingCheckbox = $(disableColumnResizingCheckboxId)
-  if(disableColumnResizingCheckbox) {
+  const disableColumnResizingCheckbox = $(disableColumnResizingCheckboxId);
+  if (disableColumnResizingCheckbox) {
     disableColumnResizingCheckbox.checked = appSettings?.disableColumnResizing;
   }
-  const alwaysShowMoreDetailsCheckbox = $(alwaysShowMoreDetailsCheckboxId)
-  if(alwaysShowMoreDetailsCheckbox) {
+  const alwaysShowMoreDetailsCheckbox = $(alwaysShowMoreDetailsCheckboxId);
+  if (alwaysShowMoreDetailsCheckbox) {
     alwaysShowMoreDetailsCheckbox.checked = appSettings?.alwaysShowMoreDetails;
   }
-  const showHiddenCheckbox = $(showHiddenCheckboxId)
-  if(showHiddenCheckbox) {
+  const showHiddenCheckbox = $(showHiddenCheckboxId);
+  if (showHiddenCheckbox) {
     showHiddenCheckbox.checked = appSettings?.showHidden;
   }
-  const turnOffAnimationsCheckbox = $(turnOffAnimationsCheckboxId)
-  if(turnOffAnimationsCheckbox) {
+  const turnOffAnimationsCheckbox = $(turnOffAnimationsCheckboxId);
+  if (turnOffAnimationsCheckbox) {
     turnOffAnimationsCheckbox.checked = appSettings?.turnOffAnimations;
   }
+}
+
+export function resetCurrentUserSettings() {
+  // Update checkbox values to default settings
+  appSettings = DEFAULT_APP_SETTINGS;
 }
 
 export function loadSettingsFromStorage() {
@@ -161,22 +207,89 @@ export function loadSettingsFromStorage() {
     if (stored) {
       const parsed = JSON.parse(stored);
       appSettings = { ...appSettings, ...parsed };
+    console.log(`loadSettingsFromStorage`, appSettings)
       return appSettings;
     }
   } catch (e) {
+    appSettings = DEFAULT_APP_SETTINGS;
     console.error("Failed to load settings from storage", e);
   }
 }
 
-export function saveSettingsToStorage(appSettings) {
+export function saveSettingsToStorage() {
   try {
-    if(!appSettings) {
-      // Get app settings from current checkbox values
-      appSettings = getCurrentUserSettings();
-      updateCurrentUserSettings();
+    console.log(`saveSettingsToStorage`, appSettings)
+    
+    // Layout reset on save
+    const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);
+    if(resetDesktopLayoutCheckbox) {
+      if(resetDesktopLayout()) {
+        const browserGrid = $("browser");
+        browserGrid.style.gridTemplateColumns = defaultColumns;
+        localStorage.removeItem(STORAGE_KEY);
+      }
+      resetDesktopLayoutCheckbox.checked = false;
+      appSettings.resetDesktopLayout = false;
     }
+    
+    applySettings();
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
   } catch (e) {
     console.error("Failed to save settings to storage", e);
   }
+}
+
+export function resetDesktopLayout() {
+  return appSettings?.resetDesktopLayout ?? DEFAULT_APP_SETTINGS?.resetDesktopLayout;
+}
+
+export function disableColumnResizing() {
+  return appSettings?.disableColumnResizing ?? DEFAULT_APP_SETTINGS?.disableColumnResizing;
+}
+export function showHidden() {
+  return appSettings?.showHidden ?? DEFAULT_APP_SETTINGS?.showHidden;
+}
+export function turnOffAnimations() {
+  return appSettings?.turnOffAnimations ?? DEFAULT_APP_SETTINGS?.turnOffAnimations;
+}
+export function alwaysShowMoreDetails() {
+  return appSettings?.alwaysShowMoreDetails ?? DEFAULT_APP_SETTINGS?.alwaysShowMoreDetails;
+}
+
+// TODO KA Reset desktop layout is a little weird because it should really be a button
+export function setResetDesktopLayout(e) {
+  let value = DEFAULT_APP_SETTINGS.resetDesktopLayout;
+  if(e) {
+      value = e.target?.checked ?? value;
+  }
+  appSettings.resetDesktopLayout = value;
+}
+
+export function setDisableColumnResizing(e) {
+  let value = DEFAULT_APP_SETTINGS.disableColumnResizing;
+  if(e) {
+      value = e.target?.checked ?? value;
+  }
+  appSettings.disableColumnResizing = value;
+}
+export function setShowHidden(e) {
+  let value = DEFAULT_APP_SETTINGS.showHidden;
+  if(e) {
+      value = e.target?.checked ?? value;
+  }
+  appSettings.showHidden = value;
+}
+export function setTurnOffAnimations(e) {
+  let value = DEFAULT_APP_SETTINGS.turnOffAnimations;
+  if(e) {
+      value = e.target?.checked ?? value;
+  }
+  appSettings.turnOffAnimations = value;
+}
+export function setAlwaysShowMoreDetails(e) {
+  let value = DEFAULT_APP_SETTINGS.alwaysShowMoreDetails;
+  if(e) {
+      value = e.target?.checked ?? value;
+  }
+  appSettings.alwaysShowMoreDetails = value;
 }
