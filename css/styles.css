@@ -1765,6 +1765,7 @@ a {
     flex-shrink: 0;
   }
 
+  .search-count,
   .mobile-search-count {
     padding: 8px 16px;
     font-size: 13px;
@@ -2499,6 +2500,21 @@ a {
   white-space: nowrap;
 }
 
+.entry-list-header-bar {
+  display: flex;
+  justify-content: flex-start;
+  gap: 4px;
+  align-content: center;
+  align-items: center;
+  
+  h4 {
+    margin: 4px 0 4px 0;
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    font-weight: 600;
+  }
+}
 .entry-list {
   display: flex;
   flex-direction: column;
@@ -2508,11 +2524,6 @@ a {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-
-  h4 {
-    margin: 4px 0 4px 0;
-    font-weight: 600;
-  }
 }
 
 .entry-list .scrolling-card.compact {

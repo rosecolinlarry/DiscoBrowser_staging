@@ -134,11 +134,7 @@
         </label>
       </div>
 
-      <div
-        id="mobileSearchCount"
-        class="mobile-search-count"
-        style="display: none"
-      ></div>
+      <div class="search-count"></div>
 
       <div class="loader hidden" id="mobileSearchLoader"></div>
 
@@ -436,12 +432,14 @@
               ></div>
             </button>
           </div>
-          <div class="toggle-wrapper">
-            <label class="toggle-input-label">
-              <input type="checkbox" id="wholeWordsCheckbox" />
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">Whole Words</span>
-            </label>
+          <div id="wholeWordsButtonWrapper">
+            <div id="wholeWordsButton" class="toggle-wrapper">
+              <label class="toggle-input-label">
+                <input type="checkbox" id="wholeWordsCheckbox" />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Whole Words</span>
+              </label>
+            </div>
           </div>
           <div id="actor-filter-wrapper" class="filter-dropdown-wrapper">
             <button
@@ -449,8 +447,10 @@
               class="filter-dropdown-button"
               type="button"
             >
-            <div id="actorFilterLabelWrapper">
-              <span id="actorFilterLabel" class="filter-label">All Actors</span>
+              <div id="actorFilterLabelWrapper">
+                <span id="actorFilterLabel" class="filter-label"
+                  >All Actors</span
+                >
               </div>
               <span class="dropdown-arrow">
                 <div
@@ -524,16 +524,20 @@
               </div>
             </div>
           </div>
-          <button
-            id="clearFiltersBtn"
-            type="button"
-            class="button-outline"
-            title="Clear all filters"
-          >
-            Clear Filters
-          </button>
+          <div class="clearFiltersBtnWrapper">
+            <button
+              id="clearFiltersBtn"
+              type="button"
+              class="button-outline"
+              title="Clear all filters"
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
-        <div id="searchLoader" class="loader hidden"></div>
+        <div id="searchLoaderWrapper">
+          <div id="searchLoader" class="loader hidden"></div>
+        </div>
         <div class="muted-text mobile-hide"></div>
       </section>
       <!-- #endregion -->
@@ -804,7 +808,12 @@
               </details>
             </div>
             <div class="entry-list">
-              <h4 id="entryListHeader">Next Dialogue Options:</h4>
+              <div class="entry-list-header-bar">
+                <div>
+                  <h4 id="entryListHeader">Next Dialogue Options:</h4>
+                </div>
+                <div class="search-count"></div>
+              </div>
               <div id="entryList" class="scrolling-card">
                 (select a conversation)
               </div>
@@ -904,8 +913,7 @@
     </div>
     <!-- #endregion -->
     <!-- #region Settings Modal -->
-    <div id="settingsModalOverlay" class="modal-overlay">
-    </div>
+    <div id="settingsModalOverlay" class="modal-overlay"></div>
     <!-- #endregion -->
     <script type="module" src="js/main.js"></script>
   </body>
