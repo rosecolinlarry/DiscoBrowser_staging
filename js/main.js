@@ -1,12 +1,47 @@
 // main.js - entry point (use <script type="module"> in index.html)
 import { loadSqlJs } from "./sqlLoader.js";
-import * as DB from "./db.js";
+import {
+  cacheEntry,
+  clearCacheForEntry,
+  execRows,
+  getActorNameById,
+  getAllConversations,
+  getAlternates,
+  getCachedEntry,
+  getChecks,
+  getConversationById,
+  getDistinctActors,
+  getEntriesBulk,
+  getEntriesForConversation,
+  getEntry,
+  getParentsChildren,
+  initDatabase,
+  searchDialogues as DBsearchDialogues,
+} from "./db.js";
 import { buildTitleTree, renderTree } from "./treeBuilder.js";
-import { $ } from "./ui.js";
-import * as UI from "./ui.js";
+import {
+  $,
+  getParsedIntOrDefault,
+  highlightTerms,
+  renderConversationOverview,
+  getStringOrDefault,
+  createCardItem,
+  renderCurrentEntry,
+  parseSpeakerFromTitle,
+  appendHistoryItem,
+  renderConvoDetails,
+  renderEntryDetails,
+} from "./ui.js";
 import { injectIconTemplates } from "./icons.js";
-import { injectUserSettingsTemplate, initializeUserSettings, applySettings, openSettingsModal } from "./userSettings.js";
-import * as appSettings from "./userSettings.js";
+import {
+  injectUserSettingsTemplate,
+  initializeUserSettings,
+  applySettings,
+  openSettings,
+  showHidden,
+  disableColumnResizing,
+  alwaysShowMoreDetails
+} from "./userSettings.js";
 
 const searchInput = $("search");
 const searchBtn = $("searchBtn");
@@ -156,10 +191,10 @@ injectUserSettingsTemplate();
 injectIconTemplates();
 
 export function getConversationsForTree() {
-  const allConvos = DB.getAllConversations();
-  if (appSettings.showHidden()) {
+  const allConvos = getAllConversations();
+  if (showHidden()) {
     // Also include hidden conversations
-    const hiddenConvos = DB.execRows(
+    const hiddenConvos = execRows(
       `SELECT id, title, type, isHidden FROM conversations WHERE isHidden == 1 ORDER BY title;`
     );
     const merged = [...allConvos, ...hiddenConvos];
@@ -175,8 +210,8 @@ export function getConversationsForTree() {
 }
 
 function setupMobileNavMenu() {
-  mobileNavHome.addEventListener('click', goBackHomeWithBrowserHistory);
-  mobileNavSettings.addEventListener('click', openSettingsModal);
+  mobileNavHome.addEventListener("click", goBackHomeWithBrowserHistory);
+  mobileNavSettings.addEventListener("click", openSettings);
   mobileNavSearch.addEventListener("click", openMobileSearchScreen);
 }
 
@@ -185,7 +220,7 @@ export function updateResizeHandles() {
   const rightHandle = document.querySelector(".resize-handle-right");
 
   if (
-    appSettings?.disableColumnResizing() ||
+    disableColumnResizing() ||
     mobileMediaQuery.matches ||
     tabletMediaQuery.matches
   ) {
@@ -218,16 +253,16 @@ function setUpMediaQueries() {
 function setUpConvoListEvents() {
   if (!convoListEl) return;
   // event delegation: clicks in convoList
-  convoListEl.addEventListener("click", async (e) =>  {
+  convoListEl.addEventListener("click", async (e) => {
     const target = e.target.closest("[data-convo-id]");
     if (target) {
-      const convoId = UI.getParsedIntOrDefault(target.dataset.convoId);
+      const convoId = getParsedIntOrDefault(target.dataset.convoId);
       await loadEntriesForConversation(convoId, true);
       return;
     }
     const topLabel = e.target.closest(".label");
     if (topLabel && topLabel.dataset.singleConvo) {
-      const convoId = UI.getParsedIntOrDefault(topLabel.dataset.singleConvo);
+      const convoId = getParsedIntOrDefault(topLabel.dataset.singleConvo);
       await loadEntriesForConversation(convoId, true);
     }
   });
@@ -259,7 +294,7 @@ async function boot() {
   setUpMediaQueries();
 
   const SQL = await loadSqlJs();
-  await DB.initDatabase(SQL, "db/discobase.sqlite3");
+  await initDatabase(SQL, "db/discobase.sqlite3");
 
   // load conversations & populate actor dropdown
   const convos = getConversationsForTree();
@@ -366,8 +401,7 @@ async function boot() {
 function updateResizableGrid() {
   if (!browserGrid || !desktopMediaQuery.matches) {
     browserGrid.style.removeProperty("gridTemplateColumns");
-  }
-  else {
+  } else {
     initializeResizableGrid();
   }
 }
@@ -429,7 +463,7 @@ function initializeResizableGrid() {
   updateHandlePositions();
 
   // Apply disabled state if column resizing is disabled
-  if (appSettings.disableColumnResizing()) {
+  if (disableColumnResizing()) {
     leftHandle.classList.add("disabled");
     rightHandle.classList.add("disabled");
   }
@@ -442,7 +476,7 @@ function initializeResizableGrid() {
 function setUpResizeHandleLeft(leftHandle) {
   // Left handle: resize convo and entries sections
   leftHandle.addEventListener("mousedown", (e) => {
-    if (appSettings.disableColumnResizing()) return;
+    if (disableColumnResizing()) return;
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
@@ -478,7 +512,7 @@ function setUpResizeHandleLeft(leftHandle) {
 function setUpResizeHandleRight(rightHandle) {
   // Right handle: resize entries and history sections
   rightHandle.addEventListener("mousedown", (e) => {
-    if (appSettings.disableColumnResizing()) return;
+    if (disableColumnResizing()) return;
     e.preventDefault();
     const startX = e.clientX;
     const startColumns = (
@@ -613,7 +647,7 @@ function setToggleIcon(toggleEl, expanded) {
   if (toggleEl.dataset && toggleEl.dataset.canToggle === "false") return;
 
   const templateId = "icon-chevron-right-template";
-  const template = document.getElementById(templateId);
+  const template = $(templateId);
 
   const clone = template.content.cloneNode(true);
   const svg = clone.querySelector("svg");
@@ -734,7 +768,7 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
   // Check if this node has conversation IDs
   if (node.convoIds && node.convoIds.length > 0) {
     node.convoIds.forEach((cid) => {
-      const convo = DB.getConversationById(cid);
+      const convo = getConversationById(cid);
       if (!convo) return;
 
       // Type filter
@@ -789,7 +823,7 @@ function createFilteredLeafItem(match, searchText, tree) {
   // Highlight matching text (supports quoted phrases and multi-word queries)
   if (searchText) {
     const hasQuotedPhrases = /"[^"]+"/g.test(searchText);
-    titleSpan.innerHTML = UI.highlightTerms(
+    titleSpan.innerHTML = highlightTerms(
       match?.title || "",
       searchText,
       hasQuotedPhrases
@@ -837,15 +871,14 @@ function createFilteredLeafItem(match, searchText, tree) {
 
 async function handleMoreDetailsClicked() {
   if (moreDetailsEl.open) {
-    if(currentConvoId && currentEntryId) {
+    if (currentConvoId && currentEntryId) {
       await showEntryDetails(
         currentConvoId,
         currentEntryId,
         currentAlternateCondition,
         currentAlternateLine
       );
-    }
-    else if(currentConvoId) {
+    } else if (currentConvoId) {
       await showConvoDetails(currentConvoId);
     }
     // Make dialogue options compact when More Details is expanded
@@ -925,7 +958,7 @@ function setUpFilterDropdowns() {
 }
 
 async function populateActorDropdown() {
-  allActors = DB.getDistinctActors();
+  allActors = getDistinctActors();
   filteredActors = [...allActors];
 
   // Search filter
@@ -1305,7 +1338,7 @@ export function highlightConversationInTree(convoId) {
 
 /* Load entries listing for conversation */
 async function loadEntriesForConversation(convoId, resetHistory = false) {
-  convoId = UI.getParsedIntOrDefault(convoId);
+  convoId = getParsedIntOrDefault(convoId);
 
   // If we're coming from home (no current conversation), ensure home state exists
   if (!isHandlingPopState && currentConvoId === null) {
@@ -1335,8 +1368,8 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
 
   // Hide homepage, show dialogue content
 
-  const homePageContainer = document.getElementById("homePageContainer");
-  const dialogueContent = document.getElementById("dialogueContent");
+  const homePageContainer = $("homePageContainer");
+  const dialogueContent = $("dialogueContent");
 
   if (homePageContainer) {
     homePageContainer.style.display = "none";
@@ -1367,9 +1400,9 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   updateMobileNavButtons();
 
   // Show conversation metadata instead of entry details
-  const conversation = DB.getConversationById(convoId);
+  const conversation = getConversationById(convoId);
   if (conversation) {
-    UI.renderConversationOverview(entryOverviewEl, conversation);
+    renderConversationOverview(entryOverviewEl, conversation);
   }
 
   // Make sure current entry container is visible
@@ -1378,14 +1411,14 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   }
 
   // Auto-open More Details if setting enabled
-  if (moreDetailsEl && appSettings.alwaysShowMoreDetails()) {
+  if (moreDetailsEl && alwaysShowMoreDetails()) {
     moreDetailsEl.open = true;
     moreDetailsEl.style.display = "block";
   }
 
   // Show details lazily only when expanded
   if (moreDetailsEl && moreDetailsEl.open) {
-    if(convoId) {
+    if (convoId) {
       await showConvoDetails(convoId);
     }
   }
@@ -1402,7 +1435,7 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
     currentEntryContainerEl.classList.remove("expanded");
   }
 
-  const rows = DB.getEntriesForConversation(convoId, appSettings.showHidden());
+  const rows = getEntriesForConversation(convoId, showHidden());
   const filtered = rows.filter(
     (r) => (r.title || "").toLowerCase() !== "start"
   );
@@ -1432,11 +1465,11 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   }
 
   filtered.forEach((r) => {
-    const entryId = UI.getParsedIntOrDefault(r.id);
-    const title = UI.getStringOrDefault(r.title, "(no title)");
+    const entryId = getParsedIntOrDefault(r.id);
+    const title = getStringOrDefault(r.title, "(no title)");
 
     const text = r.dialoguetext || "";
-    const el = UI.createCardItem(title, convoId, entryId, text);
+    const el = createCardItem(title, convoId, entryId, text);
     el.addEventListener("click", () => navigateToEntry(convoId, entryId));
     entryListEl.appendChild(el);
   });
@@ -1562,13 +1595,10 @@ function goToHomeView() {
   if (chatLogEl) {
     chatLogEl.innerHTML = "";
   }
-  if (chatLog) {
-    chatLog.innerHTML = "";
-  }
 
   // Show homepage, hide dialogue content
-  const homePageContainer = document.getElementById("homePageContainer");
-  const dialogueContent = document.getElementById("dialogueContent");
+  const homePageContainer = $("homePageContainer");
+  const dialogueContent = $("dialogueContent");
 
   if (homePageContainer) {
     homePageContainer.style.display = "block";
@@ -1622,28 +1652,35 @@ async function jumpToHistoryPoint(targetIndex) {
   // Get the target entry
   const target = navigationHistory[targetIndex];
   if (target) {
-    const cid = UI.getParsedIntOrDefault(target.convoId);
-    const eid = UI.getParsedIntOrDefault(target.entryId);
+    const cid = getParsedIntOrDefault(target.convoId);
+    const eid = getParsedIntOrDefault(target.entryId);
 
     // Update current state
     currentConvoId = cid;
     currentEntryId = eid;
 
     // Update the UI
-    const coreRow = DB.getEntry(currentConvoId, currentEntryId);
+    const coreRow = getEntry(currentConvoId, currentEntryId);
     const title = coreRow?.title;
     const dialoguetext = coreRow ? coreRow.dialoguetext : "";
 
     // Get conversation type
-    const conversation = DB.getConversationById(currentConvoId);
+    const conversation = getConversationById(currentConvoId);
     const convoType = conversation?.type || "flow";
 
-    UI.renderCurrentEntry(entryOverviewEl, cid, eid, title, dialoguetext, convoType);
+    renderCurrentEntry(
+      entryOverviewEl,
+      cid,
+      eid,
+      title,
+      dialoguetext,
+      convoType
+    );
 
     // Add current entry to history log (non-clickable)
     if (chatLogEl) {
-      const currentTitle = UI.parseSpeakerFromTitle(title) || "(no title)";
-      UI.appendHistoryItem(
+      const currentTitle = parseSpeakerFromTitle(title) || "(no title)";
+      appendHistoryItem(
         chatLogEl,
         `${currentTitle} — #${eid}`,
         dialoguetext,
@@ -1658,11 +1695,10 @@ async function jumpToHistoryPoint(targetIndex) {
 
     // Show details if expanded
     if (moreDetailsEl && moreDetailsEl.open) {
-      if(currentConvoId && currentEntryId) {
+      if (currentConvoId && currentEntryId) {
         await showEntryDetails(currentConvoId, currentEntryId);
-      }
-      else if(currentConvoId && !currentEntryId) {
-        await showConvoDetails(currentConvoId)
+      } else if (currentConvoId && !currentEntryId) {
+        await showConvoDetails(currentConvoId);
       }
     }
   }
@@ -1698,8 +1734,8 @@ async function navigateToEntry(
   selectedAlternateLine = null
 ) {
   // Ensure numeric Ids
-  convoId = UI.getParsedIntOrDefault(convoId);
-  entryId = UI.getParsedIntOrDefault(entryId);
+  convoId = getParsedIntOrDefault(convoId);
+  entryId = getParsedIntOrDefault(entryId);
 
   // Push browser history state (unless we're handling a popstate event)
   if (!isHandlingPopState && addToHistory) {
@@ -1725,8 +1761,8 @@ async function navigateToEntry(
   }
 
   // Hide homepage, show dialogue content (important for mobile when coming from search)
-  const homePageContainer = document.getElementById("homePageContainer");
-  const dialogueContent = document.getElementById("dialogueContent");
+  const homePageContainer = $("homePageContainer");
+  const dialogueContent = $("dialogueContent");
 
   if (homePageContainer) {
     homePageContainer.style.display = "none";
@@ -1743,7 +1779,7 @@ async function navigateToEntry(
   }
 
   // Auto-open More Details if setting enabled
-  if (moreDetailsEl && appSettings.alwaysShowMoreDetails()) {
+  if (moreDetailsEl && alwaysShowMoreDetails()) {
     moreDetailsEl.open = true;
     moreDetailsEl.style.display = "block";
   }
@@ -1796,17 +1832,24 @@ async function navigateToEntry(
   updateBackButtonState();
 
   // Render current entry in the overview section
-  const coreRow = DB.getEntry(convoId, entryId);
+  const coreRow = getEntry(convoId, entryId);
   const title = coreRow ? coreRow.title : `(line ${convoId}:${entryId})`;
   // Use alternate line if provided, otherwise use the original dialogue text
   const dialoguetext =
     selectedAlternateLine || (coreRow ? coreRow.dialoguetext : "");
 
   // Get conversation type
-  const conversation = DB.getConversationById(convoId);
+  const conversation = getConversationById(convoId);
   const convoType = conversation?.type || "flow";
 
-  UI.renderCurrentEntry(entryOverviewEl, convoId, entryId, title, dialoguetext, convoType);
+  renderCurrentEntry(
+    entryOverviewEl,
+    convoId,
+    entryId,
+    title,
+    dialoguetext,
+    convoType
+  );
 
   currentConvoId = convoId;
   currentEntryId = entryId;
@@ -1815,8 +1858,8 @@ async function navigateToEntry(
 
   // Add current entry to history log (non-clickable)
   if (addToHistory && chatLogEl) {
-    const currentTitle = UI.parseSpeakerFromTitle(title) || "(no title)";
-    UI.appendHistoryItem(
+    const currentTitle = parseSpeakerFromTitle(title) || "(no title)";
+    appendHistoryItem(
       chatLogEl,
       `${currentTitle} — #${entryId}`,
       dialoguetext,
@@ -1846,17 +1889,16 @@ async function navigateToEntry(
   if (moreDetailsEl && moreDetailsEl.open) {
     // Clear cache to force reload when switching between alternate views
     if (sameEntry) {
-      DB.clearCacheForEntry(convoId, entryId);
+      clearCacheForEntry(convoId, entryId);
     }
-    if(convoId && entryId) {
+    if (convoId && entryId) {
       await showEntryDetails(
         convoId,
         entryId,
         selectedAlternateCondition,
         selectedAlternateLine
       );
-    }
-    else if(convoId) {
+    } else if (convoId) {
       await showConvoDetails(convoId);
     }
   }
@@ -1864,16 +1906,16 @@ async function navigateToEntry(
 
 /* Show convo detais */
 async function showConvoDetails(convoId) {
-  if(!DB || !entryDetailsEl) return;
+  if (!entryDetailsEl) return;
 
-  const coreRow = DB.getConversationById(convoId, appSettings.showHidden());
+  const coreRow = getConversationById(convoId, showHidden());
 
-  if(!coreRow) {
-    entryDetailsEl.textContent = "(not found)"
+  if (!coreRow) {
+    entryDetailsEl.textContent = "(not found)";
   }
 
-  const convoActor= DB.getActorNameById(coreRow.actor);
-  const convoConversantActor = DB.getActorNameById(coreRow.conversant);
+  const convoActor = getActorNameById(coreRow.actor);
+  const convoConversantActor = getActorNameById(coreRow.conversant);
 
   let taskDetails = {
     displayConditionMain: coreRow.displayConditionMain,
@@ -1882,9 +1924,9 @@ async function showConvoDetails(convoId) {
     taskReward: coreRow.taskReward,
     taskTimed: coreRow.taskTimed,
     totalSubtasks: coreRow.totalSubtasks,
-  }
+  };
 
-  UI.renderConvoDetails(entryDetailsEl, {
+  renderConvoDetails(entryDetailsEl, {
     convoId: coreRow.id,
     conversationTitle: coreRow.title,
     conversationDescription: coreRow.description,
@@ -1905,8 +1947,8 @@ async function showConvoDetails(convoId) {
     difficulty: coreRow.difficulty,
     totalEntries: coreRow.totalEntries,
     totalSubtasks: coreRow.totalSubtasks,
-    taskDetails: taskDetails
-  })
+    taskDetails: taskDetails,
+  });
 }
 
 /* Show entry details (optimized) */
@@ -1916,16 +1958,16 @@ async function showEntryDetails(
   selectedAlternateCondition = null,
   selectedAlternateLine = null
 ) {
-  if (!DB || !entryDetailsEl) return;
+  if (!entryDetailsEl) return;
 
   // Fetch core row early so it can be referenced by cached fallback values
-  const coreRow = DB.getEntry(convoId, entryId);
+  const coreRow = getEntry(convoId, entryId);
 
   // Check cache only if viewing the original (no alternate selected)
   if (!selectedAlternateCondition && !selectedAlternateLine) {
-    const cached = DB.getCachedEntry(convoId, entryId);
+    const cached = getCachedEntry(convoId, entryId);
     if (cached) {
-      UI.renderEntryDetails(entryDetailsEl, {
+      renderEntryDetails(entryDetailsEl, {
         ...cached,
         selectedAlternateCondition: null,
         selectedAlternateLine: null,
@@ -1943,15 +1985,15 @@ async function showEntryDetails(
 
   // Fetch alternates, checks, parents/children
   const alternates =
-    coreRow.hasalts > 0 ? DB.getAlternates(convoId, entryId) : [];
-  const checks = coreRow.hascheck > 0 ? DB.getChecks(convoId, entryId) : [];
-  const { parents, children } = DB.getParentsChildren(convoId, entryId);
+    coreRow.hasalts > 0 ? getAlternates(convoId, entryId) : [];
+  const checks = coreRow.hascheck > 0 ? getChecks(convoId, entryId) : [];
+  const { parents, children } = getParentsChildren(convoId, entryId);
   // Get conversation data
-  const convoRow = DB.getConversationById(convoId) || {};
+  const convoRow = getConversationById(convoId) || {};
   // Get actor
-  const entryActor = DB.getActorNameById(coreRow.actor);
-  const convoActor= DB.getActorNameById(convoRow.actor);
-  const convoConversantActor = DB.getActorNameById(convoRow.conversant);
+  const entryActor = getActorNameById(coreRow.actor);
+  const convoActor = getActorNameById(convoRow.actor);
+  const convoConversantActor = getActorNameById(convoRow.conversant);
   // Get actor names and colors
   let entryActorName = entryActor?.name;
   let convoActorName = convoActor?.name;
@@ -2009,10 +2051,10 @@ async function showEntryDetails(
     const basePayload = { ...payload };
     delete basePayload.selectedAlternateCondition;
     delete basePayload.selectedAlternateLine;
-    DB.cacheEntry(convoId, entryId, basePayload);
+    cacheEntry(convoId, entryId, basePayload);
   }
 
-  UI.renderEntryDetails(entryDetailsEl, payload);
+  renderEntryDetails(entryDetailsEl, payload);
 }
 
 /* Search */
@@ -2040,8 +2082,8 @@ function searchDialogues(q, resetSearch = true) {
     searchLoader?.classList.remove("hidden");
 
     // Hide homepage, show dialogue content for search
-    const homePageContainer = document.getElementById("homePageContainer");
-    const dialogueContent = document.getElementById("dialogueContent");
+    const homePageContainer = $("homePageContainer");
+    const dialogueContent = $("dialogueContent");
 
     if (homePageContainer) {
       homePageContainer.style.display = "none";
@@ -2068,7 +2110,7 @@ function searchDialogues(q, resetSearch = true) {
   isLoadingMore = true;
 
   try {
-    const response = DB.searchDialogues(
+    const response = DBsearchDialogues(
       currentSearchQuery,
       searchResultLimit,
       currentSearchActorIds,
@@ -2076,7 +2118,7 @@ function searchDialogues(q, resetSearch = true) {
       currentSearchOffset,
       undefined, // conversationIds
       wholeWordsCheckbox?.checked || false, // wholeWords
-      appSettings.showHidden()
+      showHidden()
     );
 
     const { results: res, total } = response;
@@ -2086,7 +2128,7 @@ function searchDialogues(q, resetSearch = true) {
     let filteredResults = res;
     if (selectedTypeIds.size > 0 && selectedTypeIds.size < 3) {
       filteredResults = res.filter((r) => {
-        const convo = DB.getConversationById(r.conversationid);
+        const convo = getConversationById(r.conversationid);
         const type = convo ? convo.type || "flow" : "flow";
         return selectedTypeIds.has(type);
       });
@@ -2123,24 +2165,24 @@ function searchDialogues(q, resetSearch = true) {
 
       // For highlighting, if there are quoted phrases, we need special handling
       // Otherwise use the normal query
-      const highlightedTitle = UI.highlightTerms(
+      const highlightedTitle = highlightTerms(
         r.title || "",
         currentSearchQuery,
         hasQuotedPhrases
       );
-      const highlightedText = UI.highlightTerms(
+      const highlightedText = highlightTerms(
         r.dialoguetext || "",
         currentSearchQuery,
         hasQuotedPhrases
       );
 
       // Get conversation type for badge
-      const convo = DB.getConversationById(r.conversationid);
+      const convo = getConversationById(r.conversationid);
       const convoType = convo ? convo.type || "flow" : "flow";
 
-      const div = UI.createCardItem(
+      const div = createCardItem(
         highlightedTitle,
-        UI.getParsedIntOrDefault(r.conversationid),
+        getParsedIntOrDefault(r.conversationid),
         r.id,
         highlightedText,
         true,
@@ -2148,8 +2190,8 @@ function searchDialogues(q, resetSearch = true) {
       );
 
       div.addEventListener("click", () => {
-        const cid = UI.getParsedIntOrDefault(r.conversationid);
-        const eid = UI.getParsedIntOrDefault(r.id);
+        const cid = getParsedIntOrDefault(r.conversationid);
+        const eid = getParsedIntOrDefault(r.id);
 
         // This is a regular flow entry or alternate
         navigationHistory = [{ convoId: cid, entryId: null }];
@@ -2158,7 +2200,7 @@ function searchDialogues(q, resetSearch = true) {
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
         // Search result is a conversation, go to conversation card not entry
-        if(cid && !eid) {
+        if (cid && !eid) {
           currentConvoId = cid;
           jumpToConversationRoot();
           return;
@@ -2248,13 +2290,13 @@ function loadChildOptions(convoId, entryId) {
     entryListHeaderEl.textContent = "Next Dialogue Options";
     entryListEl.innerHTML = "";
 
-    const { children } = DB.getParentsChildren(convoId, entryId);
+    const { children } = getParentsChildren(convoId, entryId);
 
     const pairs = [];
     for (const c of children)
       pairs.push({ convoId: c.d_convo, entryId: c.d_id });
 
-    const destRows = DB.getEntriesBulk(pairs, appSettings.showHidden());
+    const destRows = getEntriesBulk(pairs, showHidden());
     const destMap = new Map(destRows.map((r) => [`${r.convo}:${r.id}`, r]));
 
     for (const c of children) {
@@ -2262,7 +2304,7 @@ function loadChildOptions(convoId, entryId) {
       if (!dest) continue;
       if ((dest.title || "").toLowerCase() === "start") continue;
 
-      const el = UI.createCardItem(
+      const el = createCardItem(
         dest.title,
         c.d_convo,
         c.d_id,
@@ -2541,7 +2583,7 @@ function performMobileSearch(resetSearch = true) {
   isMobileLoadingMore = true;
 
   try {
-    const response = DB.searchDialogues(
+    const response = DBsearchDialogues(
       mobileSearchQuery,
       searchResultLimit,
       mobileSearchActorIds,
@@ -2549,7 +2591,7 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchOffset,
       undefined, // conversationIds
       mobileWholeWordsCheckbox?.checked || false, // wholeWords
-      appSettings.showHidden()
+      showHidden()
     );
     const { results, total } = response;
     mobileSearchTotal = total;
@@ -2565,7 +2607,7 @@ function performMobileSearch(resetSearch = true) {
     // Filter by type if not "all"
     if (!mobileSelectedTypes.has("all")) {
       filteredResults = filteredResults.filter((r) => {
-        const convo = DB.getConversationById(r.conversationid);
+        const convo = getConversationById(r.conversationid);
         return convo && mobileSelectedTypes.has(convo.type || "flow");
       });
     }
@@ -2604,24 +2646,24 @@ function performMobileSearch(resetSearch = true) {
       // Check if query contains any quoted phrases
       const hasQuotedPhrases = /"[^"]+"/g.test(mobileSearchQuery);
 
-      const highlightedTitle = UI.highlightTerms(
+      const highlightedTitle = highlightTerms(
         r.title || "",
         mobileSearchQuery,
         hasQuotedPhrases
       );
-      const highlightedText = UI.highlightTerms(
+      const highlightedText = highlightTerms(
         r.dialoguetext || "",
         mobileSearchQuery,
         hasQuotedPhrases
       );
 
       // Get conversation type for badge
-      const convo = DB.getConversationById(r.conversationid);
+      const convo = getConversationById(r.conversationid);
       const convoType = convo ? convo.type || "flow" : "flow";
 
-      const div = UI.createCardItem(
+      const div = createCardItem(
         highlightedTitle,
-        UI.getParsedIntOrDefault(r.conversationid),
+        getParsedIntOrDefault(r.conversationid),
         r.id,
         highlightedText,
         true,
@@ -2629,16 +2671,15 @@ function performMobileSearch(resetSearch = true) {
       );
 
       div.addEventListener("click", () => {
-        const cid = UI.getParsedIntOrDefault(r.conversationid);
+        const cid = getParsedIntOrDefault(r.conversationid);
         const eid = r.id;
 
         const alternateCondition = r.isAlternate ? r.alternatecondition : null;
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
-        if(cid && !eid) {
+        if (cid && !eid) {
           currentConvoId = cid;
           jumpToConversationRoot();
-        }
-        else {
+        } else {
           navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
         }
 
@@ -3086,7 +3127,7 @@ function setupMobileTypeFilter() {
 function initializeIcons() {
   // Helper function to clone and size an icon template
   function getIcon(templateId, width = "30px", height = "30px") {
-    const template = document.getElementById(templateId);
+    const template = $(templateId);
     const clone = template.content.cloneNode(true);
     const svg = clone.querySelector("svg");
     svg.setAttribute("width", width);
@@ -3114,7 +3155,7 @@ function initializeIcons() {
 }
 
 export function rebuildConversationTree() {
-    // Rebuild tree to reflect hidden/title settings
+  // Rebuild tree to reflect hidden/title settings
   const convos = getConversationsForTree();
   conversationTree = buildTitleTree(convos);
   renderTree(convoListEl, conversationTree);

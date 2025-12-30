@@ -1,4 +1,5 @@
 // treeBuilder.js (lazy + iterative rendering + simple virtualization)
+import { $ } from "./ui.js";
 
 export function buildTitleTree(rows) {
   const root = { children: new Map(), convoIds: [] };
@@ -107,7 +108,7 @@ function setToggleIcon(toggleEl, expanded) {
   if (!toggleEl) return;
 
   const templateId = 'icon-chevron-right-template';
-  const template = document.getElementById(templateId);
+  const template = $(templateId);
 
   const clone = template.content.cloneNode(true);
   const svg = clone.querySelector('svg');

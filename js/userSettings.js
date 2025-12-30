@@ -19,6 +19,7 @@ const settingsModalOverlayId = "settingsModalOverlay";
 const settingsModalCloseId = "settingsModalClose";
 const restoreDefaultSettingsBtnId = "restoreDefaultSettingsBtn";
 const saveSettingsBtnId = "saveSettingsBtn";
+const settingsBtnId = "settingsBtn";
 
 // Default app settings
 let appSettings = {
@@ -141,13 +142,7 @@ export function initializeUserSettings() {
   setUpSaveButton();
   setUpRestoreDefaultSettingsButton();
 }
-export function openSettingsModal(e) {
-  setCurrentUserSettings();
-  const settingsModalOverlay = $(settingsModalOverlayId);
-  if (settingsModalOverlay) {
-    settingsModalOverlay.style.display = "flex";
-  }
-}
+
 export function applySettings() {
   // Apply animations toggle
   updateAnimationsToggle();
@@ -205,10 +200,14 @@ function setUpSaveButton() {
 function setupSettingsModal() {
   // Open settings modal
   
-    settingsBtn.addEventListener("click", openSettingsModal);
+  const settingsBtn = $(settingsBtnId)
   const settingsModalClose = $(settingsModalCloseId)
   const settingsModalOverlay = $(settingsModalOverlayId)
 
+  // Open settings modal
+  if(settingsBtn) {
+    settingsBtn.addEventListener("click", openSettings);
+  }
   // Close settings modal
   if (settingsModalClose) {
     settingsModalClose.addEventListener("click", () => {
@@ -392,6 +391,14 @@ function handleSaveSettingsButtonClick() {
   const settingsModalOverlay = $(settingsModalOverlayId);
   if (settingsModalOverlay) {
     settingsModalOverlay.style.display = "none";
+  }
+}
+
+export function openSettings(e) {
+  setCurrentUserSettings();
+  const settingsModalOverlay = $(settingsModalOverlayId);
+  if (settingsModalOverlay) {
+    settingsModalOverlay.style.display = "flex";
   }
 }
 // #endregion
