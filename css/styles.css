@@ -1697,6 +1697,7 @@ a {
     display: flex;
   }
 
+  .mobile-filter-screen .checkbox-list,
   .mobile-filter-screen .mobile-filter-list {
     flex: 1;
     overflow-y: auto;
@@ -1876,6 +1877,22 @@ a {
     font-weight: 600;
   }
 
+  .filter-dropdown {
+      position: unset;
+      background: unset;
+      border: unset;
+      border-radius: 0;
+      box-shadow: unset;
+      padding: 0;
+      /* z-index: unset;
+      flex-direction: unset;
+      max-height: unset;
+      overflow-y: unset;
+      padding: unset;
+      min-width: unset; */
+  }
+
+  .filter-dropdown .search-input,
   .mobile-filter-search {
     width: 100%;
     padding: 16px;
@@ -1884,17 +1901,21 @@ a {
     background: var(--card-bg);
     color: #fff;
     font-size: 16px;
+    border-radius: 0;
   }
-
+  
+  .filter-dropdown .search-input::placeholder
   .mobile-filter-search::placeholder {
     color: var(--muted);
   }
 
+  .checkbox-list,
   .mobile-filter-list {
     padding: 0;
     min-height: 0;
   }
 
+  .checkbox-list .checkbox-item,
   .mobile-filter-list .mobile-filter-item {
     display: flex;
     align-items: center;
@@ -1905,11 +1926,13 @@ a {
     background: transparent;
   }
 
+  .checkbox-list .checkbox-item:hover,
   .mobile-filter-list .mobile-filter-item:hover {
     background: transparent;
     box-shadow: none;
   }
 
+  .checkbox-list .checkbox-item:active, 
   .mobile-filter-list .mobile-filter-item:active {
     background: rgba(255, 255, 255, 0.08);
     box-shadow: none;
@@ -1925,15 +1948,20 @@ a {
     text-align: center;
   }
 
+  /* Eventually we can remove the mobile-filter-item once everything is consolidated  */
+  .checkbox-list .checkbox-item:active, 
   .mobile-filter-item:active {
     background: rgba(255, 255, 255, 0.08);
   }
 
+  .checkbox-list .checkbox-item:last-child,
   .mobile-filter-item:last-child {
     border-bottom: none;
   }
 
+
   .mobile-filter-item input[type="radio"],
+  .checkbox-list .checkbox-item[type="checkbox"],
   .mobile-filter-item input[type="checkbox"] {
     width: 20px;
     height: 20px;
@@ -1941,11 +1969,14 @@ a {
     accent-color: var(--teal);
   }
 
+  .filter-dropdown .checkbox-list .checkbox-item span,
   .mobile-filter-item span {
     flex: 1;
     font-size: 15px;
   }
 
+  /* TODO KA remove mobile-filter-actions once everything is consolidated */
+  .filter-actions,
   .mobile-filter-actions {
     display: flex;
     align-items: center;
@@ -1955,6 +1986,7 @@ a {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     gap: 12px;
     flex-shrink: 0;
+    flex-direction: row;
   }
 
   .mobile-action-btn {
@@ -2028,6 +2060,12 @@ a {
     background: rgba(255, 255, 255, 0.08);
   }
 
+  
+  .filter-dropdown label.checkbox-item.checkbox-label.select-all {
+    padding: 0;
+  }
+
+  .checkbox-item input[type="checkbox"],
   .mobile-checkbox-item input[type="checkbox"] {
     width: 22px;
     height: 22px;
@@ -2036,6 +2074,7 @@ a {
     cursor: pointer;
   }
 
+  .checkbox-item span,
   .mobile-checkbox-item span {
     font-size: 17px;
     flex: 1;
