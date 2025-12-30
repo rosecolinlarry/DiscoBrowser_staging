@@ -1681,6 +1681,15 @@ a {
     overflow: auto;
   }
 
+  .mobile-filter-screen .filter-dropdown {
+    display: none;
+    max-height: unset;
+  }
+  .mobile-filter-screen .filter-dropdown.show{
+    display: flex;
+  }
+
+
   .mobile-filter-screen[style*="display: block"] {
     display: flex;
   }

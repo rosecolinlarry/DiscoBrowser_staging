@@ -40,7 +40,7 @@ import {
   openSettings,
   showHidden,
   disableColumnResizing,
-  alwaysShowMoreDetails
+  alwaysShowMoreDetails,
 } from "./userSettings.js";
 
 const searchInput = $("search");
@@ -127,6 +127,11 @@ const mobileNavSearch = $("mobileNavSearch");
 const expandAllBtn = $("expandAllBtn");
 const collapseAllBtn = $("collapseAllBtn");
 const resetLayoutBtn = $("resetLayoutBtn");
+
+// Filter dropdowns
+const actorFilterDropdown = $("actorFilterDropdown");
+const actorFilterDropdownWrapper = $("actor-filter-wrapper");
+const mobileActorFilterDropdownWrapper = $("mobileActorFilterScreen");
 
 // Clear filters button
 const clearFiltersBtn = $("clearFiltersBtn");
@@ -332,9 +337,7 @@ async function boot() {
 
   // wire search
   if (searchBtn && searchInput) {
-    searchBtn.addEventListener("click", () =>
-      search(searchInput.value)
-    );
+    searchBtn.addEventListener("click", () => search(searchInput.value));
     searchInput.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") search(searchInput.value);
     });
@@ -578,7 +581,26 @@ function handleMediaQueryChange() {
     historySidebar?.append(historySection);
     convoSidebar?.appendChild(convoSection);
   }
+  moveActorFilterDropdown();
   applySettings();
+}
+
+function moveActorFilterDropdown() {
+  // mobileActorFilterScreen
+  // actorFilterDropdown <-> mobileActorFilterDropdown
+  if (!actorFilterDropdown) {
+    populateActorDropdown();
+    return;
+  }
+  if (mobileMediaQuery.matches) {
+    // Element to move actorFilterDropdown
+    // New Parent mobileActorFilterDropdownWrapper
+    mobileActorFilterDropdownWrapper.appendChild(actorFilterDropdown);
+  } else {
+    // Element to move actorFilterDropdown
+    // New Parent actor-filter-wrapper
+    actorFilterDropdownWrapper.appendChild(actorFilterDropdown);
+  }
 }
 
 function toggleElementVisibilityById(id, showElement) {
@@ -1984,8 +2006,7 @@ async function showEntryDetails(
   }
 
   // Fetch alternates, checks, parents/children
-  const alternates =
-    coreRow.hasalts > 0 ? getAlternates(convoId, entryId) : [];
+  const alternates = coreRow.hasalts > 0 ? getAlternates(convoId, entryId) : [];
   const checks = coreRow.hascheck > 0 ? getChecks(convoId, entryId) : [];
   const { parents, children } = getParentsChildren(convoId, entryId);
   // Get conversation data
@@ -2062,8 +2083,16 @@ async function showEntryDetails(
 // Helper: create a result `div` element for a search result (shared by desktop and mobile)
 function createSearchResultDiv(r, query) {
   const hasQuotedPhrases = /"[^"]+"/g.test(query);
-  const highlightedTitle = highlightTerms(r.title || "", query, hasQuotedPhrases);
-  const highlightedText = highlightTerms(r.dialoguetext || "", query, hasQuotedPhrases);
+  const highlightedTitle = highlightTerms(
+    r.title || "",
+    query,
+    hasQuotedPhrases
+  );
+  const highlightedText = highlightTerms(
+    r.dialoguetext || "",
+    query,
+    hasQuotedPhrases
+  );
   const convo = getConversationById(r.conversationid);
   const convoType = convo ? convo.type || "flow" : "flow";
   const div = createCardItem(
@@ -2226,7 +2255,6 @@ function search(q, resetSearch = true) {
     searchLoader?.classList.add("hidden");
   }
 }
-
 
 /* Main Search Bar for Mobile*/
 function performMobileSearch(resetSearch = true) {
@@ -2689,16 +2717,10 @@ function showMobileConvoFilter() {
 function showMobileActorFilter() {
   if (!mobileActorFilterScreen) return;
 
-  // Reset temporary selection to current selection when opening
-  tempSelectedActorIds = new Set(mobileSelectedActorIds);
-
-  // Re-render the actor list with current selection
-  const listContainer = $("mobileActorFilterList");
-  if (listContainer) {
-    renderActorListForMobile(allActors);
-  }
-
   mobileActorFilterScreen.style.display = "block";
+  if (actorFilterDropdown) {
+    actorFilterDropdown.classList.add("show");
+  }
 }
 
 function showMobileTypeFilter() {
@@ -2861,126 +2883,17 @@ function updateMobileConvoFilterLabel() {
   }
 }
 
-// Render mobile actor list (used by setupMobileActorFilter and showMobileActorFilter)
-function renderActorListForMobile(actors) {
-  const listContainer = $("mobileActorFilterList");
-  const selectAllCheckbox = $("mobileActorSelectAll");
-
-  if (!listContainer) return;
-
-  listContainer.innerHTML = "";
-  filteredActorsForMobile = actors;
-
-  // Update Select All checkbox state
-  if (selectAllCheckbox) {
-    const allSelected =
-      actors.length > 0 && actors.every((a) => tempSelectedActorIds.has(a.id));
-    const someSelected = actors.some((a) => tempSelectedActorIds.has(a.id));
-    selectAllCheckbox.checked = allSelected;
-    selectAllCheckbox.indeterminate = someSelected && !allSelected;
-  }
-
-  // Add actor items
-  actors.forEach((actor) => {
-    const item = document.createElement("div");
-    item.className = "mobile-filter-item";
-    const isChecked = tempSelectedActorIds.has(actor.id);
-    item.innerHTML = `
-      <input type="checkbox" ${isChecked ? "checked" : ""} />
-      <span>${actor.name}</span>
-    `;
-    item.addEventListener("click", (e) => {
-      if (e.target.tagName !== "INPUT") {
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        checkbox.checked = !checkbox.checked;
-      }
-
-      const checkbox = item.querySelector('input[type="checkbox"]');
-      if (checkbox.checked) {
-        tempSelectedActorIds.add(actor.id);
-      } else {
-        tempSelectedActorIds.delete(actor.id);
-      }
-
-      // Update Select All checkbox
-      if (selectAllCheckbox) {
-        const allSelected = filteredActorsForMobile.every((a) =>
-          tempSelectedActorIds.has(a.id)
-        );
-        const someSelected = filteredActorsForMobile.some((a) =>
-          tempSelectedActorIds.has(a.id)
-        );
-        selectAllCheckbox.checked = allSelected;
-        selectAllCheckbox.indeterminate = someSelected && !allSelected;
-      }
-    });
-    listContainer.appendChild(item);
-  });
-}
-
 function setupMobileActorFilter() {
   const backBtn = $("mobileActorFilterBack");
-  const searchInput = $("mobileActorFilterSearch");
-  const selectAllCheckbox = $("mobileActorSelectAll");
-  const addToSelectionBtn = $("mobileActorAddToSelection");
 
-  if (!backBtn || !searchInput) return;
-
-  // Initialize temp selection
-  tempSelectedActorIds = new Set(mobileSelectedActorIds);
+  if (!backBtn) return;
 
   // Back button - don't apply changes
   backBtn.addEventListener("click", () => {
     mobileActorFilterScreen.style.display = "none";
-    tempSelectedActorIds = new Set(mobileSelectedActorIds);
-  });
-
-  // Add to Selection button - apply changes
-  if (addToSelectionBtn) {
-    addToSelectionBtn.addEventListener("click", () => {
-      mobileSelectedActorIds = new Set(tempSelectedActorIds);
-      updateMobileActorFilterLabel();
-      mobileActorFilterScreen.style.display = "none";
-      // Trigger new search with updated filter
-      if (mobileSearchInput.value.trim()) {
-        performMobileSearch(true);
-      }
-    });
-  }
-
-  // Select All checkbox
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener("change", () => {
-      if (selectAllCheckbox.checked) {
-        // Select all filtered actors
-        filteredActorsForMobile.forEach((a) => tempSelectedActorIds.add(a.id));
-      } else {
-        // Deselect all filtered actors
-        filteredActorsForMobile.forEach((a) =>
-          tempSelectedActorIds.delete(a.id)
-        );
-      }
-      renderActorListForMobile(filteredActorsForMobile);
-    });
-  }
-
-  // Initial render
-  renderActorListForMobile(allActors);
-
-  // Search filter
-  searchInput.addEventListener("input", () => {
-    const query = searchInput.value.toLowerCase().trim();
-    if (!query) {
-      renderActorListForMobile(allActors);
-      return;
+    if (actorFilterDropdown) {
+      actorFilterDropdown.classList.remove("show");
     }
-
-    const filtered = allActors.filter((a) => {
-      return (
-        a.name.toLowerCase().includes(query) || a.id.toString().includes(query)
-      );
-    });
-    renderActorListForMobile(filtered);
   });
 }
 
