@@ -5,13 +5,8 @@ import { buildTitleTree, renderTree } from "./treeBuilder.js";
 import { $ } from "./ui.js";
 import * as UI from "./ui.js";
 import { injectIconTemplates } from "./icons.js";
-import { injectUserSettingsTemplate, applySettings, loadSettingsFromStorage, openSettingsModal} from "./userSettings.js";
+import { injectUserSettingsTemplate, initializeUserSettings, applySettings, openSettingsModal } from "./userSettings.js";
 import * as appSettings from "./userSettings.js";
-
-// Inject user settings template as soon as the module loads
-injectUserSettingsTemplate();
-// Inject icon templates as soon as the module loads
-injectIconTemplates();
 
 const searchInput = $("search");
 const searchBtn = $("searchBtn");
@@ -147,8 +142,18 @@ let isHandlingPopState = false;
 // Browser Grid
 const browserGrid = $("browser");
 
+const mobileMediaQuery = window.matchMedia("(max-width: 768px)");
+const tabletMediaQuery = window.matchMedia(
+  "(min-width: 769px) and (max-width: 1024px)"
+);
+const desktopMediaQuery = window.matchMedia("(min-width: 1025px)");
+
 export const defaultColumns = "352px 1fr 280px";
 export const STORAGE_KEY = "discobrowser_grid_columns";
+
+// Inject templates as soon as the module loads
+injectUserSettingsTemplate();
+injectIconTemplates();
 
 export function getConversationsForTree() {
   const allConvos = DB.getAllConversations();
@@ -167,14 +172,6 @@ export function getConversationsForTree() {
     ...c,
     title: c.title,
   }));
-}
-
-export function updateAnimationsToggle() {
-  if (appSettings?.turnOffAnimations()) {
-    document.body.classList.add("animations-disabled");
-  } else {
-    document.body.classList.remove("animations-disabled");
-  }
 }
 
 function setupMobileNavMenu() {
@@ -201,6 +198,7 @@ export function updateResizeHandles() {
 }
 
 export function updateHandlePositions() {
+  const browserGrid = $("browser");
   const columns = (browserGrid.style.gridTemplateColumns || defaultColumns)
     .split(" ")
     .map((s) => s.trim());
@@ -209,12 +207,6 @@ export function updateHandlePositions() {
   browserGrid.style.setProperty("--handle-left-pos", `calc(${col1} - 4px)`);
   browserGrid.style.setProperty("--handle-right-pos", `calc(${col3} - 4px)`);
 }
-
-const mobileMediaQuery = window.matchMedia("(max-width: 768px)");
-const tabletMediaQuery = window.matchMedia(
-  "(min-width: 769px) and (max-width: 1024px)"
-);
-const desktopMediaQuery = window.matchMedia("(min-width: 1025px)");
 
 function setUpMediaQueries() {
   desktopMediaQuery.addEventListener("change", handleMediaQueryChange);
@@ -260,8 +252,8 @@ function setUpChatLogEvents() {
 async function boot() {
   // Initialize icons when DOM is ready
   document.addEventListener("DOMContentLoaded", initializeIcons);
+  document.addEventListener("DOMContentLoaded", initializeUserSettings);
   // Load settings from localStorage
-  loadSettingsFromStorage();
   applySettings();
 
   setUpMediaQueries();
@@ -374,6 +366,9 @@ async function boot() {
 function updateResizableGrid() {
   if (!browserGrid || !desktopMediaQuery.matches) {
     browserGrid.style.removeProperty("gridTemplateColumns");
+  }
+  else {
+    initializeResizableGrid();
   }
 }
 
@@ -539,11 +534,13 @@ function handleMediaQueryChange() {
   } else if (tabletMediaQuery.matches) {
     toggleElementVisibilityById("historySidebarToggle", true);
     toggleElementVisibilityById("convoSidebarToggle", true);
+    updateResizableGrid();
     historySidebar?.appendChild(historySection);
     convoSidebar?.appendChild(convoSection);
   } else if (mobileMediaQuery.matches) {
     toggleElementVisibilityById("historySidebarToggle", true);
     toggleElementVisibilityById("convoSidebarToggle", false);
+    updateResizableGrid();
     historySidebar?.append(historySection);
     convoSidebar?.appendChild(convoSection);
   }

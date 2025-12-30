@@ -2,15 +2,10 @@ import { $ } from "./ui.js";
 import {
   defaultColumns,
   STORAGE_KEY,
-  updateAnimationsToggle,
   updateHandlePositions,
   updateResizeHandles,
-  highlightConversationInTree,
-  getConversationsForTree,
   rebuildConversationTree
 } from "./main.js";
-import { buildTitleTree, renderTree } from "./treeBuilder.js";
-
 // Settings state
 const SETTINGS_STORAGE_KEY = "discobrowser_settings";
 
@@ -126,6 +121,7 @@ const template = `
       </div>
   `;
 
+// #region Exported Set Up Helpers
 export function injectUserSettingsTemplate() {
   // Create container if it does not exist
   let container = $(settingsModalOverlayId);
@@ -136,19 +132,38 @@ export function injectUserSettingsTemplate() {
     document.body.appendChild(container);
   }
   container.innerHTML = template;
-  setUpUserSettingsHandlers();
+}
+export function initializeUserSettings() {
+  loadSettingsFromStorage();
+  applySettings();
+  setUpCheckboxHandlers();
   setupSettingsModal();
   setUpSaveButton();
   setUpRestoreDefaultSettingsButton();
 }
-
-function setUpUserSettingsHandlers() {
+export function openSettingsModal(e) {
+  setCurrentUserSettings();
+  const settingsModalOverlay = $(settingsModalOverlayId);
+  if (settingsModalOverlay) {
+    settingsModalOverlay.style.display = "flex";
+  }
+}
+export function applySettings() {
+  // Apply animations toggle
+  updateAnimationsToggle();
+  updateHandlePositions();
+  updateResizeHandles();
+  // Apply column resizing toggle - handled in initializeResizableGrid
+  // Apply show hidden toggle - handled when building tree
+  // Apply reset desktop layout - this is a one-time action, not persistent
+}
+function setUpCheckboxHandlers() {
   const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);
 
   if (resetDesktopLayoutCheckbox) {
     resetDesktopLayoutCheckbox.addEventListener(
       "change",
-      setResetDesktopLayout
+      handleResetDesktopLayoutChange
     );
   }
   const disableColumnResizingCheckbox = $(disableColumnResizingCheckboxId);
@@ -156,7 +171,7 @@ function setUpUserSettingsHandlers() {
   if (disableColumnResizingCheckbox) {
     disableColumnResizingCheckbox.addEventListener(
       "change",
-      setDisableColumnResizing
+      handleDisableColumnResizingChange
     );
   }
   const alwaysShowMoreDetailsCheckbox = $(alwaysShowMoreDetailsCheckboxId);
@@ -164,23 +179,72 @@ function setUpUserSettingsHandlers() {
   if (alwaysShowMoreDetailsCheckbox) {
     alwaysShowMoreDetailsCheckbox.addEventListener(
       "change",
-      setAlwaysShowMoreDetails
+      handleAlwaysShowMoreDetailsChange
     );
   }
   const showHiddenCheckbox = $(showHiddenCheckboxId);
 
   if (showHiddenCheckbox) {
-    showHiddenCheckbox.addEventListener("change", setShowHidden);
+    showHiddenCheckbox.addEventListener("change", handleShowHiddenChange);
   }
   const turnOffAnimationsCheckbox = $(turnOffAnimationsCheckboxId);
 
   if (turnOffAnimationsCheckbox) {
-    turnOffAnimationsCheckbox.addEventListener("change", setTurnOffAnimations);
+    turnOffAnimationsCheckbox.addEventListener("change", handleTurnOffAnimationsChange);
   }
 }
 
-export function getCurrentUserSettings() {
-  // Get settings from checkbox values
+function setUpSaveButton() {
+  // Handle save settings
+  const saveSettingsBtn = $(saveSettingsBtnId);
+  if(saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', handleSaveSettingsButtonClick)
+  }
+}
+
+function setupSettingsModal() {
+  // Open settings modal
+  
+    settingsBtn.addEventListener("click", openSettingsModal);
+  const settingsModalClose = $(settingsModalCloseId)
+  const settingsModalOverlay = $(settingsModalOverlayId)
+
+  // Close settings modal
+  if (settingsModalClose) {
+    settingsModalClose.addEventListener("click", () => {
+      settingsModalOverlay.style.display = "none";
+    });
+  }
+
+  // Close modal when clicking overlay
+  if (settingsModalOverlay) {
+    settingsModalOverlay.addEventListener("click", (e) => {
+      if (e.target === settingsModalOverlay) {
+        settingsModalOverlay.style.display = "none";
+      }
+    });
+  }
+}
+
+// #endregion
+
+// #region Exported Getters
+export function disableColumnResizing() {
+  return appSettings?.disableColumnResizing ?? DEFAULT_APP_SETTINGS.disableColumnResizing;
+}
+
+export function alwaysShowMoreDetails() {
+  return appSettings?.alwaysShowMoreDetails ?? DEFAULT_APP_SETTINGS.alwaysShowMoreDetails;
+}
+
+export function showHidden() {
+  return appSettings?.showHidden ?? DEFAULT_APP_SETTINGS.showHidden;
+}
+// #endregion
+
+// #region Manage App Setting States
+function updateCurrentUserSettings() {
+  // Update settings from checkbox values
   const currentCheckboxValues = {
     resetDesktopLayout: $(resetDesktopLayoutCheckboxId)?.checked ?? false,
     disableColumnResizing: $(disableColumnResizingCheckboxId)?.checked ?? false,
@@ -188,17 +252,9 @@ export function getCurrentUserSettings() {
     showHidden: $(showHiddenCheckboxId)?.checked ?? false,
     turnOffAnimations: $(turnOffAnimationsCheckboxId)?.checked ?? false,
   };
-  console.log("getCurrentUserSettings", currentCheckboxValues);
-  return currentCheckboxValues;
+  appSettings = currentCheckboxValues;
 }
-export function updateCurrentUserSettings() {
-  // Update settings from checkbox values
-  console.log("updateCurrentUserSettings -> Old", appSettings);
-  appSettings = getCurrentUserSettings();
-  console.log("updateCurrentUserSettings -> New", appSettings);
-}
-
-export function setCurrentUserSettings() {
+function setCurrentUserSettings() {
   // Update checkbox values from settings
   if (!appSettings) {
     // Get app settings from storage
@@ -225,20 +281,17 @@ export function setCurrentUserSettings() {
     turnOffAnimationsCheckbox.checked = appSettings?.turnOffAnimations;
   }
 }
-
-export function resetCurrentUserSettings() {
+function resetCurrentUserSettings() {
   // Update app setting values to default settings
   appSettings = DEFAULT_APP_SETTINGS;
   setCurrentUserSettings();
 }
-
-export function loadSettingsFromStorage() {
+function loadSettingsFromStorage() {
   try {
     const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
       appSettings = { ...appSettings, ...parsed };
-      console.log(`loadSettingsFromStorage`, appSettings);
       return appSettings;
     }
   } catch (e) {
@@ -246,22 +299,9 @@ export function loadSettingsFromStorage() {
     console.error("Failed to load settings from storage", e);
   }
 }
-
-export function saveSettingsToStorage() {
+function saveSettingsToStorage() {
   try {
-    console.log(`saveSettingsToStorage`, appSettings);
-
-    // Layout reset on save
-    const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);
-    if (resetDesktopLayoutCheckbox) {
-      if (resetDesktopLayout()) {
-        const browserGrid = $("browser");
-        browserGrid.style.gridTemplateColumns = defaultColumns;
-        localStorage.removeItem(STORAGE_KEY);
-      }
-      resetDesktopLayoutCheckbox.checked = false;
-      appSettings.resetDesktopLayout = false;
-    }
+    updateDesktopLayout();
 
     applySettings();
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
@@ -270,106 +310,76 @@ export function saveSettingsToStorage() {
   }
 }
 
-export function resetDesktopLayout() {
-  return (
-    appSettings?.resetDesktopLayout ?? DEFAULT_APP_SETTINGS?.resetDesktopLayout
-  );
+// #endregion
+
+// #region Update UI
+function updateDesktopLayout() {
+  const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);
+  // Layout resets on save
+  if (resetDesktopLayoutCheckbox) {
+    if (appSettings?.resetDesktopLayout) {
+      const browserGrid = $("browser");
+      browserGrid.style.gridTemplateColumns = defaultColumns;
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    resetDesktopLayoutCheckbox.checked = false;
+    appSettings.resetDesktopLayout = false;
+  }
 }
 
-export function disableColumnResizing() {
-  return (
-    appSettings?.disableColumnResizing ??
-    DEFAULT_APP_SETTINGS?.disableColumnResizing
-  );
+function updateAnimationsToggle() {
+  if (appSettings?.turnOffAnimations) {
+    document.body.classList.add("animations-disabled");
+  } else {
+    document.body.classList.remove("animations-disabled");
+  }
 }
-export function showHidden() {
-  return appSettings?.showHidden ?? DEFAULT_APP_SETTINGS?.showHidden;
-}
-export function turnOffAnimations() {
-  return (
-    appSettings?.turnOffAnimations ?? DEFAULT_APP_SETTINGS?.turnOffAnimations
-  );
-}
-export function alwaysShowMoreDetails() {
-  return (
-    appSettings?.alwaysShowMoreDetails ??
-    DEFAULT_APP_SETTINGS?.alwaysShowMoreDetails
-  );
-}
-
-// TODO KA Reset desktop layout is a little weird because it should really be a button
-export function setResetDesktopLayout(e) {
+// #region
+// #region Handlers
+function handleResetDesktopLayoutChange(e) {
+  // Reset desktop layout should be unchecked once the layout is reset (upon save)
   let value = DEFAULT_APP_SETTINGS.resetDesktopLayout;
   if (e) {
     value = e.target?.checked ?? value;
   }
   appSettings.resetDesktopLayout = value;
 }
-
-export function setDisableColumnResizing(e) {
+function handleDisableColumnResizingChange(e) {
   let value = DEFAULT_APP_SETTINGS.disableColumnResizing;
   if (e) {
     value = e.target?.checked ?? value;
   }
   appSettings.disableColumnResizing = value;
 }
-export function setShowHidden(e) {
+function handleShowHiddenChange(e) {
   let value = DEFAULT_APP_SETTINGS.showHidden;
   if (e) {
     value = e.target?.checked ?? value;
   }
   appSettings.showHidden = value;
 }
-export function setTurnOffAnimations(e) {
+function handleTurnOffAnimationsChange(e) {
   let value = DEFAULT_APP_SETTINGS.turnOffAnimations;
   if (e) {
     value = e.target?.checked ?? value;
   }
   appSettings.turnOffAnimations = value;
 }
-export function setAlwaysShowMoreDetails(e) {
+function handleAlwaysShowMoreDetailsChange(e) {
   let value = DEFAULT_APP_SETTINGS.alwaysShowMoreDetails;
   if (e) {
     value = e.target?.checked ?? value;
   }
   appSettings.alwaysShowMoreDetails = value;
 }
-
-export function openSettingsModal(e) {
-  setCurrentUserSettings();
-  const settingsModalOverlay = $(settingsModalOverlayId);
-  if (settingsModalOverlay) {
-    settingsModalOverlay.style.display = "flex";
-  }
-}
-
-export function applySettings() {
-  // Apply animations toggle
-  updateAnimationsToggle();
-  updateHandlePositions();
-  updateResizeHandles();
-  // Apply column resizing toggle - handled in initializeResizableGrid
-  // Apply show hidden toggle - handled when building tree
-  // Apply reset desktop layout - this is a one-time action, not persistent
-}
-
-export function setUpRestoreDefaultSettingsButton() {
+function setUpRestoreDefaultSettingsButton() {
   // Restore default settings and updates checkbox values.
   const restoreDefaultSettingsBtn = $(restoreDefaultSettingsBtnId);
   if(restoreDefaultSettingsBtn) {
     restoreDefaultSettingsBtn.addEventListener("click", resetCurrentUserSettings)
   }
 }
-
-export function setUpSaveButton() {
-  // Handle save settings
-  const saveSettingsBtn = $(saveSettingsBtnId);
-  if(saveSettingsBtn) {
-    saveSettingsBtn.addEventListener('click', handleSaveSettingsButtonClick)
-  }
-}
-
-export function handleSaveSettingsButtonClick() {
+function handleSaveSettingsButtonClick() {
   // Apply settings
   updateCurrentUserSettings();
   applySettings();
@@ -384,29 +394,4 @@ export function handleSaveSettingsButtonClick() {
     settingsModalOverlay.style.display = "none";
   }
 }
-
-
-function setupSettingsModal() {
-  // Open settings modal
-  
-    settingsBtn.addEventListener("click", openSettingsModal);
-  const settingsModalClose = $(settingsModalCloseId)
-  const settingsModalOverlay = $(settingsModalOverlayId)
-
-  // Close settings modal
-  if (settingsModalClose) {
-    settingsModalClose.addEventListener("click", () => {
-      settingsModalOverlay.style.display = "none";
-    });
-  }
-
-  // Close modal when clicking overlay
-  if (settingsModalOverlay) {
-    settingsModalOverlay.addEventListener("click", (e) => {
-      if (e.target === settingsModalOverlay) {
-        settingsModalOverlay.style.display = "none";
-      }
-    });
-  }
-
-}
+// #endregion
