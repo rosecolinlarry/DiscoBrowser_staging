@@ -45,7 +45,6 @@ import {
 
 const searchInput = $("search");
 const searchBtn = $("searchBtn");
-const actorFilterLabel = $("actorFilterLabel");
 const actorSearchInput = $("actorSearch");
 const actorCheckboxList = $("actorCheckboxList");
 const selectAllActors = $("selectAllActors");
@@ -108,7 +107,6 @@ const mobileTypeFilter = $("mobileTypeFilter");
 const mobileActorFilter = $("mobileActorFilter");
 const mobileConvoFilterValue = $("mobileConvoFilterValue");
 const mobileTypeFilterValue = $("mobileTypeFilterValue");
-const mobileActorFilterValue = $("mobileActorFilterValue");
 const mobileConvoFilterScreen = $("mobileConvoFilterScreen");
 const mobileActorFilterScreen = $("mobileActorFilterScreen");
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
@@ -132,6 +130,10 @@ const resetLayoutBtn = $("resetLayoutBtn");
 const actorFilterDropdown = $("actorFilterDropdown");
 const actorFilterDropdownWrapper = $("actor-filter-wrapper");
 const mobileActorFilterDropdownWrapper = $("mobileActorFilterScreen");
+
+const actorFilterLabelWrapper = $("actorFilterLabelWrapper");
+const mobileActorFilterLabelWrapper = $("mobileActorFilterLabelWrapper");
+const actorFilterLabel = $("actorFilterLabel");
 
 // Clear filters button
 const clearFiltersBtn = $("clearFiltersBtn");
@@ -161,11 +163,6 @@ let isLoadingMore = false;
 // Mobile search state
 let mobileSelectedConvoIds = new Set();
 let mobileSelectedTypes = new Set(["all"]);
-let mobileSelectedActorIds = new Set();
-
-// Mobile actor filter state
-let tempSelectedActorIds = new Set();
-let filteredActorsForMobile = [];
 
 // Mobile search pagination state
 let mobileSearchQuery = "";
@@ -376,7 +373,7 @@ async function boot() {
   setupMobileSearchInfiniteScroll();
 
   // Setup mobile sidebar
-  await setupMobileSidebar();
+  setupMobileSidebar();
   setUpSidebarToggles();
 
   // Setup mobile search
@@ -388,7 +385,6 @@ async function boot() {
 
   // Initialize mobile filter labels
   updateMobileConvoFilterLabel();
-  updateMobileActorFilterLabel();
   updateMobileTypeFilterLabel();
 
   // Setup browser history handling
@@ -586,20 +582,20 @@ function handleMediaQueryChange() {
 }
 
 function moveActorFilterDropdown() {
-  // mobileActorFilterScreen
-  // actorFilterDropdown <-> mobileActorFilterDropdown
   if (!actorFilterDropdown) {
     populateActorDropdown();
     return;
   }
   if (mobileMediaQuery.matches) {
-    // Element to move actorFilterDropdown
-    // New Parent mobileActorFilterDropdownWrapper
     mobileActorFilterDropdownWrapper.appendChild(actorFilterDropdown);
+    mobileActorFilterLabelWrapper.appendChild(actorFilterLabel);
+    
+    if (mobileActorFilter) {
+      mobileActorFilter.addEventListener("click", showMobileActorFilter);
+    }
   } else {
-    // Element to move actorFilterDropdown
-    // New Parent actor-filter-wrapper
     actorFilterDropdownWrapper.appendChild(actorFilterDropdown);
+    actorFilterLabelWrapper.appendChild(actorFilterLabel);
   }
 }
 
@@ -2263,11 +2259,11 @@ function performMobileSearch(resetSearch = true) {
   if (resetSearch) {
     // Starting a new search
     mobileSearchQuery = query;
-    mobileSearchActorIds =
-      mobileSelectedActorIds.size === 0 ||
-      mobileSelectedActorIds.size === allActors.length
-        ? null
-        : Array.from(mobileSelectedActorIds);
+  // Always update actor IDs from current filter selection (even when re-filtering)
+  currentSearchActorIds =
+    selectedActorIds.size === 0 || selectedActorIds.size === allActors.length
+      ? null
+      : Array.from(selectedActorIds);
     mobileSearchOffset = 0;
     mobileSearchLoader?.classList.remove("hidden");
     if (mobileSearchResults) {
@@ -2282,7 +2278,7 @@ function performMobileSearch(resetSearch = true) {
     const response = getSearchResults(
       mobileSearchQuery,
       searchResultLimit,
-      mobileSearchActorIds,
+      currentSearchActorIds,
       true,
       mobileSearchOffset,
       undefined, // conversationIds
@@ -2553,10 +2549,6 @@ function setupMobileSearch() {
       mobileSelectedTypes.add("all");
       if (mobileTypeFilterValue) mobileTypeFilterValue.textContent = "All";
 
-      // Clear actor filter
-      mobileSearchActorIds = null;
-      if (mobileActorFilterValue) mobileActorFilterValue.textContent = "All";
-
       // Clear whole words
       if (mobileWholeWordsCheckbox) {
         mobileWholeWordsCheckbox.checked = false;
@@ -2715,12 +2707,8 @@ function showMobileConvoFilter() {
 }
 
 function showMobileActorFilter() {
-  if (!mobileActorFilterScreen) return;
-
   mobileActorFilterScreen.style.display = "block";
-  if (actorFilterDropdown) {
-    actorFilterDropdown.classList.add("show");
-  }
+  actorFilterDropdown.classList.add("show");
 }
 
 function showMobileTypeFilter() {
@@ -2888,27 +2876,13 @@ function setupMobileActorFilter() {
 
   if (!backBtn) return;
 
-  // Back button - don't apply changes
+  // Back button - Apply Changes
   backBtn.addEventListener("click", () => {
     mobileActorFilterScreen.style.display = "none";
     if (actorFilterDropdown) {
       actorFilterDropdown.classList.remove("show");
     }
   });
-}
-
-function updateMobileActorFilterLabel() {
-  if (!mobileActorFilterValue) return;
-
-  if (mobileSelectedActorIds.size === 0) {
-    mobileActorFilterValue.textContent = "All";
-  } else if (mobileSelectedActorIds.size === 1) {
-    const actorId = Array.from(mobileSelectedActorIds)[0];
-    const actor = allActors.find((a) => a.id === actorId);
-    mobileActorFilterValue.textContent = actor ? actor.name : "1 Actor";
-  } else {
-    mobileActorFilterValue.textContent = `${mobileSelectedActorIds.size} Actors`;
-  }
 }
 
 function updateMobileTypeFilterLabel() {

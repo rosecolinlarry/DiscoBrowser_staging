@@ -1073,6 +1073,7 @@ button.button-chip {
     background: var(--panel);
   }
 
+  .filter-label,
   .filter-value {
     color: var(--teal);
     font-weight: 600;
@@ -1684,6 +1685,8 @@ a {
   .mobile-filter-screen .filter-dropdown {
     display: none;
     max-height: unset;
+    position: unset;
+    min-width: unset;
   }
   .mobile-filter-screen .filter-dropdown.show{
     display: flex;
