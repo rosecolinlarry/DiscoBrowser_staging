@@ -16,7 +16,7 @@ import {
   getEntry,
   getParentsChildren,
   initDatabase,
-  searchDialogues as DBsearchDialogues,
+  searchDialogues as getSearchResults,
 } from "./db.js";
 import { buildTitleTree, renderTree } from "./treeBuilder.js";
 import {
@@ -333,10 +333,10 @@ async function boot() {
   // wire search
   if (searchBtn && searchInput) {
     searchBtn.addEventListener("click", () =>
-      searchDialogues(searchInput.value)
+      search(searchInput.value)
     );
     searchInput.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") searchDialogues(searchInput.value);
+      if (ev.key === "Enter") search(searchInput.value);
     });
   }
 
@@ -1113,10 +1113,10 @@ function triggerSearch() {
       currentSearchOffset = 0;
       currentSearchFilteredCount = 0;
       entryListEl.innerHTML = "";
-      searchDialogues(searchInput.value, false);
+      search(searchInput.value, false);
     } else {
       // First time searching, push history state
-      searchDialogues(searchInput.value, true);
+      search(searchInput.value, true);
     }
   }
 }
@@ -2057,8 +2057,37 @@ async function showEntryDetails(
   renderEntryDetails(entryDetailsEl, payload);
 }
 
-/* Search */
-function searchDialogues(q, resetSearch = true) {
+/* Main Search Bar */
+
+// Helper: create a result `div` element for a search result (shared by desktop and mobile)
+function createSearchResultDiv(r, query) {
+  const hasQuotedPhrases = /"[^"]+"/g.test(query);
+  const highlightedTitle = highlightTerms(r.title || "", query, hasQuotedPhrases);
+  const highlightedText = highlightTerms(r.dialoguetext || "", query, hasQuotedPhrases);
+  const convo = getConversationById(r.conversationid);
+  const convoType = convo ? convo.type || "flow" : "flow";
+  const div = createCardItem(
+    highlightedTitle,
+    getParsedIntOrDefault(r.conversationid),
+    r.id,
+    highlightedText,
+    true,
+    convoType
+  );
+  return div;
+}
+
+// Helper: filter a list of results by a set of types (treat 'all' as no-op)
+function filterResultsByType(results, typeSet) {
+  if (!typeSet || typeSet.has("all") || typeSet.size === 0) return results;
+  return results.filter((r) => {
+    const convo = getConversationById(r.conversationid);
+    const type = convo ? convo.type || "flow" : "flow";
+    return typeSet.has(type);
+  });
+}
+
+function search(q, resetSearch = true) {
   const trimmedQ = q.trim();
 
   if (resetSearch) {
@@ -2110,7 +2139,7 @@ function searchDialogues(q, resetSearch = true) {
   isLoadingMore = true;
 
   try {
-    const response = DBsearchDialogues(
+    const response = getSearchResults(
       currentSearchQuery,
       searchResultLimit,
       currentSearchActorIds,
@@ -2124,15 +2153,8 @@ function searchDialogues(q, resetSearch = true) {
     const { results: res, total } = response;
     currentSearchTotal = total;
 
-    // Filter by conversation type if not all types selected
-    let filteredResults = res;
-    if (selectedTypeIds.size > 0 && selectedTypeIds.size < 3) {
-      filteredResults = res.filter((r) => {
-        const convo = getConversationById(r.conversationid);
-        const type = convo ? convo.type || "flow" : "flow";
-        return selectedTypeIds.has(type);
-      });
-    }
+    // Filter by conversation type (use helper)
+    let filteredResults = filterResultsByType(res, selectedTypeIds);
 
     if (resetSearch) {
       entryListHeaderEl.textContent = "Search Results";
@@ -2160,46 +2182,16 @@ function searchDialogues(q, resetSearch = true) {
 
     // Add results to list
     filteredResults.forEach((r) => {
-      // Check if query contains any quoted phrases
-      const hasQuotedPhrases = /"[^"]+"/g.test(currentSearchQuery);
-
-      // For highlighting, if there are quoted phrases, we need special handling
-      // Otherwise use the normal query
-      const highlightedTitle = highlightTerms(
-        r.title || "",
-        currentSearchQuery,
-        hasQuotedPhrases
-      );
-      const highlightedText = highlightTerms(
-        r.dialoguetext || "",
-        currentSearchQuery,
-        hasQuotedPhrases
-      );
-
-      // Get conversation type for badge
-      const convo = getConversationById(r.conversationid);
-      const convoType = convo ? convo.type || "flow" : "flow";
-
-      const div = createCardItem(
-        highlightedTitle,
-        getParsedIntOrDefault(r.conversationid),
-        r.id,
-        highlightedText,
-        true,
-        convoType
-      );
+      const div = createSearchResultDiv(r, currentSearchQuery);
 
       div.addEventListener("click", () => {
         const cid = getParsedIntOrDefault(r.conversationid);
         const eid = getParsedIntOrDefault(r.id);
 
-        // This is a regular flow entry or alternate
         navigationHistory = [{ convoId: cid, entryId: null }];
-        // If this is an alternate, pass the condition and alternate line
         const alternateCondition = r.isAlternate ? r.alternatecondition : null;
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
-        // Search result is a conversation, go to conversation card not entry
         if (cid && !eid) {
           currentConvoId = cid;
           jumpToConversationRoot();
@@ -2208,9 +2200,9 @@ function searchDialogues(q, resetSearch = true) {
 
         navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
         highlightConversationInTree(cid);
-
         document.querySelector(".selected")?.scrollIntoView(true);
       });
+
       entryListEl.appendChild(div);
     });
 
@@ -2235,6 +2227,130 @@ function searchDialogues(q, resetSearch = true) {
   }
 }
 
+
+/* Main Search Bar for Mobile*/
+function performMobileSearch(resetSearch = true) {
+  const query = mobileSearchInput?.value?.trim() ?? "";
+  mobileSearchTrigger.value = query;
+  if (resetSearch) {
+    // Starting a new search
+    mobileSearchQuery = query;
+    mobileSearchActorIds =
+      mobileSelectedActorIds.size === 0 ||
+      mobileSelectedActorIds.size === allActors.length
+        ? null
+        : Array.from(mobileSelectedActorIds);
+    mobileSearchOffset = 0;
+    mobileSearchLoader?.classList.remove("hidden");
+    if (mobileSearchResults) {
+      mobileSearchResults.innerHTML = "";
+    }
+  }
+
+  if (isMobileLoadingMore) return;
+  isMobileLoadingMore = true;
+
+  try {
+    const response = getSearchResults(
+      mobileSearchQuery,
+      searchResultLimit,
+      mobileSearchActorIds,
+      true,
+      mobileSearchOffset,
+      undefined, // conversationIds
+      mobileWholeWordsCheckbox?.checked || false, // wholeWords
+      showHidden()
+    );
+    const { results, total } = response;
+    mobileSearchTotal = total;
+
+    // Filter by conversations if selected
+    let filteredResults = results;
+    if (mobileSelectedConvoIds.size > 0) {
+      filteredResults = results.filter((r) =>
+        mobileSelectedConvoIds.has(r.conversationid)
+      );
+    }
+
+    // Filter by type (use helper)
+    filteredResults = filterResultsByType(filteredResults, mobileSelectedTypes);
+
+    mobileSearchLoader?.classList.add("hidden");
+
+    if (resetSearch) {
+      mobileSearchFilteredCount = 0;
+    }
+
+    if (resetSearch && filteredResults.length === 0) {
+      mobileSearchResults.innerHTML =
+        '<div class="mobile-search-prompt">No results found</div>';
+      if (mobileSearchCount) {
+        mobileSearchCount.style.display = "none";
+      }
+      return;
+    }
+
+    // Update filtered count
+    mobileSearchFilteredCount += filteredResults.length;
+
+    // Update count display
+    if (mobileSearchCount) {
+      if (mobileSelectedConvoIds.size > 0 || !mobileSelectedTypes.has("all")) {
+        // Show filtered count when filters are active
+        mobileSearchCount.textContent = `${mobileSearchFilteredCount} results (filtered)`;
+      } else {
+        // Show total count when no filters
+        mobileSearchCount.textContent = `${mobileSearchFilteredCount} of ${total} results`;
+      }
+      mobileSearchCount.style.display = "block";
+    }
+
+    filteredResults.forEach((r) => {
+      const div = createSearchResultDiv(r, mobileSearchQuery);
+
+      div.addEventListener("click", () => {
+        const cid = getParsedIntOrDefault(r.conversationid);
+        const eid = getParsedIntOrDefault(r.id);
+
+        const alternateCondition = r.isAlternate ? r.alternatecondition : null;
+        const alternateLine = r.isAlternate ? r.dialoguetext : null;
+        if (cid && !eid) {
+          currentConvoId = cid;
+          jumpToConversationRoot();
+        } else {
+          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+        }
+
+        // Close mobile search and return to main view
+        closeMobileSearchScreen();
+      });
+
+      mobileSearchResults.appendChild(div);
+    });
+
+    // Update offset for next load (based on database results, not filtered)
+    mobileSearchOffset += results.length;
+
+    // Remove any existing loading indicator
+    mobileSearchLoader?.classList.add("hidden");
+
+    // Add loading indicator if there are more results in the database and we got results this time
+    if (results.length > 0 && mobileSearchOffset < mobileSearchTotal) {
+      mobileSearchLoader?.classList.remove("hidden");
+    }
+  } catch (e) {
+    console.error("Mobile search error:", e);
+    mobileSearchLoader?.classList.add("hidden");
+    if (resetSearch) {
+      mobileSearchResults.innerHTML =
+        '<div class="mobile-search-prompt">Error performing search</div>';
+    }
+  } finally {
+    isMobileLoadingMore = false;
+    mobileSearchLoader?.classList.add("hidden");
+  }
+}
+
 // Setup infinite scroll for search results
 function setupSearchInfiniteScroll() {
   if (!entryListEl) return;
@@ -2255,7 +2371,7 @@ function setupSearchInfiniteScroll() {
       // Hide search indicator
       searchLoader?.classList.add("hidden");
       // Load more results
-      searchDialogues(currentSearchQuery, false);
+      search(currentSearchQuery, false);
     }
   });
 }
@@ -2559,158 +2675,6 @@ function closeAllSidebars() {
 function closeAllModals() {
   const modals = document.querySelectorAll(".modal-overlay.open");
   modals.forEach((modal) => modal.classList.remove("open"));
-}
-
-function performMobileSearch(resetSearch = true) {
-  const query = mobileSearchInput?.value?.trim() ?? "";
-  mobileSearchTrigger.value = query;
-  if (resetSearch) {
-    // Starting a new search
-    mobileSearchQuery = query;
-    mobileSearchActorIds =
-      mobileSelectedActorIds.size === 0 ||
-      mobileSelectedActorIds.size === allActors.length
-        ? null
-        : Array.from(mobileSelectedActorIds);
-    mobileSearchOffset = 0;
-    mobileSearchLoader?.classList.remove("hidden");
-    if (mobileSearchResults) {
-      mobileSearchResults.innerHTML = "";
-    }
-  }
-
-  if (isMobileLoadingMore) return;
-  isMobileLoadingMore = true;
-
-  try {
-    const response = DBsearchDialogues(
-      mobileSearchQuery,
-      searchResultLimit,
-      mobileSearchActorIds,
-      true,
-      mobileSearchOffset,
-      undefined, // conversationIds
-      mobileWholeWordsCheckbox?.checked || false, // wholeWords
-      showHidden()
-    );
-    const { results, total } = response;
-    mobileSearchTotal = total;
-
-    // Filter by conversations if selected
-    let filteredResults = results;
-    if (mobileSelectedConvoIds.size > 0) {
-      filteredResults = results.filter((r) =>
-        mobileSelectedConvoIds.has(r.conversationid)
-      );
-    }
-
-    // Filter by type if not "all"
-    if (!mobileSelectedTypes.has("all")) {
-      filteredResults = filteredResults.filter((r) => {
-        const convo = getConversationById(r.conversationid);
-        return convo && mobileSelectedTypes.has(convo.type || "flow");
-      });
-    }
-
-    mobileSearchLoader?.classList.add("hidden");
-
-    if (resetSearch) {
-      mobileSearchFilteredCount = 0;
-    }
-
-    if (resetSearch && filteredResults.length === 0) {
-      mobileSearchResults.innerHTML =
-        '<div class="mobile-search-prompt">No results found</div>';
-      if (mobileSearchCount) {
-        mobileSearchCount.style.display = "none";
-      }
-      return;
-    }
-
-    // Update filtered count
-    mobileSearchFilteredCount += filteredResults.length;
-
-    // Update count display
-    if (mobileSearchCount) {
-      if (mobileSelectedConvoIds.size > 0 || !mobileSelectedTypes.has("all")) {
-        // Show filtered count when filters are active
-        mobileSearchCount.textContent = `${mobileSearchFilteredCount} results (filtered)`;
-      } else {
-        // Show total count when no filters
-        mobileSearchCount.textContent = `${mobileSearchFilteredCount} of ${total} results`;
-      }
-      mobileSearchCount.style.display = "block";
-    }
-
-    filteredResults.forEach((r) => {
-      // Check if query contains any quoted phrases
-      const hasQuotedPhrases = /"[^"]+"/g.test(mobileSearchQuery);
-
-      const highlightedTitle = highlightTerms(
-        r.title || "",
-        mobileSearchQuery,
-        hasQuotedPhrases
-      );
-      const highlightedText = highlightTerms(
-        r.dialoguetext || "",
-        mobileSearchQuery,
-        hasQuotedPhrases
-      );
-
-      // Get conversation type for badge
-      const convo = getConversationById(r.conversationid);
-      const convoType = convo ? convo.type || "flow" : "flow";
-
-      const div = createCardItem(
-        highlightedTitle,
-        getParsedIntOrDefault(r.conversationid),
-        r.id,
-        highlightedText,
-        true,
-        convoType
-      );
-
-      div.addEventListener("click", () => {
-        const cid = getParsedIntOrDefault(r.conversationid);
-        const eid = r.id;
-
-        const alternateCondition = r.isAlternate ? r.alternatecondition : null;
-        const alternateLine = r.isAlternate ? r.dialoguetext : null;
-        if (cid && !eid) {
-          currentConvoId = cid;
-          jumpToConversationRoot();
-        } else {
-          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
-        }
-
-        // Close mobile search and return to main view
-        closeMobileSearchScreen();
-      });
-
-      mobileSearchResults.appendChild(div);
-    });
-
-    // Update offset for next load (based on database results, not filtered)
-    mobileSearchOffset += results.length;
-
-    // Remove any existing loading indicator
-    mobileSearchLoader?.classList.add("hidden");
-
-    // Add loading indicator if there are more results in the database and we got results this time
-    if (results.length > 0 && mobileSearchOffset < mobileSearchTotal) {
-      mobileSearchLoader?.classList.remove("hidden");
-    }
-  } catch (e) {
-    console.error("Mobile search error:", e);
-    mobileSearchLoader?.classList.add("hidden");
-    if (resetSearch) {
-      mobileSearchResults.innerHTML =
-        '<div class="mobile-search-prompt">Error performing search</div>';
-    }
-  } finally {
-    isMobileLoadingMore = false;
-    mobileSearchLoader?.classList.add("hidden");
-  }
 }
 
 function showMobileConvoFilter() {
