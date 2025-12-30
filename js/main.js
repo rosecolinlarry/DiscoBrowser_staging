@@ -5,7 +5,7 @@ import { buildTitleTree, renderTree } from "./treeBuilder.js";
 import { $ } from "./ui.js";
 import * as UI from "./ui.js";
 import { injectIconTemplates } from "./icons.js";
-import { injectUserSettingsTemplate, setCurrentUserSettings, resetCurrentUserSettings, loadSettingsFromStorage, saveSettingsToStorage, updateCurrentUserSettings} from "./userSettings.js";
+import { injectUserSettingsTemplate, applySettings, loadSettingsFromStorage, openSettingsModal} from "./userSettings.js";
 import * as appSettings from "./userSettings.js";
 
 // Inject user settings template as soon as the module loads
@@ -98,18 +98,6 @@ const expandAllBtn = $("expandAllBtn");
 const collapseAllBtn = $("collapseAllBtn");
 const resetLayoutBtn = $("resetLayoutBtn");
 
-// Settings elements
-const settingsBtn = $("settingsBtn");
-const settingsModalOverlay = $("settingsModalOverlay");
-const settingsModalClose = $("settingsModalClose");
-const resetDesktopLayoutCheckbox = $("resetDesktopLayoutCheckbox");
-const disableColumnResizingCheckbox = $("disableColumnResizingCheckbox");
-const alwaysShowMoreDetailsCheckbox = $("alwaysShowMoreDetailsCheckbox");
-const showHiddenCheckbox = $("showHiddenCheckbox");
-const turnOffAnimationsCheckbox = $("turnOffAnimationsCheckbox");
-const saveSettingsBtn = $("saveSettingsBtn");
-const restoreDefaultSettingsBtn = $("restoreDefaultSettingsBtn");
-
 // Clear filters button
 const clearFiltersBtn = $("clearFiltersBtn");
 
@@ -162,7 +150,7 @@ const browserGrid = $("browser");
 export const defaultColumns = "352px 1fr 280px";
 export const STORAGE_KEY = "discobrowser_grid_columns";
 
-function getConversationsForTree() {
+export function getConversationsForTree() {
   const allConvos = DB.getAllConversations();
   if (appSettings.showHidden()) {
     // Also include hidden conversations
@@ -181,28 +169,12 @@ function getConversationsForTree() {
   }));
 }
 
-
-export function applySettings() {
-  // Apply animations toggle
-  updateAnimationsToggle();
-  updateHandlePositions();
-  updateResizeHandles();
-  // Apply column resizing toggle - handled in initializeResizableGrid
-  // Apply show hidden toggle - handled when building tree
-  // Apply reset desktop layout - this is a one-time action, not persistent
-}
-
-function updateAnimationsToggle() {
+export function updateAnimationsToggle() {
   if (appSettings?.turnOffAnimations()) {
     document.body.classList.add("animations-disabled");
   } else {
     document.body.classList.remove("animations-disabled");
   }
-}
-
-function openSettingsModal(e) {
-    setCurrentUserSettings();
-    settingsModalOverlay.style.display = "flex";
 }
 
 function setupMobileNavMenu() {
@@ -211,59 +183,7 @@ function setupMobileNavMenu() {
   mobileNavSearch.addEventListener("click", openMobileSearchScreen);
 }
 
-function setupSettingsModal() {
-  // Open settings modal
-  
-    settingsBtn.addEventListener("click", openSettingsModal);
-
-  // Close settings modal
-  if (settingsModalClose) {
-    settingsModalClose.addEventListener("click", () => {
-      settingsModalOverlay.style.display = "none";
-    });
-  }
-
-  // Close modal when clicking overlay
-  if (settingsModalOverlay) {
-    settingsModalOverlay.addEventListener("click", (e) => {
-      if (e.target === settingsModalOverlay) {
-        settingsModalOverlay.style.display = "none";
-      }
-    });
-  }
-
-  // Handle save settings
-  if (saveSettingsBtn) {
-    saveSettingsBtn.addEventListener("click", () => {
-
-      // Apply settings
-      updateCurrentUserSettings();
-      applySettings();
-      saveSettingsToStorage();
-
-      // Rebuild tree to reflect hidden/title settings
-      const convos = getConversationsForTree();
-      conversationTree = buildTitleTree(convos);
-      renderTree(convoListEl, conversationTree);
-      if (currentConvoId !== null) {
-        highlightConversationInTree(currentConvoId);
-      }
-
-      // Save and close modal
-      settingsModalOverlay.style.display = "none";
-    });
-  }
-
-  // Restore default settings and updates checkbox values.
-  // Does not immediately save, so user can backout and keep the original settings.
-  if (restoreDefaultSettingsBtn) {
-    restoreDefaultSettingsBtn.addEventListener("click", () => {
-      resetCurrentUserSettings();
-    });
-  }
-}
-
-function updateResizeHandles() {
+export function updateResizeHandles() {
   const leftHandle = document.querySelector(".resize-handle-left");
   const rightHandle = document.querySelector(".resize-handle-right");
 
@@ -280,7 +200,7 @@ function updateResizeHandles() {
   }
 }
 
-function updateHandlePositions() {
+export function updateHandlePositions() {
   const columns = (browserGrid.style.gridTemplateColumns || defaultColumns)
     .split(" ")
     .map((s) => s.trim());
@@ -449,9 +369,6 @@ async function boot() {
 
   // Initialize resizable grid
   initializeResizableGrid();
-
-  // Set up settings modal
-  setupSettingsModal();
 }
 
 function updateResizableGrid() {
@@ -1357,7 +1274,7 @@ function setupClearFiltersButton() {
 }
 
 // Expand and highlight conversation in the conversation tree
-function highlightConversationInTree(convoId) {
+export function highlightConversationInTree(convoId) {
   // Remove highlight from all labels (both leaf and node labels)
   const allLabels = convoListEl.querySelectorAll(".label.selected");
   allLabels.forEach((label) => {
@@ -3197,6 +3114,16 @@ function initializeIcons() {
     const iconClone = getIcon(templateId, iconWidth, iconHeight);
     placeholder.replaceWith(...iconClone.childNodes);
   });
+}
+
+export function rebuildConversationTree() {
+    // Rebuild tree to reflect hidden/title settings
+  const convos = getConversationsForTree();
+  conversationTree = buildTitleTree(convos);
+  renderTree(convoListEl, conversationTree);
+  if (currentConvoId !== null) {
+    highlightConversationInTree(currentConvoId);
+  }
 }
 
 /* Initialize boot sequence */
