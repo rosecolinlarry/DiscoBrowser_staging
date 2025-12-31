@@ -1366,9 +1366,8 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   }
 
   // Check conversation type - orbs and tasks often don't have meaningful entries
-  const convoType = conversation?.type || "flow";
-
   entryListHeaderEl.textContent = "Next Dialogue Options";
+  toggleElementVisibilityById("searchCount", false);
   entryListEl.innerHTML = "";
 
   // For flows, remove compact class and expanded class
@@ -1552,6 +1551,7 @@ function goToHomeView() {
   // Reset entry list header
   if (entryListHeaderEl) {
     entryListHeaderEl.textContent = "Next Dialogue Options";
+    toggleElementVisibilityById("searchCount", false);
   }
 
   // Clear tree selection
@@ -2043,6 +2043,7 @@ export function filterResultsByType(results, typeSet) {
 function loadChildOptions(convoId, entryId) {
   try {
     entryListHeaderEl.textContent = "Next Dialogue Options";
+    toggleElementVisibilityById("searchCount", false);
     entryListEl.innerHTML = "";
 
     const { children } = getParentsChildren(convoId, entryId);

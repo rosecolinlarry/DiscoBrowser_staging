@@ -58,7 +58,14 @@ function setSearchCount(value) {
   const searchCounters = document.querySelectorAll(".search-count");
   searchCounters.forEach((element) => {
     element.textContent = value;
-    element.style.display = "flex";
+    element.classList.remove("hidden");
+  });
+}
+
+export function hideSearchCount() {
+  const searchCounters = document.querySelectorAll(".search-count");
+  searchCounters.forEach((element) => {
+    element.classList.add("hidden")
   });
 }
 
