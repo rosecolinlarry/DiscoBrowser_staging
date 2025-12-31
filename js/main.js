@@ -72,7 +72,6 @@ const convoTypeFilterBtns = document.querySelectorAll(
 
 // Mobile search state
 export let mobileSelectedConvoIds = new Set();
-export let mobileSelectedTypes = new Set(["all"]);
 
 export const entryListEl = $("entryList");
 export const entryListHeaderEl = $("entryListHeader");
@@ -111,13 +110,13 @@ export const mobileSearchLoader = $("mobileSearchLoader");
 export const mobileSearchCount = $("mobileSearchCount");
 const mobileClearFilters = $("mobileClearFilters");
 const mobileConvoFilter = $("mobileConvoFilter");
-const mobileTypeFilter = $("mobileTypeFilter");
 const mobileActorFilter = $("mobileActorFilter");
 const mobileConvoFilterValue = $("mobileConvoFilterValue");
-const mobileTypeFilterValue = $("mobileTypeFilterValue");
 const mobileConvoFilterScreen = $("mobileConvoFilterScreen");
 const mobileActorFilterScreen = $("mobileActorFilterScreen");
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
+const mobileTypeFilter = $("mobileTypeFilter");
+
 const mobileSidebarToggle = $("mobileSidebarToggle");
 const mobileClearSearchBtn = $("mobileSearchClearIcon");
 
@@ -178,6 +177,10 @@ export const STORAGE_KEY = "discobrowser_grid_columns";
 // Inject templates as soon as the module loads
 injectUserSettingsTemplate();
 injectIconTemplates();
+
+export function setCurrentConvoId(value) {
+  currentConvoId = value;
+}
 
 export function getConversationsForTree() {
   const allConvos = getAllConversations(showHidden());
@@ -440,6 +443,7 @@ function handleMediaQueryChange() {
     historySidebar?.append(historySection);
     convoSidebar?.appendChild(convoSection);
   }
+  moveTypeFilterDropdown();
   moveActorFilterDropdown();
   moveWholeWordsButton();
   moveClearFiltersBtn();
@@ -502,6 +506,25 @@ function moveActorFilterDropdown() {
   } else {
     actorFilterDropdownWrapper.appendChild(actorFilterDropdown);
     actorFilterLabelWrapper.appendChild(actorFilterLabel);
+  }
+}
+
+function moveTypeFilterDropdown() {
+  const el = $("typeFilterDropdown");
+  const elWrapper = $("typeFilterDropdownWrapper");
+  const mobileElWrapper = $("mobileTypeFilterDropdownWrapper");
+
+  const elLabel = $("typeFilterLabel");
+  const elLabelWrapper = $("typeFilterDropdownLabelWrapper");
+  const mobileElLabelWrapper = $("mobileTypeFilterDropdownWrapperLabel");
+
+  if (mobileMediaQuery.matches) {
+    mobileElWrapper.appendChild(el);
+    mobileElLabelWrapper.appendChild(elLabel);
+    mobileTypeFilter.addEventListener("click", showMobileTypeFilter);
+  } else {
+    elWrapper.appendChild(el);
+    elLabelWrapper.appendChild(elLabel);
   }
 }
 
@@ -1048,32 +1071,29 @@ function triggerSearch(e) {
 }
 
 // Setup type filter
+// TODO KA consolidate with mobile
 function setupTypeFilter() {
-  if (!typeFilterBtn || !typeFilterDropdown) return;
-
   // Select All checkbox
-  if (selectAllTypes) {
-    selectAllTypes.addEventListener("change", (e) => {
-      const isChecked = e.target.checked;
-      const checkboxes = typeCheckboxList.querySelectorAll(
-        'input[type="checkbox"][data-type]'
-      );
+  selectAllTypes.addEventListener("change", (e) => {
+    const isChecked = e.target.checked;
+    const checkboxes = typeCheckboxList.querySelectorAll(
+      'input[type="checkbox"][data-type]'
+    );
 
-      checkboxes.forEach((cb) => {
-        const type = cb.dataset.type;
-        cb.checked = isChecked;
+    checkboxes.forEach((cb) => {
+      const type = cb.dataset.type;
+      cb.checked = isChecked;
 
-        if (isChecked) {
-          selectedTypeIds.add(type);
-        } else {
-          selectedTypeIds.delete(type);
-        }
-      });
-
-      updateTypeFilterLabel();
-      triggerSearch(e);
+      if (isChecked) {
+        selectedTypeIds.add(type);
+      } else {
+        selectedTypeIds.delete(type);
+      }
     });
-  }
+
+    updateTypeFilterLabel();
+    triggerSearch(e);
+  });
 
   // Individual type checkboxes
   const typeCheckboxes = typeCheckboxList.querySelectorAll(
@@ -1098,9 +1118,8 @@ function setupTypeFilter() {
   updateTypeFilterLabel();
 }
 
+// TODO KA consolidate with mobile
 function updateTypeSelectAllState() {
-  if (!selectAllTypes) return;
-
   const typeCheckboxes = typeCheckboxList.querySelectorAll(
     'input[type="checkbox"][data-type]'
   );
@@ -1114,9 +1133,8 @@ function updateTypeSelectAllState() {
   selectAllTypes.indeterminate = !allSelected && someSelected;
 }
 
+// TODO KA consolidate with mobile
 function updateTypeFilterLabel() {
-  if (!typeFilterLabel) return;
-
   if (selectedTypeIds.size === 0 || selectedTypeIds.size === 3) {
     typeFilterLabel.textContent = "All Types";
   } else if (selectedTypeIds.size === 1) {
@@ -2119,8 +2137,8 @@ function setupMobileSearch() {
       if (mobileConvoFilterValue) mobileConvoFilterValue.textContent = "All";
 
       // Clear type filter
-      mobileSelectedTypes.clear();
-      mobileSelectedTypes.add("all");
+      selectedTypeIds.clear();
+      selectedTypeIds.add("all");
       if (mobileTypeFilterValue) mobileTypeFilterValue.textContent = "All";
 
       // Clear whole words
@@ -2138,16 +2156,6 @@ function setupMobileSearch() {
     mobileConvoFilter.addEventListener("click", () => {
       showMobileConvoFilter();
     });
-  }
-
-  // Type filter
-  if (mobileTypeFilter) {
-    mobileTypeFilter.addEventListener("click", showMobileTypeFilter);
-  }
-
-  // Actor filter
-  if (mobileActorFilter) {
-    mobileActorFilter.addEventListener("click", showMobileActorFilter);
   }
 
   // Setup conversation filter screen
@@ -2284,8 +2292,6 @@ function showMobileActorFilter() {
 }
 
 function showMobileTypeFilter() {
-  if (!mobileTypeFilterSheet) return;
-
   mobileTypeFilterSheet.style.display = "block";
   mobileTypeFilterSheet.classList.add("active");
 }
@@ -2455,96 +2461,45 @@ function setupMobileActorFilter() {
 function updateMobileTypeFilterLabel() {
   if (!mobileTypeFilterValue) return;
 
-  if (mobileSelectedTypes.has("all") || mobileSelectedTypes.size === 0) {
+  if (selectedTypeIds.has("all") || selectedTypeIds.size === 0) {
     mobileTypeFilterValue.textContent = "All";
-  } else if (mobileSelectedTypes.size === 1) {
-    const type = Array.from(mobileSelectedTypes)[0];
+  } else if (selectedTypeIds.size === 1) {
+    const type = Array.from(selectedTypeIds)[0];
     mobileTypeFilterValue.textContent =
       type.charAt(0).toUpperCase() + type.slice(1);
   } else {
-    mobileTypeFilterValue.textContent = `${mobileSelectedTypes.size} Types`;
+    mobileTypeFilterValue.textContent = `${selectedTypeIds.size} Types`;
   }
 }
 
 function setupMobileTypeFilter() {
   // Skip setup if required elements are missing (indicates refactored HTML)
-  if (!mobileTypeFilterSheet) return;
-
   const applyBtn = $("mobileTypeApply");
-  const checkboxes = mobileTypeFilterSheet.querySelectorAll(
-    'input[type="checkbox"]'
-  );
-
-  if (!applyBtn) return;
 
   // Close sheet when clicking outside content
   mobileTypeFilterSheet.addEventListener("click", (e) => {
     if (e.target === mobileTypeFilterSheet) {
       mobileTypeFilterSheet.style.display = "none";
       mobileTypeFilterSheet.classList.remove("active");
+      typeFilterDropdown.classList.remove("show");
     }
-  });
-
-  // Handle "All" checkbox behavior
-  checkboxes.forEach((cb) => {
-    cb.addEventListener("change", () => {
-      const type = cb.dataset.type;
-
-      if (type === "all" && cb.checked) {
-        // Check all others when "All" is checked
-        checkboxes.forEach((otherCb) => {
-          otherCb.checked = true;
-        });
-      } else if (type === "all" && !cb.checked) {
-        // Uncheck all others when "All" is unchecked
-        checkboxes.forEach((otherCb) => {
-          otherCb.checked = false;
-        });
-      } else if (type !== "all") {
-        // If a specific type is checked/unchecked, update "All" checkbox
-        const allCheckbox = mobileTypeFilterSheet.querySelector(
-          'input[data-type="all"]'
-        );
-        const specificCheckboxes = Array.from(checkboxes).filter(
-          (cb) => cb.dataset.type !== "all"
-        );
-        const allSpecificChecked = specificCheckboxes.every((cb) => cb.checked);
-        const anySpecificChecked = specificCheckboxes.some((cb) => cb.checked);
-
-        if (allCheckbox) {
-          allCheckbox.checked = allSpecificChecked;
-          allCheckbox.indeterminate = anySpecificChecked && !allSpecificChecked;
-        }
-      }
-    });
   });
 
   // Apply button
   applyBtn.addEventListener("click", () => {
-    mobileSelectedTypes.clear();
-
-    checkboxes.forEach((cb) => {
-      if (cb.checked) {
-        mobileSelectedTypes.add(cb.dataset.type);
-      }
-    });
-
-    // Update label
-    updateMobileTypeFilterLabel();
-
     // Close sheet
     mobileTypeFilterSheet.style.display = "none";
     mobileTypeFilterSheet.classList.remove("active");
-
+    typeFilterDropdown.classList.remove("show"); // TODO KA see if i can consolidate this with the other dropdown logic for desktop
     search();
   });
 }
 
 function setUpWholeWordsToggle() {
   const wholeWordsCheckbox = $("wholeWordsCheckbox");
-  // TODO KA update this to only filter the existing results
+  // Whole-words toggle no longer triggers a DB search; search.js listens for changes
   wholeWordsCheckbox.addEventListener("change", (e) => {
-    triggerSearch(e);
+    // Intentionally do not call triggerSearch here - filtering is handled client-side
   });
 }
 
@@ -2658,7 +2613,6 @@ async function boot() {
 
   // Initialize mobile filter labels
   updateMobileConvoFilterLabel();
-  updateMobileTypeFilterLabel();
 
   // Setup browser history handling
   setupBrowserHistory();

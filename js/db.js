@@ -88,14 +88,12 @@ export function prepareAndAll(stmtSql, params = []) {
 
 /* Conversations list */
 export function getAllConversations(showHidden) {
-  let q = `SELECT id, title, type FROM conversations `
-  if(!showHidden) {
-    q += `WHERE isHidden != 1 `
+  let q = `SELECT id, title, type FROM conversations `;
+  if (!showHidden) {
+    q += `WHERE isHidden != 1 `;
   }
-  q += `ORDER BY title;`
-  return execRows(
-    q
-  );
+  q += `ORDER BY title;`;
+  return execRows(q);
 }
 
 /* Actors */
@@ -253,7 +251,6 @@ export function searchDialogues(
   filterStartInput = true,
   offset = 0,
   conversationIds = null,
-  wholeWords = false,
   showHidden
 ) {
   const raw = (q || "").trim();
@@ -328,32 +325,12 @@ export function searchDialogues(
       );
     });
 
-    // words (support wholeWords)
+    // words (wholeWords filtered on front end)
     words.forEach((word) => {
       const safe = esc(word);
-      if (wholeWords) {
-        // For each column, build a grouped clause covering the allowed barriers
-        columns.forEach((col) => {
-          const parts = [];
-          allowedWordBarriers.forEach((c) => {
-            const safeC = esc(c);
-            parts.push(`${col} LIKE '% ${safe} %'`);
-            parts.push(`${col} LIKE '${safeC}${safe} %'`);
-            parts.push(`${col} LIKE '% ${safe}${safeC}'`);
-            parts.push(`${col} LIKE '${safeC}${safe}${safeC}'`);
-            parts.push(`${col} LIKE '${safe}'`);
-            parts.push(`${col} LIKE '%[${safeC}${safe}${safeC}]%'`);
-            parts.push(`${col} LIKE '%[${safe}]%'`);
-            parts.push(`${col} LIKE '%(${safeC}${safe}${safeC})%'`);
-            parts.push(`${col} LIKE '%(${safe})%'`);
-          });
-          conds.push(`(${parts.join(" OR ")})`);
-        });
-      } else {
-        conds.push(
-          `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`
-        );
-      }
+      conds.push(
+        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`
+      );
     });
 
     return conds;
@@ -443,11 +420,9 @@ export function searchDialogues(
       "title",
     ]);
     if (dialoguesConditions.length > 0) {
-      dialoguesWhere = `${dialoguesConditions.join(
-        " AND "
-      )}`;
-    } 
-  } 
+      dialoguesWhere = `${dialoguesConditions.join(" AND ")}`;
+    }
+  }
 
   // Handle multiple actor IDs for dialogues
   if (actorIds) {
@@ -456,10 +431,14 @@ export function searchDialogues(
       // For orbs and tasks, check both actor and conversant fields
       // Always include actor/conversant = 0 (unassigned orbs/tasks)
       const actorFilter = `(actor IN (${actorList}, '0') OR conversant IN (${actorList}, '0'))`;
-      dialoguesWhere = dialoguesWhere ? `${dialoguesWhere} AND ${actorFilter}` : actorFilter;
+      dialoguesWhere = dialoguesWhere
+        ? `${dialoguesWhere} AND ${actorFilter}`
+        : actorFilter;
     } else if (typeof actorIds === "string" || typeof actorIds === "number") {
       const actorFilter = `(actor='${actorIds}' OR conversant='${actorIds}' OR actor='0' OR conversant='0')`;
-      dialoguesWhere = dialoguesWhere ? `${dialoguesWhere} AND ${actorFilter}` : actorFilter;
+      dialoguesWhere = dialoguesWhere
+        ? `${dialoguesWhere} AND ${actorFilter}`
+        : actorFilter;
     }
   }
 
@@ -471,12 +450,16 @@ export function searchDialogues(
   ) {
     const convoList = conversationIds.map((id) => `'${id}'`).join(",");
     const convoFilter = `id IN (${convoList})`;
-    dialoguesWhere = dialoguesWhere ? `${dialoguesWhere} AND ${convoFilter}` : convoFilter;
+    dialoguesWhere = dialoguesWhere
+      ? `${dialoguesWhere} AND ${convoFilter}`
+      : convoFilter;
   }
 
   if (!showHidden) {
     const hideHiddenFilter = "isHidden != 1";
-    dialoguesWhere = dialoguesWhere ? `${dialoguesWhere} AND ${hideHiddenFilter}` : hideHiddenFilter;
+    dialoguesWhere = dialoguesWhere
+      ? `${dialoguesWhere} AND ${hideHiddenFilter}`
+      : hideHiddenFilter;
   }
 
   // If still no dialoguesWhere, default to all
@@ -577,4 +560,3 @@ export function searchDialogues(
     total: totalCount,
   };
 }
-
