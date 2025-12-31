@@ -332,7 +332,7 @@ label {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 5;
+  /* flex: 5; */
 }
 
 .search-input {
@@ -1828,6 +1828,7 @@ a {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
+  button.clear-filter,
   .mobile-filter-clear {
     display: flex;
     align-items: center;

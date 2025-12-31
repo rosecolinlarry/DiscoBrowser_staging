@@ -57,15 +57,10 @@
           ></div>
         </button>
         <div class="search-input-wrapper">
-          <label for="mobileSearchInput" class="search-input-label"
+          <label for="searchInput" class="search-input-label"
             >Search</label
           >
-          <input
-            id="mobileSearchInput"
-            class="search-input"
-            type="text"
-            placeholder="Search text..."
-          />
+          <div id="mobileSearchInputWrapper" class="search-input-wrapper"></div>
           <button
             class="button-icon search-icon-btn"
             id="mobileSearchClearIcon"
@@ -121,22 +116,19 @@
             ></div>
           </span>
         </button>
-        <button class="mobile-filter-clear" id="mobileClearFilters">
-          <span>Clear Filters</span>
-        </button>
+        <div
+          id="mobileClearFiltersBtnWrapper"
+        ></div>
       </div>
 
-      <div class="mobile-search-options toggle-wrapper">
-        <label class="toggle-input-label">
-          <input type="checkbox" id="mobileWholeWordsCheckbox" />
-          <span class="toggle-slider"></span>
-          <span class="toggle-label">Whole Words</span>
-        </label>
-      </div>
+      <div
+        id="mobileWholeWordsButtonWrapper"
+        class="mobile-search-options toggle-wrapper"
+      ></div>
 
       <div id="mobileSearchCount" class="search-count hidden"></div>
 
-      <div class="loader hidden" id="mobileSearchLoader"></div>
+      <div class="loader hidden" id="mobileSearchLoaderWrapper"></div>
 
       <div id="mobileSearchResults" class="mobile-search-results">
         <div class="mobile-search-prompt">
@@ -415,11 +407,13 @@
         <div id="search-bar" class="search-controls mobile-hide">
           <div class="search-input-wrapper">
             <label for="search" class="search-input-label">Search for</label>
-            <input
-              id="search"
-              class="desktop-search search-input"
-              placeholder="e.g. sandwich"
-            />
+            <div id="searchInputWrapper">
+              <input
+                id="search"
+                class="search-input"
+                placeholder="e.g. sandwich"
+              />
+            </div>
             <button
               id="searchBtn"
               class="search-icon-btn mobile-hide"
@@ -524,11 +518,11 @@
               </div>
             </div>
           </div>
-          <div class="clearFiltersBtnWrapper">
+          <div id="clearFiltersBtnWrapper" class="clearFiltersBtnWrapper">
             <button
               id="clearFiltersBtn"
               type="button"
-              class="button-outline"
+              class="button-outline clear-filter"
               title="Clear all filters"
             >
               Clear Filters

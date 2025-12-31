@@ -1,6 +1,6 @@
 import { entryListEl, mobileSearchResults } from "./main.js";
 import {
-  performMobileSearch,
+  search,
   currentSearchTotal,
   setCurrentSearchTotal,
   setCurrentSearchOffset,
@@ -8,7 +8,6 @@ import {
   isLoadingMore,
   setIsLoadingMore,
 } from "./search.js";
-import { search } from "./search.js";
 import { $ } from "./ui.js";
 
 // Search pagination state
@@ -63,7 +62,7 @@ export function setupMobileSearchInfiniteScroll() {
         mobileSearchLoader.classList.add("hidden");
       }
       // Load more results
-      performMobileSearch(false);
+      search(false);
     }
   });
 }

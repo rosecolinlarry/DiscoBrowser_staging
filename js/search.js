@@ -8,7 +8,6 @@ import {
   currentEntryContainerEl,
   entryListEl,
   searchResultLimit,
-  wholeWordsCheckbox,
   filterResultsByType,
   selectedTypeIds,
   entryListHeaderEl,
@@ -18,14 +17,15 @@ import {
   highlightConversationInTree,
   closeMobileSearchScreen,
   mobileSearchCount,
-  mobileSearchInput,
   mobileSearchLoader,
   mobileSearchResults,
   mobileSearchTrigger,
-  mobileWholeWordsCheckbox,
   mobileSelectedConvoIds,
   mobileSelectedTypes,
   setNavigationHistory,
+  mobileMediaQuery,
+  desktopMediaQuery,
+  tabletMediaQuery,
 } from "./main.js";
 import { $, getParsedIntOrDefault } from "./ui.js";
 import { showHidden } from "./userSettings.js";
@@ -36,6 +36,8 @@ export let currentSearchActorIds = null;
 export let currentSearchTotal = 0;
 export let currentSearchFilteredCount = 0; // Count after type filtering
 export let isLoadingMore = false;
+
+const wholeWordsCheckbox = $("wholeWordsCheckbox");
 
 export function setCurrentSearchOffset(value) {
   currentSearchOffset = value;
@@ -65,11 +67,15 @@ function setSearchCount(value) {
 export function hideSearchCount() {
   const searchCounters = document.querySelectorAll(".search-count");
   searchCounters.forEach((element) => {
-    element.classList.add("hidden")
+    element.classList.add("hidden");
   });
 }
 
 export function search(resetSearch = true) {
+  if (mobileMediaQuery.matches) {
+    performMobileSearch(resetSearch);
+    return;
+  }
   const searchInput = $("search");
   if (!searchInput) return;
 
@@ -130,7 +136,7 @@ export function search(resetSearch = true) {
       true, // filterStartInput
       currentSearchOffset,
       undefined, // conversationIds
-      wholeWordsCheckbox?.checked || false, // wholeWords
+      wholeWordsCheckbox.checked || false, // wholeWords
       showHidden()
     );
 
@@ -177,7 +183,7 @@ export function search(resetSearch = true) {
           jumpToConversationRoot();
           return;
         }
-        
+
         // TODO KA hide search result count if not on search result page
         navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
         highlightConversationInTree(cid);
@@ -208,7 +214,8 @@ export function search(resetSearch = true) {
   }
 }
 
-export function performMobileSearch(resetSearch = true) {
+function performMobileSearch(resetSearch = true) {
+  if (!mobileMediaQuery.matches) return;
   const searchInput = $("search");
   if (!searchInput) return;
   searchInput.value = searchInput.value?.trim();
@@ -238,7 +245,7 @@ export function performMobileSearch(resetSearch = true) {
       true,
       currentSearchOffset,
       undefined, // conversationIds
-      mobileWholeWordsCheckbox?.checked || false, // wholeWords
+      wholeWordsCheckbox.checked || false, // wholeWords
       showHidden()
     );
     const { results, total } = response;
@@ -274,7 +281,9 @@ export function performMobileSearch(resetSearch = true) {
     currentSearchFilteredCount += filteredResults.length;
 
     // Update header with current count
-    setSearchCount(`Search Results (${currentSearchFilteredCount} of ${total})`);
+    setSearchCount(
+      `Search Results (${currentSearchFilteredCount} of ${total})`
+    );
 
     filteredResults.forEach((r) => {
       const div = createSearchResultDiv(r, searchInput.value);

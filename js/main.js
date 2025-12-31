@@ -48,16 +48,12 @@ import {
   setupSearchInfiniteScroll,
 } from "./setupSearchInfiniteScroll.js";
 import {
-  performMobileSearch,
   search,
   setCurrentSearchOffset,
   setCurrentSearchFilteredCount,
-  setCurrentSearchActorIds,
   setCurrentSearchTotal,
 } from "./search.js";
 
-const searchInput = $("search");
-const searchBtn = $("searchBtn");
 const actorSearchInput = $("actorSearch");
 const actorCheckboxList = $("actorCheckboxList");
 const selectAllActors = $("selectAllActors");
@@ -107,15 +103,9 @@ const convoSidebarToggle = $("convoSidebarToggle");
 const convoSidebar = $("convoSidebar");
 const convoSidebarClose = $("convoSidebarClose");
 
-// Search option elements
-export const wholeWordsCheckbox = $("wholeWordsCheckbox");
-
 // Mobile elements
 export const mobileSearchTrigger = $("mobileSearchTrigger");
 const mobileSearchScreen = $("mobileSearchScreen");
-export const mobileSearchInput = $("mobileSearchInput");
-const mobileSearchIconBtn = $("mobileSearchIconBtn");
-const mobileSearchBack = $("mobileSearchBack");
 export const mobileSearchResults = $("mobileSearchResults");
 export const mobileSearchLoader = $("mobileSearchLoader");
 export const mobileSearchCount = $("mobileSearchCount");
@@ -128,7 +118,6 @@ const mobileTypeFilterValue = $("mobileTypeFilterValue");
 const mobileConvoFilterScreen = $("mobileConvoFilterScreen");
 const mobileActorFilterScreen = $("mobileActorFilterScreen");
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
-export const mobileWholeWordsCheckbox = $("mobileWholeWordsCheckbox");
 const mobileSidebarToggle = $("mobileSidebarToggle");
 const mobileClearSearchBtn = $("mobileSearchClearIcon");
 
@@ -177,11 +166,11 @@ export let isHandlingPopState = false;
 // Browser Grid
 const browserGrid = $("browser");
 
-const mobileMediaQuery = window.matchMedia("(max-width: 768px)");
-const tabletMediaQuery = window.matchMedia(
+export const mobileMediaQuery = window.matchMedia("(max-width: 768px)");
+export const tabletMediaQuery = window.matchMedia(
   "(min-width: 769px) and (max-width: 1024px)"
 );
-const desktopMediaQuery = window.matchMedia("(min-width: 1025px)");
+export const desktopMediaQuery = window.matchMedia("(min-width: 1025px)");
 
 export const defaultColumns = "352px 1fr 280px";
 export const STORAGE_KEY = "discobrowser_grid_columns";
@@ -453,7 +442,7 @@ function handleMediaQueryChange() {
   }
   moveActorFilterDropdown();
   moveWholeWordsButton();
-  moveclearFiltersBtn();
+  moveClearFiltersBtn();
   moveSearchLoader();
   moveSearchInput();
   applySettings();
@@ -463,18 +452,16 @@ function moveWholeWordsButton() {
   const el = $("wholeWordsButton");
   const elWrapper = $("wholeWordsButtonWrapper");
   const mobileElWrapper = $("mobileWholeWordsButtonWrapper");
-  if (!el || !mobileElWrapper || !elWrapper) return;
   if (mobileMediaQuery.matches) {
     mobileElWrapper.appendChild(el);
   } else {
     elWrapper.appendChild(el);
   }
 }
-function moveclearFiltersBtn() {
+function moveClearFiltersBtn() {
   const el = $("clearFiltersBtn");
   const elWrapper = $("clearFiltersBtnWrapper");
-  const mobileElWrapper = $("mobileclearFiltersBtnWrapper");
-  if (!el || !mobileElWrapper || !elWrapper) return;
+  const mobileElWrapper = $("mobileClearFiltersBtnWrapper");
   if (mobileMediaQuery.matches) {
     mobileElWrapper.appendChild(el);
   } else {
@@ -485,7 +472,6 @@ function moveSearchLoader() {
   const el = $("searchLoader");
   const elWrapper = $("searchLoaderWrapper");
   const mobileElWrapper = $("mobileSearchLoaderWrapper");
-  if (!el || !mobileElWrapper || !elWrapper) return;
   if (mobileMediaQuery.matches) {
     mobileElWrapper.appendChild(el);
   } else {
@@ -494,10 +480,9 @@ function moveSearchLoader() {
 }
 
 function moveSearchInput() {
-  const el = $("searchInput");
+  const el = $("search");
   const elWrapper = $("searchInputWrapper");
   const mobileElWrapper = $("mobileSearchInputWrapper");
-  if (!el || !mobileElWrapper || !elWrapper) return;
   if (mobileMediaQuery.matches) {
     mobileElWrapper.appendChild(el);
   } else {
@@ -513,10 +498,7 @@ function moveActorFilterDropdown() {
   if (mobileMediaQuery.matches) {
     mobileActorFilterDropdownWrapper.appendChild(actorFilterDropdown);
     mobileActorFilterLabelWrapper.appendChild(actorFilterLabel);
-
-    if (mobileActorFilter) {
-      mobileActorFilter.addEventListener("click", showMobileActorFilter);
-    }
+    mobileActorFilter.addEventListener("click", showMobileActorFilter);
   } else {
     actorFilterDropdownWrapper.appendChild(actorFilterDropdown);
     actorFilterLabelWrapper.appendChild(actorFilterLabel);
@@ -930,13 +912,13 @@ async function populateActorDropdown() {
       });
 
       updateActorFilterLabel();
-      triggerSearch();
+      triggerSearch(e);
     });
   }
 
   // Add to Selection button
   if (addToSelectionBtn) {
-    addToSelectionBtn.addEventListener("click", () => {
+    addToSelectionBtn.addEventListener("click", (e) => {
       const checkboxes = actorCheckboxList.querySelectorAll(
         'input[type="checkbox"]:checked'
       );
@@ -948,7 +930,7 @@ async function populateActorDropdown() {
       actorSearchInput.value = "";
       filterActors();
       updateActorFilterLabel();
-      triggerSearch();
+      triggerSearch(e);
     });
   }
 
@@ -987,7 +969,7 @@ function renderActorCheckboxes(actors) {
     checkbox.dataset.actorId = actor.id;
     checkbox.checked = selectedActorIds.has(actor.id);
 
-    checkbox.addEventListener("change", () => {
+    checkbox.addEventListener("change", (e) => {
       if (checkbox.checked) {
         selectedActorIds.add(actor.id);
       } else {
@@ -995,7 +977,7 @@ function renderActorCheckboxes(actors) {
       }
       updateSelectAllState();
       updateActorFilterLabel();
-      triggerSearch();
+      triggerSearch(e);
     });
 
     const span = document.createElement("span");
@@ -1045,7 +1027,9 @@ function updateActorFilterLabel() {
   }
 }
 
-function triggerSearch() {
+function triggerSearch(e) {
+  e.preventDefault();
+  const searchInput = $("search");
   if (searchInput.value) {
     // Always reset search when filters change to clear old results
     // But only push history state if not already in search view
@@ -1055,10 +1039,10 @@ function triggerSearch() {
       setCurrentSearchOffset(0);
       setCurrentSearchFilteredCount(0);
       entryListEl.innerHTML = "";
-      search(searchInput.value, false);
+      search(false);
     } else {
       // First time searching, push history state
-      search(searchInput.value, true);
+      search(true);
     }
   }
 }
@@ -1087,7 +1071,7 @@ function setupTypeFilter() {
       });
 
       updateTypeFilterLabel();
-      triggerSearch();
+      triggerSearch(e);
     });
   }
 
@@ -1096,7 +1080,7 @@ function setupTypeFilter() {
     'input[type="checkbox"][data-type]'
   );
   typeCheckboxes.forEach((cb) => {
-    cb.addEventListener("change", () => {
+    cb.addEventListener("change", (e) => {
       const type = cb.dataset.type;
 
       if (cb.checked) {
@@ -1107,7 +1091,7 @@ function setupTypeFilter() {
 
       updateTypeSelectAllState();
       updateTypeFilterLabel();
-      triggerSearch();
+      triggerSearch(e);
     });
   });
 
@@ -1199,7 +1183,7 @@ export function closeMobileSearchScreen() {
 function setupclearFiltersBtn() {
   if (!clearFiltersBtn) return;
 
-  clearFiltersBtn.addEventListener("click", () => {
+  clearFiltersBtn.addEventListener("click", (e) => {
     // Reset actor filters
     selectedActorIds.clear();
     const actorCheckboxes = actorCheckboxList?.querySelectorAll(
@@ -1236,12 +1220,11 @@ function setupclearFiltersBtn() {
     updateTypeFilterLabel();
 
     // Reset whole words checkbox
-    if (wholeWordsCheckbox) {
-      wholeWordsCheckbox.checked = false;
-    }
+    const wholeWordsCheckbox = $("wholeWordsCheckbox");
+    wholeWordsCheckbox.checked = false;
 
     // Trigger search with cleared filters
-    triggerSearch();
+    triggerSearch(e);
   });
 }
 
@@ -2093,12 +2076,12 @@ function loadChildOptions(convoId, entryId) {
 
 /* Mobile Search Functions */
 function setupClearSearchInput() {
-  if (!mobileSearchInput || !mobileClearSearchBtn) return;
-
-  mobileClearSearchBtn.addEventListener("click", () => {
-    mobileSearchInput.value = "";
+  const mobileSearchClearIcon = $("mobileSearchClearIcon");
+  const searchInput = $("search");
+  mobileSearchClearIcon.addEventListener("click", () => {
     mobileSearchTrigger.value = "";
-    mobileSearchInput.focus();
+    searchInput.value = "";
+    searchInput.focus();
   });
 }
 
@@ -2108,51 +2091,26 @@ function openMobileSearchScreen() {
     pushHistoryState("search");
   }
   mobileSearchScreen.style.display = "flex";
-  mobileSearchInput.focus();
+  const searchInput = $("search");
+  searchInput.focus();
 }
 
 function setupMobileSearch() {
   // Open mobile search screen
-  mobileSearchInput.addEventListener("input", (e) => {
-    // TODO Remove when everything is consolidated between mobile and desktop
-    // keeps the search query values in sync
-    mobileSearchTrigger.value = e?.target?.value?.trim();
-    searchInput.value = e?.target?.value.trim();
-  });
   mobileSearchTrigger.addEventListener("click", openMobileSearchScreen);
 
   // Close mobile search screen
-  if (mobileSearchBack) {
-    mobileSearchBack.addEventListener("click", () => {
-      // Use browser back to return to previous state
-      window.history.back();
-    });
-  }
-
-  // Mobile search - Enter key triggers search
-  if (mobileSearchInput) {
-    mobileSearchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") performMobileSearch();
-    });
-  }
+  const mobileSearchBack = $("mobileSearchBack");
+  mobileSearchBack.addEventListener("click", () => {
+    // Use browser back to return to previous state
+    window.history.back();
+  });
 
   // Mobile search icon button
-  if (mobileSearchIconBtn) {
-    mobileSearchIconBtn.addEventListener("click", () => {
-      performMobileSearch();
-    });
-  }
-
-  // Whole words toggle - trigger search when changed
-  if (mobileWholeWordsCheckbox) {
-    mobileWholeWordsCheckbox.addEventListener("change", () => {
-      // Only trigger search if there's an active query
-      if ($("search")?.value) {
-        performMobileSearch();
-      }
-    });
-  }
-
+  const mobileSearchIconBtn = $("mobileSearchIconBtn");
+  mobileSearchIconBtn.addEventListener("click", () => {
+    search();
+  });
   // Clear filters button
   if (mobileClearFilters) {
     mobileClearFilters.addEventListener("click", () => {
@@ -2166,13 +2124,11 @@ function setupMobileSearch() {
       if (mobileTypeFilterValue) mobileTypeFilterValue.textContent = "All";
 
       // Clear whole words
-      if (mobileWholeWordsCheckbox) {
-        mobileWholeWordsCheckbox.checked = false;
-      }
+      wholeWordsCheckbox.checked = false;
 
       // Re-run search if there's an active query
       if ($("search")?.value) {
-        performMobileSearch();
+        search();
       }
     });
   }
@@ -2336,15 +2292,10 @@ function showMobileTypeFilter() {
 
 function setupMobileConvoFilter() {
   const backBtn = $("mobileConvoFilterBack");
-  const searchInput = $("mobileConvoFilterSearch");
+  const mobileConvoFilterSearch = $("mobileConvoFilterSearch");
   const listContainer = $("mobileConvoFilterList");
   const selectAllCheckbox = $("mobileConvoSelectAll");
   const addToSelectionBtn = $("mobileConvoAddToSelection");
-
-  // Skip setup if any required elements are missing (indicates refactored HTML)
-  if (!backBtn || !searchInput || !listContainer) {
-    return;
-  }
 
   let tempSelectedConvoIds = new Set(mobileSelectedConvoIds);
   let allConvos = [];
@@ -2363,8 +2314,8 @@ function setupMobileConvoFilter() {
       updateMobileConvoFilterLabel();
       mobileConvoFilterScreen.style.display = "none";
       // Trigger new search with updated filter
-      if (mobileSearchInput.value.trim()) {
-        performMobileSearch();
+      if (mobileConvoFilterSearch.value.trim()) {
+        search();
       }
     });
   }
@@ -2447,13 +2398,13 @@ function setupMobileConvoFilter() {
     allConvos = getConversationsForTree();
 
     tempSelectedConvoIds = new Set(mobileSelectedConvoIds);
-    searchInput.value = "";
+    mobileConvoFilterSearch.value = "";
     renderConvoList(allConvos);
   };
 
   // Search filter
-  searchInput.addEventListener("input", () => {
-    const query = searchInput.value.toLowerCase().trim();
+  mobileConvoFilterSearch.addEventListener("input", () => {
+    const query = mobileConvoFilterSearch.value.toLowerCase().trim();
     if (!query) {
       renderConvoList(allConvos);
       return;
@@ -2585,9 +2536,40 @@ function setupMobileTypeFilter() {
     mobileTypeFilterSheet.style.display = "none";
     mobileTypeFilterSheet.classList.remove("active");
 
-    // Perform search if there's a query
-    if (mobileSearchInput.value.trim()) performMobileSearch();
+    search();
   });
+}
+
+function setUpWholeWordsToggle() {
+  const wholeWordsCheckbox = $("wholeWordsCheckbox");
+  // TODO KA update this to only filter the existing results
+  wholeWordsCheckbox.addEventListener("change", (e) => {
+    triggerSearch(e);
+  });
+}
+
+function setUpSearch() {
+  const searchInput = $("search");
+  const searchBtn = $("searchBtn");
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      search();
+    }
+  });
+
+  searchInput.addEventListener("input", (e) => {
+    // TODO KA Remove when search input is consolidated for desktop and mobile
+    mobileSearchTrigger.value = e?.target?.value?.trim();
+  });
+  searchBtn.addEventListener("click", () => search());
+}
+
+function setUpMainHeader() {
+  const headerTitle = document.querySelector("h1");
+  if (headerTitle) {
+    headerTitle.style.cursor = "pointer";
+    headerTitle.addEventListener("click", goBackHomeWithBrowserHistory);
+  }
 }
 
 async function boot() {
@@ -2630,31 +2612,13 @@ async function boot() {
   setupclearFiltersBtn();
 
   // Make header clickable to go home
-  const headerTitle = document.querySelector("h1");
-  if (headerTitle) {
-    headerTitle.style.cursor = "pointer";
-    headerTitle.addEventListener("click", goBackHomeWithBrowserHistory);
-  }
+  setUpMainHeader();
 
   // wire search
-  if (searchBtn && searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      // TODO KA Remove when search input is consolidated for desktop and mobile
-      mobileSearchInput.value = e?.target?.value?.trim();
-      mobileSearchTrigger.value = e?.target?.value?.trim();
-    });
-    searchBtn.addEventListener("click", () => search(searchInput.value));
-    searchInput.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") search(searchInput.value);
-    });
-  }
+  setUpSearch();
 
   // Whole words toggle - trigger search when changed
-  if (wholeWordsCheckbox) {
-    wholeWordsCheckbox.addEventListener("change", () => {
-      triggerSearch();
-    });
-  }
+  setUpWholeWordsToggle();
 
   if (backBtn) {
     backBtn.addEventListener("click", () => {
