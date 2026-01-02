@@ -1694,7 +1694,7 @@ a {
   }
 
   .mobile-filter-screen .filter-dropdown {
-    display: none;
+    display: unset;
     max-height: unset;
     position: unset;
     min-width: unset;
@@ -1752,6 +1752,10 @@ a {
 
   .mobile-search-screen .search-controls {
     flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-shrink: 0;
   }
 
   .mobile-search-filters {
@@ -2148,6 +2152,7 @@ a {
     grid-row: 1;
   }
 
+  .mobile-search-header .search-input-wrapper,
   .mobile-search-trigger-wrapper {
     flex: 1;
     position: relative;

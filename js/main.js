@@ -2139,7 +2139,6 @@ function setupMobileSearch() {
       // Clear type filter
       selectedTypeIds.clear();
       selectedTypeIds.add("all");
-      if (mobileTypeFilterValue) mobileTypeFilterValue.textContent = "All";
 
       // Clear whole words
       wholeWordsCheckbox.checked = false;
@@ -2458,20 +2457,6 @@ function setupMobileActorFilter() {
   });
 }
 
-function updateMobileTypeFilterLabel() {
-  if (!mobileTypeFilterValue) return;
-
-  if (selectedTypeIds.has("all") || selectedTypeIds.size === 0) {
-    mobileTypeFilterValue.textContent = "All";
-  } else if (selectedTypeIds.size === 1) {
-    const type = Array.from(selectedTypeIds)[0];
-    mobileTypeFilterValue.textContent =
-      type.charAt(0).toUpperCase() + type.slice(1);
-  } else {
-    mobileTypeFilterValue.textContent = `${selectedTypeIds.size} Types`;
-  }
-}
-
 function setupMobileTypeFilter() {
   // Skip setup if required elements are missing (indicates refactored HTML)
   const applyBtn = $("mobileTypeApply");
@@ -2527,6 +2512,26 @@ function setUpMainHeader() {
   }
 }
 
+function setUpHistoryConvoRootButton() {
+  if (convoRootBtn) {
+    convoRootBtn.addEventListener("click", () => {
+      if (currentConvoId !== null) {
+        jumpToConversationRoot();
+      }
+    });
+  }
+}
+
+function setUpHistoryBackButton() {
+  if (backBtn) {
+    backBtn.addEventListener("click", () => {
+      // Use browser back button instead of manual history management
+      window.history.back();
+    });
+  }
+}
+
+
 async function boot() {
   // Initialize icons when DOM is ready
   document.addEventListener("DOMContentLoaded", initializeIcons);
@@ -2575,20 +2580,9 @@ async function boot() {
   // Whole words toggle - trigger search when changed
   setUpWholeWordsToggle();
 
-  if (backBtn) {
-    backBtn.addEventListener("click", () => {
-      // Use browser back button instead of manual history management
-      window.history.back();
-    });
-  }
+  setUpHistoryBackButton();
 
-  if (convoRootBtn) {
-    convoRootBtn.addEventListener("click", () => {
-      if (currentConvoId !== null) {
-        jumpToConversationRoot();
-      }
-    });
-  }
+  setUpHistoryConvoRootButton();
 
   updateBackButtonState();
 

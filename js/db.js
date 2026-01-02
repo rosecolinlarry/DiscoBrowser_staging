@@ -26,6 +26,7 @@ const allowedWordBarriers = [
   "--",
   "",
 ];
+
 export async function initDatabase(sqlFactory, path = "db/discobase.sqlite3") {
   SQL = sqlFactory;
   try {
@@ -86,17 +87,8 @@ export function prepareAndAll(stmtSql, params = []) {
   return out;
 }
 
-/* Conversations list */
-export function getAllConversations(showHidden) {
-  let q = `SELECT id, title, type FROM conversations `;
-  if (!showHidden) {
-    q += `WHERE isHidden != 1 `;
-  }
-  q += `ORDER BY title;`;
-  return execRows(q);
-}
 
-/* Actors */
+// #region Actors
 export function getDistinctActors() {
   return execRows(
     `SELECT DISTINCT id, name FROM actors WHERE name IS NOT NULL AND name != '' ORDER BY name;`
@@ -114,7 +106,9 @@ export function getActorNameById(actorId) {
   );
   return actor;
 }
+// #endregion
 
+// #region Conversations
 export function getConversationById(convoId, showHidden) {
   // Get the conversation's task related fields
   let convoSQL = `SELECT  
@@ -132,7 +126,18 @@ export function getConversationById(convoId, showHidden) {
     return execRowsFirstOrDefault(convoSQL);
   }
 }
+/* Conversations list */
+export function getAllConversations(showHidden) {
+  let q = `SELECT id, title, type FROM conversations `;
+  if (!showHidden) {
+    q += `WHERE isHidden != 1 `;
+  }
+  q += `ORDER BY title;`;
+  return execRows(q);
+}
+// #endregion
 
+// #region Entries
 /* Load dentries for a conversation (summary listing) */
 export function getEntriesForConversation(convoId, showHidden) {
   if (showHidden) {
@@ -242,8 +247,10 @@ export function getEntriesBulk(pairs = [], showHidden) {
   }
   return results;
 }
+// #endregion
 
-/** Search entry dialogues and conversation dialogues (orbs/tasks) */
+// #region Search
+/** Search entry dialogues and conversation dialogues */
 export function searchDialogues(
   q,
   limit = 1000,
@@ -560,3 +567,4 @@ export function searchDialogues(
     total: totalCount,
   };
 }
+// #endregion
