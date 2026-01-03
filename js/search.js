@@ -33,7 +33,7 @@ import { showHidden } from "./userSettings.js";
 
 // Search pagination state
 export let currentSearchOffset = 0;
-export let currentSearchConvoIds= null;
+export let currentSearchConvoIds = null;
 export let currentSearchActorIds = null;
 export let currentSearchTotal = 0;
 export let currentSearchFilteredCount = 0; // Count after type filtering
@@ -91,9 +91,7 @@ function filterAndMatchResults(results, rawQuery, { useMobile = false } = {}) {
   let filtered = filterResultsByType(results, typeSet);
 
   if (selectedConvoIds && selectedConvoIds.size > 0) {
-    filtered = filtered.filter((r) =>
-      selectedConvoIds.has(r.conversationid)
-    );
+    filtered = filtered.filter((r) => selectedConvoIds.has(r.conversationid));
   }
 
   if (wholeWordsCheckbox.checked && rawQuery) {
@@ -116,7 +114,7 @@ export function applyFiltersToCurrentResults(useMobile = false) {
     if (!filtered.length) {
       mobileSearchResults.innerHTML =
         '<div class="mobile-search-prompt">No results found</div>';
-      if (mobileSearchCount) mobileSearchCount.style.display = "none";
+      if (mobileSearchCount) mobileSearchCount.classList.add("hidden");
       return;
     }
     // TODO KA consolidate search results to one dom element
@@ -145,7 +143,6 @@ export function applyFiltersToCurrentResults(useMobile = false) {
     setSearchCount(
       `Search Results (${filtered.length} of ${currentSearchTotal})`
     );
-    if (mobileSearchCount) mobileSearchCount.style.display = "inline-block";
     return;
   }
 
@@ -248,7 +245,7 @@ export function search(resetSearch = true) {
   currentSearchConvoIds =
     selectedConvoIds.size === 0 || selectedConvoIds.size === allConvos.length
       ? null
-      : Array.from(selectedConvoIds)
+      : Array.from(selectedConvoIds);
 
   // Always update actor IDs from current filter selection (even when re-filtering)
   currentSearchActorIds =
@@ -372,7 +369,7 @@ export function search(resetSearch = true) {
       // Update filtered count
       currentSearchFilteredCount += initialFiltered.length;
       entryListHeaderEl.textContent = `Search Results`;
-      setSearchCount(`(${currentSearchFilteredCount} of ${total})`);
+      setSearchCount(`(${currentSearchFilteredCount} of ${currentSearchTotal})`);
 
       // Render initial set
       initialFiltered.forEach((r) => {
@@ -407,6 +404,7 @@ export function search(resetSearch = true) {
       // Update filtered count
       currentSearchFilteredCount += newFiltered.length;
       entryListHeaderEl.textContent = `Search Results`;
+      // TODO KA this number gets weird when filtering by types and needing to scroll. Consider just showing the total results and not pagination state.
       setSearchCount(`(${currentSearchFilteredCount} of ${total})`);
 
       newFiltered.forEach((r) => {
@@ -521,7 +519,7 @@ function performMobileSearch(resetSearch = true) {
       if (initialFiltered.length === 0) {
         mobileSearchResults.innerHTML =
           '<div class="mobile-search-prompt">No results found</div>';
-        if (mobileSearchCount) mobileSearchCount.style.display = "none";
+        if (mobileSearchCount) mobileSearchCount.classList.add("hidden");
         return;
       }
 
@@ -588,7 +586,6 @@ function performMobileSearch(resetSearch = true) {
     setSearchCount(
       `Search Results (${currentSearchFilteredCount} of ${total})`
     );
-    if (mobileSearchCount) mobileSearchCount.style.display = "inline-block";
 
     // Update offset for next load (based on database results, not filtered)
     currentSearchOffset += results.length;
