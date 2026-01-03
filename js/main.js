@@ -540,7 +540,7 @@ function moveTypeFilterDropdown() {
   if (mobileMediaQuery.matches) {
     mobileElWrapper.appendChild(el);
     mobileElLabelWrapper.appendChild(elLabel);
-    mobileTypeFilter.addEventListener("click", showmobileTypeFilter);
+    mobileTypeFilter.addEventListener("click", showMobileTypeFilter);
   } else {
     elWrapper.appendChild(el);
     elLabelWrapper.appendChild(elLabel);
@@ -2347,7 +2347,7 @@ function setupMobileSearch() {
   setupMobileActorFilter();
 
   // Setup type filter sheet
-  setupmobileTypeFilter();
+  setupMobileTypeFilter();
 }
 
 function setupMobileSidebar() {
@@ -2469,7 +2469,7 @@ function showMobileActorFilter() {
   actorFilterDropdown.classList.add("show");
 }
 
-function showmobileTypeFilter() {
+function showMobileTypeFilter() {
   mobileTypeFilterSheet.style.display = "block";
   mobileTypeFilterSheet.classList.add("active");
 }
@@ -2506,7 +2506,7 @@ function setupMobileActorFilter() {
   });
 }
 
-function setupmobileTypeFilter() {
+function setupMobileTypeFilter() {
   // Skip setup if required elements are missing (indicates refactored HTML)
   const applyBtn = $("mobileTypeApply");
 
