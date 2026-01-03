@@ -50,7 +50,7 @@
         class="mobile-search-screen"
         style="display: none"
       >
-        <div class="mobile-search-header">
+        <div class="mobile-header">
           <button id="mobileSearchBack" class="button-icon">
             <div
               class="icon-placeholder"
@@ -127,7 +127,7 @@
             <span>Type</span>
             <div
               class="filter-dropdown-label-wrapper"
-              id="mobileTypeFilterDropdownWrapperLabel"
+              id="mobileTypeFilterWrapperLabel"
             ></div>
             <span class="dropdown-icon filter-dropdown-button-icon">
               <div
@@ -202,7 +202,7 @@
         <div class="bottom-sheet-content">
           <h4>Filter by Type</h4>
           <div class="mobile-type-options">
-            <div id="mobileTypeFilterDropdownWrapper"></div>
+            <div id="mobileTypeFilterWrapper"></div>
           </div>
           <button class="mobile-apply-btn" id="mobileTypeApply">Apply</button>
         </div>
@@ -264,7 +264,7 @@
           >
           <input
             id="mobileSearchTrigger"
-            class="mobile-search-trigger"
+            class="mobile-search-trigger search-input"
             type="text"
             placeholder="Search text..."
             readonly
@@ -476,6 +476,7 @@
               <div id="convoCheckboxList" class="checkbox-list"></div>
             </div>
           </div>
+          
           <div id="actorFilterWrapper" class="filter-dropdown-wrapper">
             <button
               id="actorFilterBtn"
@@ -532,7 +533,8 @@
               </div>
             </div>
           </div>
-          <div id="type-filter-wrapper" class="filter-dropdown-wrapper">
+
+          <div id="typeFilterWrapper" class="filter-dropdown-wrapper">
             <button
               id="typeFilterBtn"
               class="filter-dropdown-button"
@@ -552,36 +554,35 @@
                 ></div>
               </span>
             </button>
-            <div class="filter-dropdown" id="typeFilterDropdownWrapper">
-              <div id="typeFilterDropdown" class="filter-dropdown">
-                <div class="filter-actions">
-                  <label class="checkbox-item select-all checkbox-label">
-                    <input
-                      class="filter-dropdown-select-all"
-                      type="checkbox"
-                      id="selectAllTypes"
-                      checked
-                    />
-                    <span>Select All</span>
-                  </label>
-                </div>
-                <div id="typeCheckboxList" class="checkbox-list">
-                  <label class="checkbox-item checkbox-label type-flow">
-                    <input type="checkbox" data-type="flow" checked />
-                    <span>Flow</span>
-                  </label>
-                  <label class="checkbox-item checkbox-label type-orb">
-                    <input type="checkbox" data-type="orb" checked />
-                    <span>Orb</span>
-                  </label>
-                  <label class="checkbox-item checkbox-label type-task">
-                    <input type="checkbox" data-type="task" checked />
-                    <span>Task</span>
-                  </label>
-                </div>
+            <div id="typeFilterDropdown" class="filter-dropdown">
+              <div class="filter-actions">
+                <label class="checkbox-item select-all checkbox-label">
+                  <input
+                    class="filter-dropdown-select-all"
+                    type="checkbox"
+                    id="selectAllTypes"
+                    checked
+                  />
+                  <span>Select All</span>
+                </label>
+              </div>
+              <div id="typeCheckboxList" class="checkbox-list">
+                <label class="checkbox-item checkbox-label type-flow">
+                  <input type="checkbox" data-type="flow" checked />
+                  <span>Flow</span>
+                </label>
+                <label class="checkbox-item checkbox-label type-orb">
+                  <input type="checkbox" data-type="orb" checked />
+                  <span>Orb</span>
+                </label>
+                <label class="checkbox-item checkbox-label type-task">
+                  <input type="checkbox" data-type="task" checked />
+                  <span>Task</span>
+                </label>
               </div>
             </div>
           </div>
+
           <div id="clearFiltersBtnWrapper" class="clearFiltersBtnWrapper">
             <button
               id="clearFiltersBtn"
