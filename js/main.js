@@ -530,17 +530,17 @@ function moveActorFilterDropdown() {
 }
 function moveTypeFilterDropdown() {
   const el = $("typeFilterDropdown");
-  const elWrapper = $("typeFilterDropdownWrapper");
-  const mobileElWrapper = $("mobileTypeFilterDropdownWrapper");
+  const elWrapper = $("typeFilterWrapper");
+  const mobileElWrapper = $("mobileTypeFilterWrapper");
 
   const elLabel = $("typeFilterLabel");
   const elLabelWrapper = $("typeFilterDropdownLabelWrapper");
-  const mobileElLabelWrapper = $("mobileTypeFilterDropdownWrapperLabel");
+  const mobileElLabelWrapper = $("mobileTypeFilterWrapperLabel");
 
   if (mobileMediaQuery.matches) {
     mobileElWrapper.appendChild(el);
     mobileElLabelWrapper.appendChild(elLabel);
-    mobileTypeFilter.addEventListener("click", showMobileTypeFilter);
+    mobileTypeFilter.addEventListener("click", showmobileTypeFilter);
   } else {
     elWrapper.appendChild(el);
     elLabelWrapper.appendChild(elLabel);
@@ -2347,7 +2347,7 @@ function setupMobileSearch() {
   setupMobileActorFilter();
 
   // Setup type filter sheet
-  setupMobileTypeFilter();
+  setupmobileTypeFilter();
 }
 
 function setupMobileSidebar() {
@@ -2469,7 +2469,7 @@ function showMobileActorFilter() {
   actorFilterDropdown.classList.add("show");
 }
 
-function showMobileTypeFilter() {
+function showmobileTypeFilter() {
   mobileTypeFilterSheet.style.display = "block";
   mobileTypeFilterSheet.classList.add("active");
 }
@@ -2506,7 +2506,7 @@ function setupMobileActorFilter() {
   });
 }
 
-function setupMobileTypeFilter() {
+function setupmobileTypeFilter() {
   // Skip setup if required elements are missing (indicates refactored HTML)
   const applyBtn = $("mobileTypeApply");
 
