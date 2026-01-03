@@ -57,7 +57,7 @@ import {
 const actorSearchInput = $("actorSearch");
 const actorCheckboxList = $("actorCheckboxList");
 const selectAllActors = $("selectAllActors");
-const addToSelectionBtn = $("addToSelection");
+const actorAddToSelectionBtn = $("actorAddToSelection");
 const typeFilterBtn = $("typeFilterBtn");
 const typeFilterLabel = $("typeFilterLabel");
 const typeFilterDropdown = $("typeFilterDropdown");
@@ -71,7 +71,7 @@ const convoTypeFilterBtns = document.querySelectorAll(
 );
 
 // Mobile search state
-export let mobileSelectedConvoIds = new Set();
+export let selectedConvoIds = new Set();
 
 export const entryListEl = $("entryList");
 export const entryListHeaderEl = $("entryListHeader");
@@ -109,13 +109,7 @@ export const mobileSearchResults = $("mobileSearchResults");
 export const mobileSearchLoader = $("mobileSearchLoader");
 export const mobileSearchCount = $("mobileSearchCount");
 const mobileClearFilters = $("mobileClearFilters");
-const mobileConvoFilter = $("mobileConvoFilter");
-const mobileActorFilter = $("mobileActorFilter");
-const mobileConvoFilterValue = $("mobileConvoFilterValue");
-const mobileConvoFilterScreen = $("mobileConvoFilterScreen");
-const mobileActorFilterScreen = $("mobileActorFilterScreen");
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
-const mobileTypeFilter = $("mobileTypeFilter");
 
 const mobileSidebarToggle = $("mobileSidebarToggle");
 const mobileClearSearchBtn = $("mobileSearchClearIcon");
@@ -133,13 +127,27 @@ const collapseAllBtn = $("collapseAllBtn");
 const resetLayoutBtn = $("resetLayoutBtn");
 
 // Filter dropdowns
-const actorFilterDropdown = $("actorFilterDropdown");
-const actorFilterDropdownWrapper = $("actor-filter-wrapper");
-const mobileActorFilterDropdownWrapper = $("mobileActorFilterScreen");
 
-const actorFilterLabelWrapper = $("actorFilterLabelWrapper");
-const mobileActorFilterLabelWrapper = $("mobileActorFilterLabelWrapper");
-const actorFilterLabel = $("actorFilterLabel");
+const convoFilterDropdownWrapper = $("convoFilterWrapper"); // Filter Wrapper
+const mobileConvoFilter = $("mobileConvoFilter"); // Button
+const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
+const mobileConvoFilterWrapper = $("mobileConvoFilterWrapper"); // Checklist
+
+const convoFilterLabelWrapper = $("convoFilterLabelWrapper"); // Text Wrapper
+const mobileConvoFilterLabelWrapper = $("mobileConvoFilterLabelWrapper"); // Text Wrapper
+const convoFilterLabel = $("convoFilterLabel"); // Text
+
+const actorFilterWrapper = $("actorFilterWrapper"); // Filter Wrapper
+const mobileActorFilter = $("mobileActorFilter"); // Button
+const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
+const mobileActorFilterWrapper = $("mobileActorFilterWrapper"); // Checklist
+
+const actorFilterLabelWrapper = $("actorFilterLabelWrapper"); // Text Wrapper
+const mobileActorFilterLabelWrapper = $("mobileActorFilterLabelWrapper"); // Test Wrapper
+const actorFilterLabel = $("actorFilterLabel"); // Text
+
+
+const mobileTypeFilter = $("mobileTypeFilter"); // Button
 
 // Clear filters button
 const clearFiltersBtn = $("clearFiltersBtn");
@@ -444,6 +452,7 @@ function handleMediaQueryChange() {
     convoSidebar?.appendChild(convoSection);
   }
   moveTypeFilterDropdown();
+  moveConvoFilterDropdown();
   moveActorFilterDropdown();
   moveWholeWordsButton();
   moveClearFiltersBtn();
@@ -494,17 +503,33 @@ function moveSearchInput() {
   }
 }
 
+
+function moveConvoFilterDropdown() {
+  if (!convoFilterDropdown) {
+    populateConvoDropdown();
+    return;
+  }
+  if (mobileMediaQuery.matches) {
+    mobileConvoFilterWrapper.appendChild(convoFilterDropdown);
+    mobileConvoFilterLabelWrapper.appendChild(convoFilterLabel);
+    mobileConvoFilter.addEventListener("click", showMobileConvoFilter);
+  } else {
+    convoFilterDropdownWrapper.appendChild(convoFilterDropdown);
+    convoFilterLabelWrapper.appendChild(convoFilterLabel);
+  }
+}
+
 function moveActorFilterDropdown() {
   if (!actorFilterDropdown) {
     populateActorDropdown();
     return;
   }
   if (mobileMediaQuery.matches) {
-    mobileActorFilterDropdownWrapper.appendChild(actorFilterDropdown);
+    mobileActorFilterWrapper.appendChild(actorFilterDropdown);
     mobileActorFilterLabelWrapper.appendChild(actorFilterLabel);
     mobileActorFilter.addEventListener("click", showMobileActorFilter);
   } else {
-    actorFilterDropdownWrapper.appendChild(actorFilterDropdown);
+    actorFilterWrapper.appendChild(actorFilterDropdown);
     actorFilterLabelWrapper.appendChild(actorFilterLabel);
   }
 }
@@ -940,8 +965,8 @@ async function populateActorDropdown() {
   }
 
   // Add to Selection button
-  if (addToSelectionBtn) {
-    addToSelectionBtn.addEventListener("click", (e) => {
+  if (actorAddToSelectionBtn) {
+    actorAddToSelectionBtn.addEventListener("click", (e) => {
       const checkboxes = actorCheckboxList.querySelectorAll(
         'input[type="checkbox"]:checked'
       );
@@ -950,6 +975,7 @@ async function populateActorDropdown() {
       });
 
       // Clear search and show all with current selection
+      // TODO KA for mobile, have this close the actor filter screen and automatically apply the filter/trigger a new search
       actorSearchInput.value = "";
       filterActors();
       updateActorFilterLabel();
@@ -2133,8 +2159,8 @@ function setupMobileSearch() {
   if (mobileClearFilters) {
     mobileClearFilters.addEventListener("click", () => {
       // Clear conversation filter
-      mobileSelectedConvoIds.clear();
-      if (mobileConvoFilterValue) mobileConvoFilterValue.textContent = "All";
+      selectedConvoIds.clear();
+      if (convoFilterLabel) convoFilterLabel.textContent = "All";
 
       // Clear type filter
       selectedTypeIds.clear();
@@ -2158,7 +2184,7 @@ function setupMobileSearch() {
   }
 
   // Setup conversation filter screen
-  setupMobileConvoFilter();
+  setupConvoFilter();
 
   // Setup actor filter screen
   setupMobileActorFilter();
@@ -2277,16 +2303,17 @@ function closeAllModals() {
 }
 
 function showMobileConvoFilter() {
-  if (!mobileConvoFilterScreen) return;
+  if (!mobileConvoFilterWrapper) return;
 
   if (window.refreshMobileConvoList) {
     window.refreshMobileConvoList();
   }
-  mobileConvoFilterScreen.style.display = "block";
+  mobileConvoFilterWrapper.style.display = "block";
+  convoFilterDropdown.classList.add("show");
 }
 
 function showMobileActorFilter() {
-  mobileActorFilterScreen.style.display = "block";
+  mobileActorFilterWrapper.style.display = "block";
   actorFilterDropdown.classList.add("show");
 }
 
@@ -2295,31 +2322,31 @@ function showMobileTypeFilter() {
   mobileTypeFilterSheet.classList.add("active");
 }
 
-function setupMobileConvoFilter() {
+function setupConvoFilter() {
   const backBtn = $("mobileConvoFilterBack");
-  const mobileConvoFilterSearch = $("mobileConvoFilterSearch");
-  const listContainer = $("mobileConvoFilterList");
-  const selectAllCheckbox = $("mobileConvoSelectAll");
-  const addToSelectionBtn = $("mobileConvoAddToSelection");
+  const convoFilterSearch = $("convoSearch");
+  const listContainer = $("convoCheckboxList");
+  const selectAllCheckbox = $("selectAllConvo");
+  const addToSelectionBtn = $("convoAddToSelection");
 
-  let tempSelectedConvoIds = new Set(mobileSelectedConvoIds);
+  let tempSelectedConvoIds = new Set(selectedConvoIds);
   let allConvos = [];
   let filteredConvos = [];
 
   // Back button - don't apply changes
   backBtn.addEventListener("click", () => {
-    mobileConvoFilterScreen.style.display = "none";
-    tempSelectedConvoIds = new Set(mobileSelectedConvoIds);
+    mobileConvoFilterWrapper.style.display = "none";
+    tempSelectedConvoIds = new Set(selectedConvoIds);
   });
 
   // Add to Selection button - apply changes
   if (addToSelectionBtn) {
     addToSelectionBtn.addEventListener("click", () => {
-      mobileSelectedConvoIds = new Set(tempSelectedConvoIds);
-      updateMobileConvoFilterLabel();
-      mobileConvoFilterScreen.style.display = "none";
+      selectedConvoIds = new Set(tempSelectedConvoIds);
+      updateConvoFilterLabel();
+      mobileConvoFilterWrapper.style.display = "none";
       // Trigger new search with updated filter
-      if (mobileConvoFilterSearch.value.trim()) {
+      if (convoFilterSearch.value.trim()) {
         search();
       }
     });
@@ -2359,7 +2386,7 @@ function setupMobileConvoFilter() {
     // Add conversation items
     conversations.forEach((convo) => {
       const item = document.createElement("div");
-      item.className = "mobile-filter-item";
+      item.className = "checkbox-item";
       const isChecked = tempSelectedConvoIds.has(convo.id);
       item.innerHTML = `
         <input type="checkbox" ${isChecked ? "checked" : ""} />
@@ -2402,14 +2429,14 @@ function setupMobileConvoFilter() {
   window.refreshMobileConvoList = () => {
     allConvos = getConversationsForTree();
 
-    tempSelectedConvoIds = new Set(mobileSelectedConvoIds);
-    mobileConvoFilterSearch.value = "";
+    tempSelectedConvoIds = new Set(selectedConvoIds);
+    convoFilterSearch.value = "";
     renderConvoList(allConvos);
   };
 
   // Search filter
-  mobileConvoFilterSearch.addEventListener("input", () => {
-    const query = mobileConvoFilterSearch.value.toLowerCase().trim();
+  convoFilterSearch.addEventListener("input", () => {
+    const query = convoFilterSearch.value.toLowerCase().trim();
     if (!query) {
       renderConvoList(allConvos);
       return;
@@ -2426,20 +2453,20 @@ function setupMobileConvoFilter() {
   });
 }
 
-function updateMobileConvoFilterLabel() {
-  if (!mobileConvoFilterValue) return;
+function updateConvoFilterLabel() {
+  if (!convoFilterLabel) return;
 
-  if (mobileSelectedConvoIds.size === 0) {
-    mobileConvoFilterValue.textContent = "All";
-  } else if (mobileSelectedConvoIds.size === 1) {
-    const convoId = Array.from(mobileSelectedConvoIds)[0];
+  if (selectedConvoIds.size === 0) {
+    convoFilterLabel.textContent = "All";
+  } else if (selectedConvoIds.size === 1) {
+    const convoId = Array.from(selectedConvoIds)[0];
     const allConvos = getConversationsForTree();
     const convo = allConvos.find((c) => c.id === convoId);
-    mobileConvoFilterValue.textContent = convo
+    convoFilterLabel.textContent = convo
       ? convo.title || `#${convo.id}`
       : "1 Convo";
   } else {
-    mobileConvoFilterValue.textContent = `${mobileSelectedConvoIds.size} Convos`;
+    convoFilterLabel.textContent = `${selectedConvoIds.size} Convos`;
   }
 }
 
@@ -2450,7 +2477,7 @@ function setupMobileActorFilter() {
 
   // Back button - Apply Changes
   backBtn.addEventListener("click", () => {
-    mobileActorFilterScreen.style.display = "none";
+    mobileActorFilterWrapper.style.display = "none";
     if (actorFilterDropdown) {
       actorFilterDropdown.classList.remove("show");
     }
@@ -2606,7 +2633,7 @@ async function boot() {
   setupMobileNavMenu();
 
   // Initialize mobile filter labels
-  updateMobileConvoFilterLabel();
+  updateConvoFilterLabel();
 
   // Setup browser history handling
   setupBrowserHistory();

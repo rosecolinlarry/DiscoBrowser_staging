@@ -20,7 +20,7 @@ import {
   mobileSearchLoader,
   mobileSearchResults,
   mobileSearchTrigger,
-  mobileSelectedConvoIds,
+  selectedConvoIds,
   setNavigationHistory,
   mobileMediaQuery,
   desktopMediaQuery,
@@ -89,9 +89,9 @@ function filterAndMatchResults(results, rawQuery, { useMobile = false } = {}) {
   let filtered = filterResultsByType(results, typeSet);
 
   // Mobile: apply convo selection filter if present
-  if (useMobile && mobileSelectedConvoIds && mobileSelectedConvoIds.size > 0) {
+  if (useMobile && selectedConvoIds && selectedConvoIds.size > 0) {
     filtered = filtered.filter((r) =>
-      mobileSelectedConvoIds.has(r.conversationid)
+      selectedConvoIds.has(r.conversationid)
     );
   }
 

@@ -82,8 +82,8 @@
 
       <div class="search-controls">
         <button class="button-chip" id="mobileConvoFilter">
-          <span>Conversation</span>
-          <span class="filter-value" id="mobileConvoFilterValue">All</span>
+          <span>Conversations</span>
+          <div id="mobileConvoFilterLabelWrapper"></div>
           <span class="dropdown-icon">
             <div
               class="icon-placeholder"
@@ -135,7 +135,7 @@
     <!-- #endregion -->
     <!-- #region Mobile Conversation Filter Screen -->
     <div
-      id="mobileConvoFilterScreen"
+      id="mobileConvoFilterWrapper"
       class="mobile-filter-screen"
       style="display: none"
     >
@@ -147,30 +147,13 @@
             data-icon-size="30px"
           ></div>
         </button>
-        <h3>Filter by Conversation</h3>
+        <h3>Filter by Conversations</h3>
       </div>
-      <label for="mobileConvoFilterSearch" class="search-input-label"
-        >Search</label
-      >
-      <input
-        type="text"
-        class="mobile-filter-search"
-        id="mobileConvoFilterSearch"
-        placeholder="Search conversations..."
-      />
-      <div class="mobile-filter-actions">
-        <label class="mobile-checkbox-item checkbox-label">
-          <input type="checkbox" id="mobileConvoSelectAll" />
-          <span>Select All</span>
-        </label>
-        <button id="mobileConvoAddToSelection">Add to Selection</button>
-      </div>
-      <div id="mobileConvoFilterList" class="mobile-filter-list"></div>
     </div>
     <!-- #endregion -->
     <!-- #region Mobile Actor Filter Screen -->
     <div
-      id="mobileActorFilterScreen"
+      id="mobileActorFilterWrapper"
       class="mobile-filter-screen"
       style="display: none"
     >
@@ -416,7 +399,48 @@
               </label>
             </div>
           </div>
-          <div id="actor-filter-wrapper" class="filter-dropdown-wrapper">
+          <div id="convoFilterWrapper" class="filter-dropdown-wrapper">
+            <button
+              id="convoFilterBtn"
+              class="filter-dropdown-button"
+              type="button"
+            >
+              <div id="convoFilterLabelWrapper">
+                <span id="convoFilterLabel" class="filter-label"
+                  >All Conversations</span
+                >
+              </div>
+              <span class="dropdown-arrow">
+                <div
+                  class="icon-placeholder"
+                  data-icon-template="icon-arrow-drop-down-template"
+                  data-icon-size="18px"
+                ></div>
+              </span>
+            </button>
+            <div id="convoFilterDropdown" class="filter-dropdown">
+              <label for="convoSearch" class="search-input-label"
+                >Filter by Title</label
+              >
+              <input
+                id="convoSearch"
+                class="search-input"
+                type="text"
+                placeholder="e.g. WHIRLING F1"
+              />
+              <div class="filter-actions">
+                <label class="checkbox-item select-all checkbox-label">
+                  <input type="checkbox" id="selectAllConvo" />
+                  <span>Select All</span>
+                </label>
+                <button id="convoAddToSelection" type="button">
+                  Add to Selection
+                </button>
+              </div>
+              <div id="convoCheckboxList" class="checkbox-list"></div>
+            </div>
+          </div>
+          <div id="actorFilterWrapper" class="filter-dropdown-wrapper">
             <button
               id="actorFilterBtn"
               class="filter-dropdown-button"
@@ -450,7 +474,7 @@
                   <input type="checkbox" id="selectAllActors" />
                   <span>Select All</span>
                 </label>
-                <button id="addToSelection" type="button">
+                <button id="actorAddToSelection" type="button">
                   Add to Selection
                 </button>
               </div>
