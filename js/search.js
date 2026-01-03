@@ -3,6 +3,7 @@ import {
   isHandlingPopState,
   pushHistoryState,
   selectedActorIds,
+  allConvos,
   allActors,
   searchLoader,
   currentEntryContainerEl,
@@ -32,6 +33,7 @@ import { showHidden } from "./userSettings.js";
 
 // Search pagination state
 export let currentSearchOffset = 0;
+export let currentSearchConvoIds= null;
 export let currentSearchActorIds = null;
 export let currentSearchTotal = 0;
 export let currentSearchFilteredCount = 0; // Count after type filtering
@@ -88,8 +90,7 @@ function filterAndMatchResults(results, rawQuery, { useMobile = false } = {}) {
 
   let filtered = filterResultsByType(results, typeSet);
 
-  // Mobile: apply convo selection filter if present
-  if (useMobile && selectedConvoIds && selectedConvoIds.size > 0) {
+  if (selectedConvoIds && selectedConvoIds.size > 0) {
     filtered = filtered.filter((r) =>
       selectedConvoIds.has(r.conversationid)
     );
@@ -202,6 +203,9 @@ export function setCurrentSearchFilteredCount(value) {
 export function setIsLoadingMore(value) {
   isLoadingMore = value;
 }
+export function setCurrentSearchConvoIds(value) {
+  currentSearchConvoIds = value;
+}
 export function setCurrentSearchActorIds(value) {
   currentSearchActorIds = value;
 }
@@ -239,6 +243,12 @@ export function search(resetSearch = true) {
     // Starting a new search
     currentSearchOffset = 0;
   }
+
+  // Always update convo IDs from current filter selection (even when re-filtering)
+  currentSearchConvoIds =
+    selectedConvoIds.size === 0 || selectedConvoIds.size === allConvos.length
+      ? null
+      : Array.from(selectedConvoIds)
 
   // Always update actor IDs from current filter selection (even when re-filtering)
   currentSearchActorIds =
@@ -284,7 +294,7 @@ export function search(resetSearch = true) {
       currentSearchActorIds,
       true, // filterStartInput
       currentSearchOffset,
-      undefined, // conversationIds
+      currentSearchConvoIds, // conversationIds
       showHidden()
     );
 
@@ -454,6 +464,11 @@ function performMobileSearch(resetSearch = true) {
   mobileSearchTrigger.value = searchInput.value;
   if (resetSearch) {
     // Starting a new search
+    // Always update convo IDs from current filter selection (even when re-filtering)
+    currentSearchConvoIds =
+      selectedConvoIds.size === 0 || selectedConvoIds.size === allConvos.length
+        ? null
+        : Array.from(selectedConvoIds);
     // Always update actor IDs from current filter selection (even when re-filtering)
     currentSearchActorIds =
       selectedActorIds.size === 0 || selectedActorIds.size === allActors.length
@@ -477,7 +492,7 @@ function performMobileSearch(resetSearch = true) {
       currentSearchActorIds,
       true,
       currentSearchOffset,
-      undefined, // conversationIds
+      currentSearchConvoIds,
       showHidden()
     );
     const { results, total } = response;

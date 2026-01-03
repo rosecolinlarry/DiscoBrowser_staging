@@ -55,7 +55,9 @@ import {
 } from "./search.js";
 
 const actorSearchInput = $("actorSearch");
+const convoCheckboxList = $("convoCheckboxList");
 const actorCheckboxList = $("actorCheckboxList");
+const selectAllConvos = $("selectAllConvos");
 const selectAllActors = $("selectAllActors");
 const actorAddToSelectionBtn = $("actorAddToSelection");
 const typeFilterBtn = $("typeFilterBtn");
@@ -71,8 +73,6 @@ const convoTypeFilterBtns = document.querySelectorAll(
 );
 
 // Mobile search state
-export let selectedConvoIds = new Set();
-
 export const entryListEl = $("entryList");
 export const entryListHeaderEl = $("entryListHeader");
 const entryDetailsEl = $("entryDetails");
@@ -146,7 +146,6 @@ const actorFilterLabelWrapper = $("actorFilterLabelWrapper"); // Text Wrapper
 const mobileActorFilterLabelWrapper = $("mobileActorFilterLabelWrapper"); // Test Wrapper
 const actorFilterLabel = $("actorFilterLabel"); // Text
 
-
 const mobileTypeFilter = $("mobileTypeFilter"); // Button
 
 // Clear filters button
@@ -161,7 +160,9 @@ let currentAlternateCondition = null;
 let currentAlternateLine = null;
 let conversationTree = null;
 let activeTypeFilter = "all";
+export let allConvos = [];
 export let allActors = [];
+export let selectedConvoIds = new Set();
 export let selectedActorIds = new Set();
 export let selectedTypeIds = new Set(["flow", "orb", "task"]); // All types selected by default
 let filteredActors = [];
@@ -191,7 +192,7 @@ export function setCurrentConvoId(value) {
 }
 
 export function getConversationsForTree() {
-  const allConvos = getAllConversations(showHidden());
+  allConvos = getAllConversations(showHidden());
   return allConvos.map((c) => ({
     ...c,
     title: c.title,
@@ -491,7 +492,6 @@ function moveSearchLoader() {
     elWrapper.appendChild(el);
   }
 }
-
 function moveSearchInput() {
   const el = $("search");
   const elWrapper = $("searchInputWrapper");
@@ -502,8 +502,6 @@ function moveSearchInput() {
     elWrapper.appendChild(el);
   }
 }
-
-
 function moveConvoFilterDropdown() {
   if (!convoFilterDropdown) {
     populateConvoDropdown();
@@ -518,7 +516,6 @@ function moveConvoFilterDropdown() {
     convoFilterLabelWrapper.appendChild(convoFilterLabel);
   }
 }
-
 function moveActorFilterDropdown() {
   if (!actorFilterDropdown) {
     populateActorDropdown();
@@ -533,7 +530,6 @@ function moveActorFilterDropdown() {
     actorFilterLabelWrapper.appendChild(actorFilterLabel);
   }
 }
-
 function moveTypeFilterDropdown() {
   const el = $("typeFilterDropdown");
   const elWrapper = $("typeFilterDropdownWrapper");
@@ -552,12 +548,10 @@ function moveTypeFilterDropdown() {
     elLabelWrapper.appendChild(elLabel);
   }
 }
-
 function toggleElementVisibilityById(id, showElement) {
   const el = $(id);
   el.style.display = showElement ? "" : "none";
 }
-
 function setUpSidebarToggles() {
   convoSidebarToggle.addEventListener("click", openConversationSection);
   historySidebarToggle.addEventListener("click", openHistorySidebar);
@@ -565,7 +559,6 @@ function setUpSidebarToggles() {
   sidebarOverlay.addEventListener("click", closeAllSidebars);
   sidebarOverlay.addEventListener("click", closeAllModals);
 }
-
 function setupConversationFilter() {
   // Text search filter
   if (convoSearchInput) {
@@ -602,7 +595,6 @@ function setupConversationFilter() {
     });
   }
 }
-
 function updateTreeControlButtons(enableButtons) {
   if (expandAllBtn) {
     expandAllBtn.disabled = !enableButtons;
@@ -611,7 +603,6 @@ function updateTreeControlButtons(enableButtons) {
     collapseAllBtn.disabled = !enableButtons;
   }
 }
-
 function setToggleIcon(toggleEl, expanded) {
   if (!toggleEl) return;
 
@@ -634,7 +625,6 @@ function setToggleIcon(toggleEl, expanded) {
   // Update rotation class for animation
   toggleEl.classList.toggle("toggle-expanded", expanded);
 }
-
 function expandAllTreeNodes() {
   const allNodes = convoListEl.querySelectorAll(".node");
   allNodes.forEach((node) => {
@@ -649,7 +639,6 @@ function expandAllTreeNodes() {
     }
   });
 }
-
 function collapseAllTreeNodes() {
   const allNodes = convoListEl.querySelectorAll(".node");
   allNodes.forEach((node) => {
@@ -662,7 +651,6 @@ function collapseAllTreeNodes() {
     }
   });
 }
-
 function filterConversationTree() {
   let searchText;
   if (!conversationTree) return;
@@ -735,7 +723,6 @@ function filterConversationTree() {
     convoListEl.appendChild(item);
   });
 }
-
 function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
   // Check if this node has conversation IDs
   if (node.convoIds && node.convoIds.length > 0) {
@@ -776,7 +763,6 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
     }
   }
 }
-
 function createFilteredLeafItem(match, searchText, tree) {
   const wrapper = document.createElement("div");
   wrapper.className = "node leaf-result";
@@ -840,7 +826,6 @@ function createFilteredLeafItem(match, searchText, tree) {
 
   return wrapper;
 }
-
 async function handleMoreDetailsClicked() {
   if (moreDetailsEl.open) {
     if (currentConvoId && currentEntryId) {
@@ -888,13 +873,11 @@ async function handleMoreDetailsClicked() {
     }
   }
 }
-
 function closeAllDropdowns() {
   document.querySelectorAll(".filter-dropdown.show").forEach((e) => {
     e.classList.remove("show");
   });
 }
-
 function setUpFilterDropdowns() {
   const dropdownButtons = document.querySelectorAll(
     ".search-controls .filter-dropdown-button"
@@ -928,7 +911,138 @@ function setUpFilterDropdowns() {
     });
   });
 }
+// #region Filter Dropdowns
 
+// TODO KA create helpers for the filter dropdowns to reduce duplications
+// TODO KA search when dropdown is closed and/or filter screen is closed
+
+// #region Conversation Filter Dropdown
+function setupConvoFilter() {
+  const convoFilterSearch = $("convoSearch");
+  const listContainer = $("convoCheckboxList");
+  const selectAllCheckbox = $("selectAllConvos");
+  const addToSelectionBtn = $("convoAddToSelection");
+
+  let filteredConvos = [];
+
+  // Add to Selection button - apply changes
+  if (addToSelectionBtn) {
+    addToSelectionBtn.addEventListener("click", () => {
+      selectedConvoIds = new Set(selectedConvoIds);
+      updateConvoFilterLabel();
+      mobileConvoFilterWrapper.style.display = "none";
+      // Trigger new search with updated filter
+      if (convoFilterSearch.value.trim()) {
+        search();
+      }
+    });
+  }
+
+  // Select All checkbox
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener("change", () => {
+      if (selectAllCheckbox.checked) {
+        // Select all filtered convos
+        filteredConvos.forEach((c) => selectedConvoIds.add(c.id));
+      } else {
+        // Deselect all filtered convos
+        filteredConvos.forEach((c) => selectedConvoIds.delete(c.id));
+      }
+      renderConvoList(filteredConvos);
+    });
+  }
+
+  // Render conversation list
+  function renderConvoList(conversations) {
+    listContainer.innerHTML = "";
+    filteredConvos = conversations;
+
+    // Add conversation items
+    conversations.forEach((convo) => {
+      const label = document.createElement("label");
+      label.className = "checkbox-item";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.convoId = convo.id;
+      checkbox.dataset.convoTitle = convo.title;
+      checkbox.checked = selectedConvoIds.has(convo.id);
+
+      checkbox.addEventListener("change", (e) => {
+        if (checkbox.checked) {
+          selectedConvoIds.add(convo.id);
+        } else {
+          selectedConvoIds.delete(convo.id);
+        }
+
+        updateConvoSelectAllState(conversations);
+        updateConvoFilterLabel();
+        triggerSearch(e);
+      });
+      const span = document.createElement("span");
+      span.textContent = convo.title;
+
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      convoCheckboxList.appendChild(label);
+    });
+  }
+
+  // Initial render
+  if (!allConvos || allConvos.length === 0) {
+    allConvos = getConversationsForTree();
+  }
+  renderConvoList(allConvos);
+
+  // Search filter
+  convoFilterSearch.addEventListener("input", () => {
+    const query = convoFilterSearch.value.toLowerCase().trim();
+    if (!query) {
+      renderConvoList(allConvos);
+      return;
+    }
+
+    const filtered = allConvos.filter((c) => {
+      return (
+        (c.title || "").toLowerCase().includes(query) ||
+        c.id.toString().includes(query)
+      );
+    });
+
+    renderConvoList(filtered);
+  });
+
+  function updateConvoSelectAllState(conversations) {
+    if (selectAllCheckbox) {
+      const allSelected =
+        conversations.length > 0 &&
+        conversations.every((c) => selectedConvoIds.has(c.id));
+      const someSelected = conversations.some((c) =>
+        selectedConvoIds.has(c.id)
+      );
+      selectAllCheckbox.checked = allSelected;
+      selectAllCheckbox.indeterminate = someSelected && !allSelected;
+    }
+  }
+}
+function updateConvoFilterLabel() {
+  if (
+    selectedConvoIds.size === 0 ||
+    selectedConvoIds.size === allConvos.length
+  ) {
+    convoFilterLabel.textContent = "All Conversations";
+  } else if (selectedConvoIds.size === 1) {
+    const convoId = Array.from(selectedConvoIds)[0];
+    const convo = allConvos.find((c) => c.id === convoId);
+    convoFilterLabel.textContent = convo ? convo.title : "1 Conversation";
+  } else {
+    convoFilterLabel.textContent = `${selectedConvoIds.size} Conversations`;
+  }
+}
+
+// #endregion
+
+// #region Actor Filter Dropdown
 async function populateActorDropdown() {
   allActors = getDistinctActors();
   filteredActors = [...allActors];
@@ -985,7 +1099,6 @@ async function populateActorDropdown() {
 
   renderActorCheckboxes(allActors);
 }
-
 function filterActors() {
   const searchText = actorSearchInput
     ? actorSearchInput.value.toLowerCase().trim()
@@ -1003,9 +1116,8 @@ function filterActors() {
   }
 
   renderActorCheckboxes(filteredActors);
-  updateSelectAllState();
+  updateActorSelectAllState();
 }
-
 function renderActorCheckboxes(actors) {
   actorCheckboxList.innerHTML = "";
 
@@ -1024,7 +1136,7 @@ function renderActorCheckboxes(actors) {
       } else {
         selectedActorIds.delete(actor.id);
       }
-      updateSelectAllState();
+      updateActorSelectAllState();
       updateActorFilterLabel();
       triggerSearch(e);
     });
@@ -1037,10 +1149,9 @@ function renderActorCheckboxes(actors) {
     actorCheckboxList.appendChild(label);
   });
 
-  updateSelectAllState();
+  updateActorSelectAllState();
 }
-
-function updateSelectAllState() {
+function updateActorSelectAllState() {
   if (!selectAllActors) return;
 
   const visibleCheckboxes = actorCheckboxList.querySelectorAll(
@@ -1058,7 +1169,6 @@ function updateSelectAllState() {
   selectAllActors.checked = allSelected;
   selectAllActors.indeterminate = !allSelected && someSelected;
 }
-
 function updateActorFilterLabel() {
   if (!actorFilterLabel) return;
 
@@ -1075,27 +1185,9 @@ function updateActorFilterLabel() {
     actorFilterLabel.textContent = `${selectedActorIds.size} Actors`;
   }
 }
+// #endregion
 
-function triggerSearch(e) {
-  e.preventDefault();
-  const searchInput = $("search");
-  if (searchInput.value) {
-    // Always reset search when filters change to clear old results
-    // But only push history state if not already in search view
-    const isAlreadySearching = currentAppState === "search";
-    if (isAlreadySearching) {
-      // Already in search view, manually reset and search without pushing history
-      setCurrentSearchOffset(0);
-      setCurrentSearchFilteredCount(0);
-      entryListEl.innerHTML = "";
-      search(false);
-    } else {
-      // First time searching, push history state
-      search(true);
-    }
-  }
-}
-
+// #region Conversation Type Filter Dropdown
 // Setup type filter
 // TODO KA consolidate with mobile
 function setupTypeFilter() {
@@ -1143,7 +1235,6 @@ function setupTypeFilter() {
 
   updateTypeFilterLabel();
 }
-
 // TODO KA consolidate with mobile
 function updateTypeSelectAllState() {
   const typeCheckboxes = typeCheckboxList.querySelectorAll(
@@ -1158,7 +1249,6 @@ function updateTypeSelectAllState() {
   selectAllTypes.checked = allSelected;
   selectAllTypes.indeterminate = !allSelected && someSelected;
 }
-
 // TODO KA consolidate with mobile
 function updateTypeFilterLabel() {
   if (selectedTypeIds.size === 0 || selectedTypeIds.size === 3) {
@@ -1171,6 +1261,33 @@ function updateTypeFilterLabel() {
   }
 }
 
+// #endregion
+
+// #endregion
+
+function triggerSearch(e) {
+  e.preventDefault();
+  const searchInput = $("search");
+  if (searchInput.value) {
+    // Always reset search when filters change to clear old results
+    // But only push history state if not already in search view
+    const isAlreadySearching = currentAppState === "search";
+    if (isAlreadySearching) {
+      // Already in search view, manually reset and search without pushing history
+      // TODO KA use this for auto applying searching after choosing convos
+      setCurrentSearchOffset(0);
+      setCurrentSearchFilteredCount(0);
+      entryListEl.innerHTML = "";
+      search(false);
+    } else {
+      // First time searching, push history state
+      search(true);
+    }
+  }
+}
+
+// #region Sidebars
+// #region History Sidebar
 function openHistorySidebar() {
   if (historySidebar) {
     historySidebar.classList.add("open");
@@ -1184,7 +1301,6 @@ function openHistorySidebar() {
     sidebarOverlay.style.display = "block";
   }
 }
-
 function closeHistorySidebar() {
   if (historySidebar) {
     historySidebar.classList.remove("open");
@@ -1193,7 +1309,9 @@ function closeHistorySidebar() {
     sidebarOverlay.style.display = "none";
   }
 }
+// #endregion
 
+// #region Conversation Tree Sidebar
 function closeConversationSection() {
   if (convoSidebar) {
     convoSidebar.classList.remove("open");
@@ -1202,7 +1320,6 @@ function closeConversationSection() {
     sidebarOverlay.style.display = "none";
   }
 }
-
 function openConversationSection() {
   if (convoSidebar) {
     convoSidebar.classList.add("open");
@@ -1216,6 +1333,8 @@ function openConversationSection() {
     sidebarOverlay.style.display = "block";
   }
 }
+// #endregion
+// #endregion
 
 export function closeMobileSearchScreen() {
   if (mobileSearchScreen) {
@@ -1224,10 +1343,25 @@ export function closeMobileSearchScreen() {
 }
 
 // Setup clear filters button
-function setupclearFiltersBtn() {
+function setupClearFiltersBtn() {
   if (!clearFiltersBtn) return;
 
   clearFiltersBtn.addEventListener("click", (e) => {
+    // Reset convo filters
+    selectedConvoIds.clear();
+    const convoCheckboxes = convoCheckboxList?.querySelectorAll(
+      'input[type="checkbox"]'
+    );
+    if (convoCheckboxes) {
+      convoCheckboxes.forEach((cb) => {
+        cb.checked = false;
+      });
+    }
+    if (selectAllConvos) {
+      selectAllConvos.checked = false;
+    }
+    updateConvoFilterLabel();
+
     // Reset actor filters
     selectedActorIds.clear();
     const actorCheckboxes = actorCheckboxList?.querySelectorAll(
@@ -1443,7 +1577,9 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   });
 }
 
-/* Navigation / history functions */
+// #region Navigation and History Management
+
+// #region Browser History Management
 function goBackHomeWithBrowserHistory() {
   // Use browser history to go back to home
   if (currentConvoId !== null || currentAppState !== "home") {
@@ -1466,7 +1602,6 @@ function updateBackButtonState() {
   }
 }
 
-// Browser History Management
 async function setupBrowserHistory() {
   // Set initial state
   window.history.replaceState({ view: "home" }, "", window.location.pathname);
@@ -1553,50 +1688,6 @@ export function pushHistoryState(view, data = {}) {
   window.history.pushState(state, "", window.location.pathname);
 }
 
-function goToHomeView() {
-  // Clear current conversation
-  currentConvoId = null;
-  currentEntryId = null;
-  navigationHistory = [];
-
-  // Clear chat log
-  if (chatLogEl) {
-    chatLogEl.innerHTML = "";
-  }
-
-  // Show homepage, hide dialogue content
-  const homePageContainer = $("homePageContainer");
-  const dialogueContent = $("dialogueContent");
-
-  if (homePageContainer) {
-    homePageContainer.style.display = "block";
-  }
-  if (dialogueContent) {
-    dialogueContent.style.display = "none";
-  }
-
-  // Reset entry list header
-  if (entryListHeaderEl) {
-    entryListHeaderEl.textContent = "Next Dialogue Options";
-    toggleElementVisibilityById("searchCount", false);
-  }
-
-  // Clear tree selection
-  document.querySelectorAll(".tree-item.selected").forEach((item) => {
-    item.classList.remove("selected");
-  });
-
-  // Disable mobile back button if visible
-  if (backBtn) {
-    backBtn.disabled = true;
-  }
-
-  // Close mobile search if open
-  closeMobileSearchScreen();
-
-  updateBackButtonState();
-}
-
 export function setNavigationHistory(value) {
   navigationHistory = value;
 }
@@ -1675,6 +1766,51 @@ async function jumpToHistoryPoint(targetIndex) {
       }
     }
   }
+
+  updateBackButtonState();
+}
+// #endregion
+
+function goToHomeView() {
+  // Clear current conversation
+  currentConvoId = null;
+  currentEntryId = null;
+  navigationHistory = [];
+
+  // Clear chat log
+  if (chatLogEl) {
+    chatLogEl.innerHTML = "";
+  }
+
+  // Show homepage, hide dialogue content
+  const homePageContainer = $("homePageContainer");
+  const dialogueContent = $("dialogueContent");
+
+  if (homePageContainer) {
+    homePageContainer.style.display = "block";
+  }
+  if (dialogueContent) {
+    dialogueContent.style.display = "none";
+  }
+
+  // Reset entry list header
+  if (entryListHeaderEl) {
+    entryListHeaderEl.textContent = "Next Dialogue Options";
+    toggleElementVisibilityById("searchCount", false);
+  }
+
+  // Clear tree selection
+  document.querySelectorAll(".tree-item.selected").forEach((item) => {
+    item.classList.remove("selected");
+  });
+
+  // Disable mobile back button if visible
+  if (backBtn) {
+    backBtn.disabled = true;
+  }
+
+  // Close mobile search if open
+  closeMobileSearchScreen();
 
   updateBackButtonState();
 }
@@ -1876,7 +2012,9 @@ export async function navigateToEntry(
     }
   }
 }
+// #endregion
 
+// #region Show Details
 /* Show convo detais */
 async function showConvoDetails(convoId) {
   if (!entryDetailsEl) return;
@@ -2028,8 +2166,7 @@ async function showEntryDetails(
 
   renderEntryDetails(entryDetailsEl, payload);
 }
-
-/* Main Search Bar */
+// #endregion
 
 // Helper: create a result `div` element for a search result (shared by desktop and mobile)
 export function createSearchResultDiv(r, query) {
@@ -2118,8 +2255,9 @@ function loadChildOptions(convoId, entryId) {
   }
 }
 
-/* Mobile Search Functions */
+// #region Mobile Setup
 function setupClearSearchInput() {
+  // TODO KA make one for desktop
   const mobileSearchClearIcon = $("mobileSearchClearIcon");
   const searchInput = $("search");
   mobileSearchClearIcon.addEventListener("click", () => {
@@ -2160,7 +2298,7 @@ function setupMobileSearch() {
     mobileClearFilters.addEventListener("click", () => {
       // Clear conversation filter
       selectedConvoIds.clear();
-      if (convoFilterLabel) convoFilterLabel.textContent = "All";
+      if (convoFilterLabel) convoFilterLabel.textContent = "All Conversations";
 
       // Clear type filter
       selectedTypeIds.clear();
@@ -2183,8 +2321,8 @@ function setupMobileSearch() {
     });
   }
 
-  // Setup conversation filter screen
-  setupConvoFilter();
+  // Setup convo filter screen
+  setupConvoActorFilter();
 
   // Setup actor filter screen
   setupMobileActorFilter();
@@ -2303,11 +2441,6 @@ function closeAllModals() {
 }
 
 function showMobileConvoFilter() {
-  if (!mobileConvoFilterWrapper) return;
-
-  if (window.refreshMobileConvoList) {
-    window.refreshMobileConvoList();
-  }
   mobileConvoFilterWrapper.style.display = "block";
   convoFilterDropdown.classList.add("show");
 }
@@ -2322,152 +2455,18 @@ function showMobileTypeFilter() {
   mobileTypeFilterSheet.classList.add("active");
 }
 
-function setupConvoFilter() {
+function setupConvoActorFilter() {
   const backBtn = $("mobileConvoFilterBack");
-  const convoFilterSearch = $("convoSearch");
-  const listContainer = $("convoCheckboxList");
-  const selectAllCheckbox = $("selectAllConvo");
-  const addToSelectionBtn = $("convoAddToSelection");
 
-  let tempSelectedConvoIds = new Set(selectedConvoIds);
-  let allConvos = [];
-  let filteredConvos = [];
+  if (!backBtn) return;
 
-  // Back button - don't apply changes
+  // Back button - Apply Changes
   backBtn.addEventListener("click", () => {
     mobileConvoFilterWrapper.style.display = "none";
-    tempSelectedConvoIds = new Set(selectedConvoIds);
-  });
-
-  // Add to Selection button - apply changes
-  if (addToSelectionBtn) {
-    addToSelectionBtn.addEventListener("click", () => {
-      selectedConvoIds = new Set(tempSelectedConvoIds);
-      updateConvoFilterLabel();
-      mobileConvoFilterWrapper.style.display = "none";
-      // Trigger new search with updated filter
-      if (convoFilterSearch.value.trim()) {
-        search();
-      }
-    });
-  }
-
-  // Select All checkbox
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener("change", () => {
-      if (selectAllCheckbox.checked) {
-        // Select all filtered convos
-        filteredConvos.forEach((c) => tempSelectedConvoIds.add(c.id));
-      } else {
-        // Deselect all filtered convos
-        filteredConvos.forEach((c) => tempSelectedConvoIds.delete(c.id));
-      }
-      renderConvoList(filteredConvos);
-    });
-  }
-
-  // Render conversation list
-  function renderConvoList(conversations) {
-    listContainer.innerHTML = "";
-    filteredConvos = conversations;
-
-    // Update Select All checkbox state
-    if (selectAllCheckbox) {
-      const allSelected =
-        conversations.length > 0 &&
-        conversations.every((c) => tempSelectedConvoIds.has(c.id));
-      const someSelected = conversations.some((c) =>
-        tempSelectedConvoIds.has(c.id)
-      );
-      selectAllCheckbox.checked = allSelected;
-      selectAllCheckbox.indeterminate = someSelected && !allSelected;
+    if (convoFilterDropdown) {
+      convoFilterDropdown.classList.remove("show");
     }
-
-    // Add conversation items
-    conversations.forEach((convo) => {
-      const item = document.createElement("div");
-      item.className = "checkbox-item";
-      const isChecked = tempSelectedConvoIds.has(convo.id);
-      item.innerHTML = `
-        <input type="checkbox" ${isChecked ? "checked" : ""} />
-        <span>${convo.title || `Conversation ${convo.id}`}</span>
-      `;
-      item.addEventListener("click", (e) => {
-        if (e.target.tagName !== "INPUT") {
-          const checkbox = item.querySelector('input[type="checkbox"]');
-          checkbox.checked = !checkbox.checked;
-        }
-
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        if (checkbox.checked) {
-          tempSelectedConvoIds.add(convo.id);
-        } else {
-          tempSelectedConvoIds.delete(convo.id);
-        }
-
-        // Update Select All checkbox
-        if (selectAllCheckbox) {
-          const allSelected = filteredConvos.every((c) =>
-            tempSelectedConvoIds.has(c.id)
-          );
-          const someSelected = filteredConvos.some((c) =>
-            tempSelectedConvoIds.has(c.id)
-          );
-          selectAllCheckbox.checked = allSelected;
-          selectAllCheckbox.indeterminate = someSelected && !allSelected;
-        }
-      });
-      listContainer.appendChild(item);
-    });
-  }
-
-  // Initial render
-  allConvos = getConversationsForTree();
-  renderConvoList(allConvos);
-
-  // Expose refresh function
-  window.refreshMobileConvoList = () => {
-    allConvos = getConversationsForTree();
-
-    tempSelectedConvoIds = new Set(selectedConvoIds);
-    convoFilterSearch.value = "";
-    renderConvoList(allConvos);
-  };
-
-  // Search filter
-  convoFilterSearch.addEventListener("input", () => {
-    const query = convoFilterSearch.value.toLowerCase().trim();
-    if (!query) {
-      renderConvoList(allConvos);
-      return;
-    }
-
-    const filtered = allConvos.filter((c) => {
-      return (
-        (c.title || "").toLowerCase().includes(query) ||
-        c.id.toString().includes(query)
-      );
-    });
-
-    renderConvoList(filtered);
   });
-}
-
-function updateConvoFilterLabel() {
-  if (!convoFilterLabel) return;
-
-  if (selectedConvoIds.size === 0) {
-    convoFilterLabel.textContent = "All";
-  } else if (selectedConvoIds.size === 1) {
-    const convoId = Array.from(selectedConvoIds)[0];
-    const allConvos = getConversationsForTree();
-    const convo = allConvos.find((c) => c.id === convoId);
-    convoFilterLabel.textContent = convo
-      ? convo.title || `#${convo.id}`
-      : "1 Convo";
-  } else {
-    convoFilterLabel.textContent = `${selectedConvoIds.size} Convos`;
-  }
 }
 
 function setupMobileActorFilter() {
@@ -2506,6 +2505,7 @@ function setupMobileTypeFilter() {
     search();
   });
 }
+// #endregion
 
 function setUpWholeWordsToggle() {
   const wholeWordsCheckbox = $("wholeWordsCheckbox");
@@ -2558,7 +2558,6 @@ function setUpHistoryBackButton() {
   }
 }
 
-
 async function boot() {
   // Initialize icons when DOM is ready
   document.addEventListener("DOMContentLoaded", initializeIcons);
@@ -2572,10 +2571,10 @@ async function boot() {
   await initDatabase(SQL, "db/discobase.sqlite3");
 
   // load conversations & populate actor dropdown
-  const convos = getConversationsForTree();
+  allConvos = getConversationsForTree();
 
   // Build tree and render (includes all types: flow, orb, task)
-  conversationTree = buildTitleTree(convos);
+  conversationTree = buildTitleTree(allConvos);
   renderTree(convoListEl, conversationTree);
 
   // Set up conversation filter
@@ -2589,14 +2588,17 @@ async function boot() {
   // Set up filter dropdowns to open and close
   setUpFilterDropdowns();
 
-  // actor dropdown
+  // conversation filter dropdown
+  setupConvoFilter();
+
+  // actor filter dropdown
   await populateActorDropdown();
 
   // type filter dropdown
   setupTypeFilter();
 
   // clear filters button
-  setupclearFiltersBtn();
+  setupClearFiltersBtn();
 
   // Make header clickable to go home
   setUpMainHeader();
