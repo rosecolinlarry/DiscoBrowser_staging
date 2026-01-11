@@ -923,8 +923,7 @@ function setUpFilterDropdowns() {
 }
 // #region Filter Dropdowns
 
-// TODO KA create helpers for the filter dropdowns to reduce duplications
-// TODO KA search when dropdown is closed and/or filter screen is closed
+// TODO KA either prevent back button in mobile from navigating the user back while in the search screen OR map the back button to the back button of the convo filter
 
 // #region Conversation Filter Dropdown
 function setupConvoFilter() {
