@@ -32,6 +32,8 @@ import {
   appendHistoryItem,
   renderConvoDetails,
   renderEntryDetails,
+  toggleElementVisibility,
+  toggleElementVisibilityBySelector,
 } from "./ui.js";
 import { initializeIcons, injectIconTemplates } from "./icons.js";
 import {
@@ -74,6 +76,10 @@ const convoTypeFilterBtns = document.querySelectorAll(
   ".radio-button-group .radio-button"
 );
 
+export const searchInput = $("search");
+export const homePageContainer = $("homePageContainer");
+export const dialogueContent = $("dialogueContent");
+
 // Mobile search state
 export const entryListEl = $("entryList");
 export const entryListHeaderEl = $("entryListHeader");
@@ -106,18 +112,19 @@ const convoSidebarClose = $("convoSidebarClose");
 
 // Mobile elements
 export const mobileSearchTrigger = $("mobileSearchTrigger");
-const mobileSearchScreen = $("mobileSearchScreen");
+export const mobileSearchScreen = $("mobileSearchScreen");
 export const mobileSearchResults = $("mobileSearchResults");
-export const mobileSearchLoader = $("mobileSearchLoader");
 export const mobileSearchCount = $("mobileSearchCount");
 const mobileClearFilters = $("mobileClearFilters");
-const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
 
 const mobileSidebarToggle = $("mobileSidebarToggle");
 const mobileClearSearchBtn = $("mobileSearchClearIcon");
 
+const mobileSearchBack = $("mobileSearchBack");
+
 // Mobile nav menu buttons
 const mobileNavPanel = $("mobileNavPanel");
+const mobileNavSidebarClose = $("navSidebarClose");
 const mobileNavBtn = $("mobileNavBtn");
 const mobileNavHome = $("mobileNavHome");
 const mobileNavSettings = $("mobileNavSettings");
@@ -149,6 +156,8 @@ const mobileActorFilterLabelWrapper = $("mobileActorFilterLabelWrapper"); // Tes
 const actorFilterLabel = $("actorFilterLabel"); // Text
 
 const mobileTypeFilter = $("mobileTypeFilter"); // Button
+const mobileTypeFilterWrapper = $("mobileTypeFilterWrapper"); // Filter Wrapper
+const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
 
 // Clear filters button
 const clearFiltersBtn = $("clearFiltersBtn");
@@ -437,19 +446,22 @@ function handleMediaQueryChange() {
   closeMobileSearchScreen();
   closeAllModals();
   if (desktopMediaQuery.matches) {
-    toggleElementVisibilityById("historySidebarToggle", false);
-    toggleElementVisibilityById("convoSidebarToggle", false);
+    toggleElementVisibilityBySelector("#historySidebarToggle", false);
+    toggleElementVisibilityBySelector("#convoSidebarToggle", false);
+    toggleElementVisibilityBySelector(".mobile-container", false);
     browserEl?.prepend(convoSection);
     browserEl?.appendChild(historySection);
   } else if (tabletMediaQuery.matches) {
-    toggleElementVisibilityById("historySidebarToggle", true);
-    toggleElementVisibilityById("convoSidebarToggle", true);
+    toggleElementVisibilityBySelector("#historySidebarToggle", true);
+    toggleElementVisibilityBySelector("#convoSidebarToggle", true);
+    toggleElementVisibilityBySelector(".mobile-container", false);
     updateResizableGrid();
     historySidebar?.appendChild(historySection);
     convoSidebar?.appendChild(convoSection);
   } else if (mobileMediaQuery.matches) {
-    toggleElementVisibilityById("historySidebarToggle", true);
-    toggleElementVisibilityById("convoSidebarToggle", false);
+    toggleElementVisibilityBySelector("#historySidebarToggle", true);
+    toggleElementVisibilityBySelector("#convoSidebarToggle", false);
+    toggleElementVisibilityBySelector(".mobile-container", true);
     updateResizableGrid();
     historySidebar?.append(historySection);
     convoSidebar?.appendChild(convoSection);
@@ -546,10 +558,7 @@ function moveTypeFilterDropdown() {
     elLabelWrapper.appendChild(elLabel);
   }
 }
-function toggleElementVisibilityById(id, showElement) {
-  const el = $(id);
-  el.style.display = showElement ? "" : "none";
-}
+
 function setUpSidebarToggles() {
   convoSidebarToggle.addEventListener("click", openConversationSection);
   historySidebarToggle.addEventListener("click", openHistorySidebar);
@@ -871,42 +880,44 @@ async function handleMoreDetailsClicked() {
     }
   }
 }
-function closeAllDropdowns() {
-  document.querySelectorAll(".filter-dropdown.show").forEach((e) => {
-    e.classList.remove("show");
-  });
-}
+
 function setUpFilterDropdowns() {
-  const dropdownButtons = document.querySelectorAll(
-    ".filter-dropdown-button"
-  );
+  const dropdownButtons = document.querySelectorAll(".filter-dropdown-button");
+  const allDropdowns = document.querySelectorAll(".filter-dropdown");
+
+  // Prevent clicks inside any dropdown from bubbling to document
+  allDropdowns.forEach((dd) => dd.addEventListener("click", (ev) => ev.stopPropagation()));
+
+  // Track currently open dropdown so we only allow one at a time
+  let openDropdown = null;
+
+  // Single document-level click handler to close the open dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!openDropdown) return;
+    if (!openDropdown.contains(e.target) && e.target !== typeFilterBtn) {
+      toggleElementVisibility(openDropdown, false);
+      openDropdown = null;
+    }
+  });
+
   dropdownButtons.forEach((dropdownButton) => {
     dropdownButton.addEventListener("click", (e) => {
       e.stopPropagation();
-      const filterDropdown =
-        dropdownButton?.parentElement?.getElementsByClassName(
-          "filter-dropdown"
-        )[0];
+      const filterDropdown = dropdownButton.parentElement?.querySelector(".filter-dropdown");
+      if (!filterDropdown) return;
 
-      // Set up toggling dropdown open/close
-      if (filterDropdown?.classList.contains("show")) {
-        filterDropdown?.classList.remove("show");
-      } else {
-        closeAllDropdowns();
-        filterDropdown?.classList.add("show");
+      const shouldOpen = filterDropdown.classList.contains("hidden");
+
+      // Close any other open dropdown first
+      if (openDropdown && openDropdown !== filterDropdown) {
+        toggleElementVisibility(openDropdown, false);
       }
 
-      // Close dropdown when clicking outside
-      document.addEventListener("click", (e) => {
-        if (!filterDropdown?.contains(e.target) && e.target !== typeFilterBtn) {
-          filterDropdown?.classList.remove("show");
-        }
-      });
+      // Toggle the clicked dropdown
+      toggleElementVisibility(filterDropdown, shouldOpen);
 
-      // Prevent dropdown from closing when clicking inside
-      filterDropdown?.addEventListener("click", (e) => {
-        e.stopPropagation();
-      });
+      // Update currently open reference
+      openDropdown = shouldOpen ? filterDropdown : null;
     });
   });
 }
@@ -929,7 +940,8 @@ function setupConvoFilter() {
     addToSelectionBtn.addEventListener("click", () => {
       selectedConvoIds = new Set(selectedConvoIds);
       updateConvoFilterLabel();
-      mobileConvoFilterWrapper.style.display = "none";
+      toggleElementVisibility(mobileConvoFilterWrapper, false);
+
       // Trigger new search with updated filter
       if (convoFilterSearch.value.trim()) {
         search();
@@ -1093,8 +1105,8 @@ async function populateActorDropdown() {
       updateActorFilterLabel();
 
       // Close mobile actor filter screen and remove dropdown show state
-      if (mobileActorFilterWrapper) mobileActorFilterWrapper.style.display = "none";
-      if (actorFilterDropdown) actorFilterDropdown.classList.remove("show");
+      toggleElementVisibility(mobileActorFilterWrapper, false);
+      toggleElementVisibility(actorFilterDropdown, false);
 
       // Trigger a reset search so results reflect the new selection
       search(true);
@@ -1271,7 +1283,7 @@ function updateTypeFilterLabel() {
 
 function triggerSearch(e) {
   e.preventDefault();
-  const searchInput = $("search");
+
   if (searchInput.value) {
     // Always reset search when filters change to clear old results
     // But only push history state if not already in search view
@@ -1299,57 +1311,32 @@ function triggerSearch(e) {
 // #region Sidebars
 // #region History Sidebar
 function openHistorySidebar() {
-  if (historySidebar) {
-    historySidebar.classList.add("open");
-    historySidebar.style.display = "";
-    closeConversationSection();
-  }
-  if (historySidebarClose) {
-    historySidebarClose.addEventListener("click", closeHistorySidebar);
-  }
-  if (sidebarOverlay) {
-    sidebarOverlay.style.display = "block";
-  }
+  toggleElementVisibility(historySidebar, true);
+  closeConversationSection();
+  historySidebarClose.addEventListener("click", closeHistorySidebar);
 }
 function closeHistorySidebar() {
-  if (historySidebar) {
-    historySidebar.classList.remove("open");
-  }
-  if (sidebarOverlay) {
-    sidebarOverlay.style.display = "none";
-  }
+  toggleElementVisibility(historySidebar, false);
+  toggleElementVisibility(sidebarOverlay, false);
 }
 // #endregion
 
 // #region Conversation Tree Sidebar
 function closeConversationSection() {
-  if (convoSidebar) {
-    convoSidebar.classList.remove("open");
-  }
-  if (sidebarOverlay) {
-    sidebarOverlay.style.display = "none";
-  }
+  toggleElementVisibility(convoSidebar, false);
+  toggleElementVisibility(sidebarOverlay, false);
 }
 function openConversationSection() {
-  if (convoSidebar) {
-    convoSidebar.classList.add("open");
-    convoSidebar.style.display = "";
-    closeHistorySidebar();
-  }
-  if (convoSidebarClose) {
-    convoSidebarClose.addEventListener("click", closeConversationSection);
-  }
-  if (sidebarOverlay) {
-    sidebarOverlay.style.display = "block";
-  }
+  closeHistorySidebar();
+  toggleElementVisibility(convoSidebar, true);
+  convoSidebarClose.addEventListener("click", closeConversationSection);
+  toggleElementVisibility(sidebarOverlay, true);
 }
 // #endregion
 // #endregion
 
 export function closeMobileSearchScreen() {
-  if (mobileSearchScreen) {
-    mobileSearchScreen.style.display = "none";
-  }
+  toggleElementVisibility(mobileSearchScreen, false);
 }
 
 // Setup clear filters button
@@ -1467,19 +1454,11 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
     navigationHistory = [{ convoId, entryId: null }];
   }
 
-  if (currentEntryContainerEl) currentEntryContainerEl.style.display = "flex";
+  toggleElementVisibility(currentEntryContainerEl, true);
 
   // Hide homepage, show dialogue content
-
-  const homePageContainer = $("homePageContainer");
-  const dialogueContent = $("dialogueContent");
-
-  if (homePageContainer) {
-    homePageContainer.style.display = "none";
-  }
-  if (dialogueContent) {
-    dialogueContent.style.display = "flex";
-  }
+  toggleElementVisibility(homePageContainer, false);
+  toggleElementVisibility(dialogueContent, true);
 
   // Remove search mode styling
   const entryListContainer = entryListEl?.closest(".entry-list");
@@ -1509,14 +1488,12 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   }
 
   // Make sure current entry container is visible
-  if (currentEntryContainerEl) {
-    currentEntryContainerEl.style.visibility = "visible";
-  }
+  toggleElementVisibility(currentEntryContainerEl, true);
 
   // Auto-open More Details if setting enabled
   if (moreDetailsEl && alwaysShowMoreDetails()) {
     moreDetailsEl.open = true;
-    moreDetailsEl.style.display = "block";
+    toggleElementVisibility(moreDetailsEl, true);
   }
 
   // Show details lazily only when expanded
@@ -1782,15 +1759,8 @@ function goToHomeView() {
   }
 
   // Show homepage, hide dialogue content
-  const homePageContainer = $("homePageContainer");
-  const dialogueContent = $("dialogueContent");
-
-  if (homePageContainer) {
-    homePageContainer.style.display = "block";
-  }
-  if (dialogueContent) {
-    dialogueContent.style.display = "none";
-  }
+  toggleElementVisibility(homePageContainer, true);
+  toggleElementVisibility(dialogueContent, false);
 
   // Reset entry list header
   if (entryListHeaderEl) {
@@ -1869,27 +1839,17 @@ export async function navigateToEntry(
   }
 
   // Hide homepage, show dialogue content (important for mobile when coming from search)
-  const homePageContainer = $("homePageContainer");
-  const dialogueContent = $("dialogueContent");
 
-  if (homePageContainer) {
-    homePageContainer.style.display = "none";
-  }
-  if (dialogueContent) {
-    dialogueContent.style.display = "flex";
-  }
-
+  toggleElementVisibility(homePageContainer, false);
+  toggleElementVisibility(dialogueContent, true);
   // Make visible
-  if (currentEntryContainerEl) {
-    currentEntryContainerEl.style.overflowY = "auto";
-    currentEntryContainerEl.style.display = "flex";
-    currentEntryContainerEl.style.visibility = "visible";
-  }
+  currentEntryContainerEl.style.overflowY = "auto"; // TODO KA add this to styles
+  toggleElementVisibility(currentEntryContainerEl, true);
 
   // Auto-open More Details if setting enabled
   if (moreDetailsEl && alwaysShowMoreDetails()) {
     moreDetailsEl.open = true;
-    moreDetailsEl.style.display = "block";
+    toggleElementVisibility(moreDetailsEl, true);
   }
 
   // Also restore entry list layout when navigating from search
@@ -1969,7 +1929,8 @@ export async function navigateToEntry(
 
   // Show More Details
   if (moreDetailsEl) {
-    moreDetailsEl.style.display = "block";
+    moreDetailsEl.open = true;
+    toggleElementVisibility(moreDetailsEl, true);
   }
 
   // Disable/enable root button
@@ -2247,7 +2208,7 @@ function loadChildOptions(convoId, entryId) {
 function setupClearSearchInput() {
   // TODO KA make one for desktop
   const mobileSearchClearIcon = $("mobileSearchClearIcon");
-  const searchInput = $("search");
+
   mobileSearchClearIcon.addEventListener("click", () => {
     mobileSearchTrigger.value = "";
     searchInput.value = "";
@@ -2261,8 +2222,7 @@ function openMobileSearchScreen() {
     pushHistoryState("search");
   }
   showSearchCount();
-  mobileSearchScreen.style.display = "flex";
-  const searchInput = $("search");
+  toggleElementVisibility(mobileSearchScreen, true);
   searchInput.focus();
 
   // If there are already mobile search results rendered, re-run the search with reset = true
@@ -2277,7 +2237,6 @@ function setupMobileSearch() {
   mobileSearchTrigger.addEventListener("click", openMobileSearchScreen);
 
   // Close mobile search screen
-  const mobileSearchBack = $("mobileSearchBack");
   mobileSearchBack.addEventListener("click", () => {
     // Use browser back to return to previous state
     window.history.back();
@@ -2379,39 +2338,30 @@ function setupMobileSidebar() {
 }
 
 function openMobileNavSidebar() {
-  if (mobileNavPanel) {
-    mobileNavPanel.classList.add("open");
-    mobileNavPanel.style.display = "";
-    closeConversationSection();
-  }
-  if (mobileNavPanel) {
-    mobileNavPanel.addEventListener("click", closeMobileNavSidebar);
-  }
-  if (sidebarOverlay) {
-    sidebarOverlay.style.display = "block";
-  }
+  toggleElementVisibility(mobileNavPanel, true);
+  toggleElementVisibility(sidebarOverlay, true);
+  mobileNavSidebarClose.addEventListener("click", closeMobileNavSidebar);
+  closeConversationSection();
 }
 
 function closeMobileNavSidebar() {
-  if (mobileNavPanel) {
-    mobileNavPanel.classList.remove("open");
-  }
-  if (sidebarOverlay) {
-    sidebarOverlay.style.display = "none";
-  }
+  toggleElementVisibility(mobileNavPanel, false);
+  toggleElementVisibility(sidebarOverlay, false);
 }
 
 function setupConversationTypesModal() {
   const helpIcon = $("helpIcon");
   const modal = $("conversationTypesModalOverlay");
   const closeBtn = modal.querySelector(".modal-close");
-  const openModal = () => {
-    modal.classList.add("open");
-  };
 
-  const closeModal = () => {
+  function openModal() {
+    toggleElementVisibility(modal, true);
+  }
+
+  function closeModal() {
     modal.classList.remove("open");
-  };
+    toggleElementVisibility(modal, false);
+  }
 
   helpIcon.addEventListener("click", openModal);
   closeBtn.addEventListener("click", closeModal);
@@ -2447,44 +2397,35 @@ function updateMobileNavButtons() {
 }
 
 function closeAllSidebars() {
-  const modals = document.querySelectorAll(".sidebar.open");
-  modals.forEach((modal) => modal.classList.remove("open"));
-  if (sidebarOverlay) {
-    sidebarOverlay.style.display = "none";
-  }
+  const modals = document.querySelectorAll(".sidebar");
+  modals.forEach((modal) => toggleElementVisibility(modals, false));
+  toggleElementVisibility(sidebarOverlay, false);
 }
 
 function closeAllModals() {
-  const modals = document.querySelectorAll(".modal-overlay.open");
-  modals.forEach((modal) => modal.classList.remove("open"));
+  const modals = document.querySelectorAll(".modal-overlay");
+  modals.forEach((modal) => toggleElementVisibility(modals, false));
 }
 
 function showMobileConvoFilter() {
-  mobileConvoFilterWrapper.style.display = "block";
-  convoFilterDropdown.classList.add("show");
+  toggleElementVisibility(mobileConvoFilterWrapper, true);
 }
 
 function showMobileActorFilter() {
-  mobileActorFilterWrapper.style.display = "block";
-  actorFilterDropdown.classList.add("show");
+  toggleElementVisibility(mobileActorFilterWrapper, true);
 }
 
 function showMobileTypeFilter() {
-  mobileTypeFilterSheet.style.display = "block";
-  mobileTypeFilterSheet.classList.add("active");
+  toggleElementVisibility(mobileTypeFilterSheet, true);
+  // TODO KA when filtering by task and no text, it does not show all tasks
+  toggleElementVisibility(typeFilterDropdown, true);
 }
 
 function setupConvoActorFilter() {
   const backBtn = $("mobileConvoFilterBack");
-
-  if (!backBtn) return;
-
   // Back button - Apply Changes
   backBtn.addEventListener("click", () => {
-    mobileConvoFilterWrapper.style.display = "none";
-    if (convoFilterDropdown) {
-      convoFilterDropdown.classList.remove("show");
-    }
+    toggleElementVisibility(mobileConvoFilterWrapper, false);
     // Apply changes and re-run search with reset
     search(true);
   });
@@ -2497,10 +2438,7 @@ function setupMobileActorFilter() {
 
   // Back button - Apply Changes
   backBtn.addEventListener("click", () => {
-    mobileActorFilterWrapper.style.display = "none";
-    if (actorFilterDropdown) {
-      actorFilterDropdown.classList.remove("show");
-    }
+    toggleElementVisibility(mobileActorFilterWrapper, false);
     // Apply changes and re-run search with reset
     search(true);
   });
@@ -2513,9 +2451,7 @@ function setupMobileTypeFilter() {
   // Close sheet when clicking outside content
   mobileTypeFilterSheet.addEventListener("click", (e) => {
     if (e.target === mobileTypeFilterSheet) {
-      mobileTypeFilterSheet.style.display = "none";
-      mobileTypeFilterSheet.classList.remove("active");
-      typeFilterDropdown.classList.remove("show");
+      toggleElementVisibility(mobileTypeFilterSheet, false);
       // Apply changes and re-run search with reset
       search(true);
     }
@@ -2524,7 +2460,7 @@ function setupMobileTypeFilter() {
   // Apply button
   applyBtn.addEventListener("click", () => {
     // Close sheet
-    mobileTypeFilterSheet.style.display = "none";
+    toggleElementVisibility(mobileTypeFilterSheet, false);
     mobileTypeFilterSheet.classList.remove("active");
     typeFilterDropdown.classList.remove("show");
     // Explicitly run a reset search so mobile results reflect the new selection
@@ -2542,7 +2478,6 @@ function setUpWholeWordsToggle() {
 }
 
 function setUpSearch() {
-  const searchInput = $("search");
   const searchBtn = $("searchBtn");
   searchInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {

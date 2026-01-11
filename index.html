@@ -46,9 +46,7 @@
     <div class="mobile-container">
       <!-- #region Mobile Search Screen  -->
       <div
-        id="mobileSearchScreen"
-        class="mobile-search-screen"
-        style="display: none"
+        id="mobileSearchScreen" class="mobile-search-screen hidden"
       >
         <div class="mobile-header">
           <button id="mobileSearchBack" class="button-icon">
@@ -157,11 +155,7 @@
       </div>
       <!-- #endregion -->
       <!-- #region Mobile Conversation Filter Screen -->
-      <div
-        id="mobileConvoFilterWrapper"
-        class="mobile-filter-screen filter-dropdown-wrapper"
-        style="display: none"
-      >
+      <div id="mobileConvoFilterWrapper" class="mobile-filter-screen filter-dropdown-wrapper hidden" >
         <div class="mobile-filter-header">
           <button class="button-icon back-button" id="mobileConvoFilterBack">
             <div
@@ -175,11 +169,7 @@
       </div>
       <!-- #endregion -->
       <!-- #region Mobile Actor Filter Screen -->
-      <div
-        id="mobileActorFilterWrapper"
-        class="mobile-filter-screen filter-dropdown-wrapper"
-        style="display: none"
-      >
+      <div id="mobileActorFilterWrapper" class="mobile-filter-screen filter-dropdown-wrapper hidden">
         <div class="mobile-filter-header">
           <button class="button-icon back-button" id="mobileActorFilterBack">
             <div
@@ -193,11 +183,7 @@
       </div>
       <!-- #endregion -->
       <!-- #region Mobile Type Filter Bottom Sheet -->
-      <div
-        id="mobileTypeFilterSheet"
-        class="mobile-bottom-sheet filter-dropdown-wrapper"
-        style="display: none"
-      >
+      <div id="mobileTypeFilterSheet" class="mobile-bottom-sheet filter-dropdown-wrapper hidden">
         <div class="bottom-sheet-handle"></div>
         <div class="bottom-sheet-content">
           <h4>Filter by Type</h4>
@@ -218,12 +204,7 @@
       <div id="historySidebar" class="sidebar sidebar-right"></div>
       <!-- #endregion -->
       <!-- #region Sidebar Toggle Buttons (Mobile/Tablet) -->
-      <div
-        id="convoSidebarToggle"
-        class="sidebar-toggle-btn sidebar-toggle-left"
-        style="display: none"
-        title="Toggle conversations sidebar"
-      >
+      <div id="convoSidebarToggle" class="sidebar-toggle-btn sidebar-toggle-left hidden" title="Toggle conversations sidebar" >
         <span class="toggle-icon">
           <div
             class="icon-placeholder"
@@ -233,12 +214,7 @@
         </span>
         <span class="toggle-label">Conversations</span>
       </div>
-      <div
-        id="historySidebarToggle"
-        class="sidebar-toggle-btn sidebar-toggle-right"
-        style="display: none"
-        title="Toggle history sidebar"
-      >
+      <div id="historySidebarToggle" class="sidebar-toggle-btn sidebar-toggle-right hidden" title="Toggle history sidebar">
         <span class="toggle-label">History</span>
         <span class="toggle-icon">
           <div
@@ -361,7 +337,7 @@
         <div>
           <h1>Disco Browser</h1>
         </div>
-        <div style="display: flex; gap: 8px; align-items: center">
+        <div class="header-container-buttons">
           <button
             id="settingsBtn"
             class="button-icon"
@@ -382,10 +358,9 @@
             title="View on GitHub"
           >
             <div
-              class="icon-placeholder"
+              class="icon-placeholder github-icon"
               data-icon-template="icon-github-template"
               data-icon-size="24px"
-              style="display: inline-flex; width: 24px; height: 24px"
             ></div>
           </a>
         </div>
@@ -446,7 +421,7 @@
                 ></div>
               </span>
             </button>
-            <div id="convoFilterDropdown" class="filter-dropdown">
+            <div id="convoFilterDropdown" class="filter-dropdown  hidden">
               <label for="convoSearch" class="search-input-label"
                 >Filter by Title</label
               >
@@ -499,7 +474,7 @@
                 ></div>
               </span>
             </button>
-            <div id="actorFilterDropdown" class="filter-dropdown">
+            <div id="actorFilterDropdown" class="filter-dropdown hidden">
               <label for="actorSearch" class="search-input-label"
                 >Filter by Name</label
               >
@@ -554,7 +529,7 @@
                 ></div>
               </span>
             </button>
-            <div id="typeFilterDropdown" class="filter-dropdown">
+            <div id="typeFilterDropdown" class="filter-dropdown hidden">
               <div class="filter-actions">
                 <label class="checkbox-item select-all checkbox-label">
                   <input
@@ -818,21 +793,8 @@
               Select a conversation from the left sidebar to begin exploring!
             </p>
 
-            <div
-              style="
-                display: flex;
-                justify-content: center;
-                align-content: center;
-                flex-direction: column;
-              "
-            >
-              <div
-                style="
-                  align-items: center;
-                  display: flex;
-                  justify-content: center;
-                "
-              >
+            <div class="centered-footer">
+              <div>
                 <a
                   href="https://github.com/rosecolinlarry/DiscoBrowser"
                   target="_blank"
@@ -841,23 +803,21 @@
                   title="View on GitHub"
                 >
                   <div
-                    class="icon-placeholder"
+                    class="icon-placeholder github-icon"
                     data-icon-template="icon-github-template"
                     data-icon-size="24px"
-                    style="display: inline-flex; width: 24px; height: 24px"
                   ></div>
                   <span style="font-size: medium">View on GitHub</span>
                 </a>
               </div>
             </div>
           </div>
-
+          <!-- Search Results (hidden by default) -->
+           <div id="searchResultsContainer" class="card search-results-card hidden">
+              <h3>Search Results</h3>
+           </div>
           <!-- Dialogue content (hidden by default) -->
-          <div
-            id="dialogueContent"
-            class="dialogue-content"
-            style="display: none"
-          >
+          <div id="dialogueContent" class="dialogue-content hidden">
             <h3>Dialogue</h3>
             <div id="currentEntryContainer" class="card current-entry-card">
               <div id="entryOverview">(select an entry)</div>

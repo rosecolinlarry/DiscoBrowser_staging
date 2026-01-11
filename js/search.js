@@ -18,7 +18,6 @@ import {
   highlightConversationInTree,
   closeMobileSearchScreen,
   mobileSearchCount,
-  mobileSearchLoader,
   mobileSearchResults,
   mobileSearchTrigger,
   selectedConvoIds,
@@ -27,8 +26,16 @@ import {
   desktopMediaQuery,
   tabletMediaQuery,
   setCurrentConvoId,
+  homePageContainer,
+  dialogueContent,
+  searchInput
 } from "./main.js";
-import { $, getParsedIntOrDefault } from "./ui.js";
+import {
+  $,
+  getParsedIntOrDefault,
+  toggleElementVisibility,
+  toggleElementVisibilityBySelector,
+} from "./ui.js";
 import { showHidden } from "./userSettings.js";
 
 // Search pagination state
@@ -40,7 +47,7 @@ export let currentSearchFilteredCount = 0; // Count after type filtering
 export let isLoadingMore = false;
 
 const wholeWordsCheckbox = $("wholeWordsCheckbox");
-const searchInput = $("search");
+
 
 // Keep raw (DB) results so we can apply client-side filters like whole-words without re-querying
 export let currentSearchRawResults = [];
@@ -114,7 +121,7 @@ export function applyFiltersToCurrentResults(useMobile = false) {
     if (!filtered.length) {
       mobileSearchResults.innerHTML =
         '<div class="mobile-search-prompt">No results found</div>';
-      if (mobileSearchCount) mobileSearchCount.classList.add("hidden");
+      toggleElementVisibility(mobileSearchCount, false);
       return;
     }
     // TODO KA consolidate search results to one dom element
@@ -211,21 +218,21 @@ function setSearchCount(value) {
   const searchCounters = document.querySelectorAll(".search-count");
   searchCounters.forEach((element) => {
     element.textContent = value;
-    element.classList.remove("hidden");
+    toggleElementVisibility(element, true);
   });
 }
 
 export function showSearchCount() {
   const searchCounters = document.querySelectorAll(".search-count");
   searchCounters.forEach((element) => {
-    element.classList.remove("hidden");
+    toggleElementVisibility(element, true);
   });
 }
 
 export function hideSearchCount() {
   const searchCounters = document.querySelectorAll(".search-count");
   searchCounters.forEach((element) => {
-    element.classList.add("hidden");
+    toggleElementVisibility(element, false);
   });
 }
 
@@ -260,21 +267,14 @@ export function search(resetSearch = true) {
       : Array.from(selectedActorIds);
 
   if (resetSearch) {
-    searchLoader?.classList.remove("hidden");
+    toggleElementVisibility(searchLoader, true);
 
     // Hide homepage, show dialogue content for search
-    const homePageContainer = $("homePageContainer");
-    const dialogueContent = $("dialogueContent");
-
-    if (homePageContainer) {
-      homePageContainer.style.display = "none";
-    }
-    if (dialogueContent) {
-      dialogueContent.style.display = "flex";
-    }
+    toggleElementVisibility(homePageContainer, false);
+    toggleElementVisibility(dialogueContent, true);
 
     // Hide current entry and make search take full space
-    if (currentEntryContainerEl) currentEntryContainerEl.style.display = "none";
+    toggleElementVisibility(currentEntryContainerEl, false);
     const entryListContainer = entryListEl?.closest(".entry-list");
     if (entryListContainer) {
       entryListContainer.classList.add("full-height");
@@ -375,7 +375,9 @@ export function search(resetSearch = true) {
       // Update filtered count
       currentSearchFilteredCount += initialFiltered.length;
       entryListHeaderEl.textContent = `Search Results`;
-      setSearchCount(`(${currentSearchFilteredCount} of ${currentSearchTotal})`);
+      setSearchCount(
+        `(${currentSearchFilteredCount} of ${currentSearchTotal})`
+      );
 
       // Render initial set
       initialFiltered.forEach((r) => {
@@ -444,11 +446,11 @@ export function search(resetSearch = true) {
     currentSearchOffset += res.length;
 
     // Remove any existing loading indicator
-    searchLoader?.classList.add("hidden");
+    toggleElementVisibility(searchLoader, false);
 
     // Add loading indicator if there are more results in the database and we got results this time
     if (res.length > 0 && currentSearchOffset < currentSearchTotal) {
-      searchLoader?.classList.remove("hidden");
+      toggleElementVisibility(searchLoader, true);
     }
   } catch (e) {
     console.error("Search error", e);
@@ -457,7 +459,7 @@ export function search(resetSearch = true) {
     }
   } finally {
     isLoadingMore = false;
-    searchLoader?.classList.add("hidden");
+    toggleElementVisibility(searchLoader, false);
   }
 }
 
@@ -479,7 +481,7 @@ function performMobileSearch(resetSearch = true) {
         ? null
         : Array.from(selectedActorIds);
     currentSearchOffset = 0;
-    mobileSearchLoader?.classList.remove("hidden");
+    toggleElementVisibility(searchLoader, true);
     if (mobileSearchResults) {
       mobileSearchResults.innerHTML = "";
     }
@@ -509,7 +511,7 @@ function performMobileSearch(resetSearch = true) {
       currentSearchRawResults = [...currentSearchRawResults, ...results];
     }
 
-    mobileSearchLoader?.classList.add("hidden");
+    toggleElementVisibility(searchLoader, false);
 
     if (resetSearch) {
       currentSearchFilteredCount = 0;
@@ -525,7 +527,7 @@ function performMobileSearch(resetSearch = true) {
       if (initialFiltered.length === 0) {
         mobileSearchResults.innerHTML =
           '<div class="mobile-search-prompt">No results found</div>';
-        if (mobileSearchCount) mobileSearchCount.classList.add("hidden");
+        toggleElementVisibility(mobileSearchCount, false);
         return;
       }
 
@@ -596,22 +598,19 @@ function performMobileSearch(resetSearch = true) {
     // Update offset for next load (based on database results, not filtered)
     currentSearchOffset += results.length;
 
-    // Remove any existing loading indicator
-    mobileSearchLoader?.classList.add("hidden");
-
     // Add loading indicator if there are more results in the database and we got results this time
     if (results.length > 0 && currentSearchOffset < currentSearchTotal) {
-      mobileSearchLoader?.classList.remove("hidden");
+      toggleElementVisibility(searchLoader, true);
     }
   } catch (e) {
     console.error("Mobile search error:", e);
-    mobileSearchLoader?.classList.add("hidden");
     if (resetSearch) {
       mobileSearchResults.innerHTML =
         '<div class="mobile-search-prompt">Error performing search</div>';
     }
   } finally {
+    // Remove any existing loading indicator
     isLoadingMore = false;
-    mobileSearchLoader?.classList.add("hidden");
+    toggleElementVisibility(searchLoader, false);
   }
 }

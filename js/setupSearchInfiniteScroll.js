@@ -1,4 +1,4 @@
-import { entryListEl, mobileSearchResults } from "./main.js";
+import { entryListEl, mobileSearchResults, searchLoader } from "./main.js";
 import {
   search,
   currentSearchTotal,
@@ -8,12 +8,9 @@ import {
   isLoadingMore,
   setIsLoadingMore,
 } from "./search.js";
-import { $ } from "./ui.js";
+import { $, toggleElementVisibility } from "./ui.js";
 
 // Search pagination state
-
-const searchLoader = $("searchLoader");
-const mobileSearchLoader = $("mobileSearchLoader");
 
 // Setup infinite scroll for search results
 export function setupSearchInfiniteScroll() {
@@ -33,9 +30,7 @@ export function setupSearchInfiniteScroll() {
       currentSearchOffset < currentSearchTotal
     ) {
       // Hide search indicator
-      if (searchLoader) {
-        searchLoader.classList.add("hidden");
-      }
+      toggleElementVisibility(searchLoader, false);
       // Load more results
       search(false);
     }
@@ -58,8 +53,8 @@ export function setupMobileSearchInfiniteScroll() {
       currentSearchOffset < currentSearchTotal
     ) {
       // Remove loading indicator
-      if (mobileSearchLoader) {
-        mobileSearchLoader.classList.add("hidden");
+      if (searchLoader) {
+        toggleElementVisibility(searchLoader, false);
       }
       // Load more results
       search(false);

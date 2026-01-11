@@ -85,6 +85,38 @@ export function createCardItem(titleText, convoId, entryId, contentText, allowHt
   return el;
 }
 
+/* #region Visibility helpers */
+export function toggleElementVisibility(el, showElement) {
+  if(el instanceof NodeList) {
+    el.forEach(element => {
+      toggleElementVisibility(element, showElement)
+    });
+    return;
+  }
+
+  if(showElement) {
+    el.classList.remove("hidden")
+  }
+  else {
+    el.classList.add("hidden")
+  }
+  if(el.classList.contains("sidebar")) {
+    if(showElement) {
+      el.classList.add("open")
+    }
+    else {
+      el.classList.remove("open");
+    }
+  }
+}
+
+export function toggleElementVisibilityBySelector(selector,showElement) {
+  const el = document.querySelector(selector)
+  toggleElementVisibility(el, showElement)
+}
+
+/* #endregion */
+
 /* Chat log/history helpers */
 export function resetChatLog(chatLogEl) {
   if (!chatLogEl) return;
@@ -482,6 +514,7 @@ function buildTable(rows, hideNone = true) {
   return t;
 }
 
+// TODO KA move this somewhere else?
 export function getStringOrDefault(str, defaultValue = "") {
   if (str === null || str === undefined || str === 0) {
     return defaultValue;
@@ -492,11 +525,13 @@ export function getStringOrDefault(str, defaultValue = "") {
   return str;
 }
 
+// TODO KA move this somewhere else?
 export function getParsedIntOrDefault(value, defaultValue = null) {
   const parsedValue = parseInt(value, 10);
   return isNaN(parsedValue) ? defaultValue : parsedValue;
 }
 
+// TODO KA move this somewhere else?
 export function escapeHtml(s) {
   return s.replace(
     /[&<>"']/g,
