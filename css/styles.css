@@ -1790,6 +1790,10 @@ a {
     text-align: left;
   }
 
+  .mobile-header .search-input.mobile-search-trigger  {
+    color: var(--muted);
+  }
+
   .mobile-search-trigger {
     color: var(--muted);
     font-size: 16px;
@@ -2208,6 +2212,7 @@ a {
     position: relative;
     display: flex;
     align-items: center;
+    color: var(--muted);
   }
 
   .mobile-search-trigger::placeholder {

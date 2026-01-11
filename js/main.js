@@ -111,7 +111,11 @@ const convoSidebar = $("convoSidebar");
 const convoSidebarClose = $("convoSidebarClose");
 
 // Mobile elements
+// Use the single search input for both desktop and mobile to keep state unified
 export const mobileSearchTrigger = $("mobileSearchTrigger");
+// The actual mobile header trigger element (readonly input)
+const mobileSearchTriggerEl = mobileSearchTrigger;
+const searchClearBtn = $("searchClearBtn");
 export const mobileSearchScreen = $("mobileSearchScreen");
 export const mobileSearchResults = $("mobileSearchResults");
 export const mobileSearchCount = $("mobileSearchCount");
@@ -2209,9 +2213,11 @@ function setupClearSearchInput() {
   const mobileSearchClearIcon = $("mobileSearchClearIcon");
 
   mobileSearchClearIcon.addEventListener("click", () => {
-    mobileSearchTrigger.value = "";
-    searchInput.value = "";
-    searchInput.focus();
+    // Clear the unified search input and focus it
+    if (searchInput) {
+      searchInput.value = "";
+      searchInput.focus();
+    }
   });
 }
 
@@ -2232,8 +2238,10 @@ function openMobileSearchScreen() {
 }
 
 function setupMobileSearch() {
-  // Open mobile search screen
-  mobileSearchTrigger.addEventListener("click", openMobileSearchScreen);
+  // Open mobile search screen when the mobile header trigger is clicked
+  if (mobileSearchTriggerEl) {
+    mobileSearchTriggerEl.addEventListener("click", openMobileSearchScreen);
+  }
 
   // Close mobile search screen
   mobileSearchBack.addEventListener("click", () => {
@@ -2435,7 +2443,6 @@ function setupMobileActorFilter() {
 
   if (!backBtn) return;
 
-  // Back button - Apply Changes
   backBtn.addEventListener("click", () => {
     toggleElementVisibility(mobileActorFilterWrapper, false);
     // Apply changes and re-run search with reset
@@ -2483,11 +2490,29 @@ function setUpSearch() {
       search();
     }
   });
+  // On mobile, clicking the (visible) search input should open the mobile search screen
+  searchInput.addEventListener("click", (e) => {
+    if (mobileMediaQuery.matches) {
+      openMobileSearchScreen();
+    }
+  });
 
   searchInput.addEventListener("input", (e) => {
-    // TODO KA Remove when search input is consolidated for desktop and mobile
-    mobileSearchTrigger.value = e?.target?.value?.trim();
+    // Keep mobile and desktop input unified (single element used)
+    // If the mobile header trigger exists, mirror the value for display
+    if (mobileSearchTriggerEl) mobileSearchTriggerEl.value = e?.target?.value ?? "";
   });
+
+  // Desktop clear (X) button
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener("click", () => {
+      if (searchInput) {
+        searchInput.value = "";
+        searchInput.focus();
+        // Optional: trigger a search update or UI refresh
+      }
+    });
+  }
   searchBtn.addEventListener("click", () => search());
 }
 
