@@ -44,7 +44,6 @@ import {
   alwaysShowMoreDetails,
 } from "./userSettings.js";
 import {
-  setupMobileSearchInfiniteScroll,
   setupSearchInfiniteScroll,
 } from "./setupSearchInfiniteScroll.js";
 import {
@@ -2509,7 +2508,7 @@ function setUpSearch() {
       toggleElementVisibility(searchClearBtn, true)
       toggleElementVisibility(searchBtn, false)
     } else {
-      // TODO Show search icon
+      // Show search icon
       toggleElementVisibility(searchClearBtn, false)
       toggleElementVisibility(searchBtn, true)
     }
@@ -2607,7 +2606,6 @@ async function boot() {
 
   // Setup infinite scroll for search
   setupSearchInfiniteScroll();
-  setupMobileSearchInfiniteScroll();
 
   // Setup mobile sidebar
   setupMobileSidebar();

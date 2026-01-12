@@ -416,6 +416,9 @@ label {
 
 .search-count {
   display: flex;
+  &.hidden {
+    display: none;
+  }
 }
 
 /* #region Details table styling */

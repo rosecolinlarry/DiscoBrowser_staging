@@ -144,10 +144,12 @@ export function applyFiltersToCurrentResults(useMobile = false) {
       mobileSearchResults.appendChild(div);
     });
 
-    // Update search count UI
-    setSearchCount(
-      `Search Results (${filtered.length} of ${currentSearchTotal})`
-    );
+    // Update search count UI: prefer DB total unless a client-only filter (whole-words) is active
+    if (wholeWordsCheckbox.checked && rawQuery) {
+      setSearchCount(`Search Results (${filtered.length})`);
+    } else {
+      setSearchCount(`Search Results (${currentSearchTotal})`);
+    }
     return;
   }
 
@@ -161,7 +163,13 @@ export function applyFiltersToCurrentResults(useMobile = false) {
   }
 
   entryListHeaderEl.textContent = `Search Results`;
-  setSearchCount(`(${currentSearchFilteredCount} of ${currentSearchTotal})`);
+  // If a client-only filter (whole-words) is active and there's a query,
+  // show the client-side filtered total; otherwise show the DB total.
+  if (wholeWordsCheckbox.checked && rawQuery) {
+    setSearchCount(`(${filtered.length})`);
+  } else {
+    setSearchCount(`(${currentSearchTotal})`);
+  }
 
   filtered.forEach((r) => {
     const div = createSearchResultDiv(r, rawQuery);
@@ -190,7 +198,14 @@ export function applyFiltersToCurrentResults(useMobile = false) {
 
 // Listen for whole-words toggle and re-filter existing results (do not re-run DB search)
 wholeWordsCheckbox.addEventListener("change", () => {
+  // Preserve the total count computed by the last DB search — whole-words
+  // filtering should only affect the filtered count, not the underlying total
+  // number of results available from the database.
+  const prevTotal = currentSearchTotal;
   applyFiltersToCurrentResults(mobileMediaQuery.matches);
+  if (prevTotal > 0 && currentSearchTotal === 0) {
+    setCurrentSearchTotal(prevTotal);
+  }
 });
 
 export function setCurrentSearchOffset(value) {
@@ -370,12 +385,14 @@ export function search(resetSearch = true) {
         return;
       }
 
-      // Update filtered count
+      // Update filtered count (used internally) but display DB total or client-filtered total
       currentSearchFilteredCount += initialFiltered.length;
       entryListHeaderEl.textContent = `Search Results`;
-      setSearchCount(
-        `(${currentSearchFilteredCount} of ${currentSearchTotal})`
-      );
+      if (wholeWordsCheckbox.checked && rawQuery) {
+        setSearchCount(`(${initialFiltered.length})`);
+      } else {
+        setSearchCount(`(${currentSearchTotal})`);
+      }
 
       // Render initial set
       initialFiltered.forEach((r) => {
@@ -410,7 +427,8 @@ export function search(resetSearch = true) {
       // Update filtered count
       currentSearchFilteredCount += newFiltered.length;
       entryListHeaderEl.textContent = `Search Results`;
-      setSearchCount(`(${currentSearchFilteredCount} of ${total})`);
+      // Show DB total for pagination
+      setSearchCount(`(${total})`);
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
@@ -512,6 +530,8 @@ function performMobileSearch(resetSearch = true) {
       );
     }
     const { results, total } = response;
+    // Ensure global total reflects DB/query results for mobile as well
+    setCurrentSearchTotal(total);
     // Append to raw results
     if (resetSearch) {
       currentSearchRawResults = [...results];
@@ -598,10 +618,12 @@ function performMobileSearch(resetSearch = true) {
       });
     }
 
-    // Update header with current count
-    setSearchCount(
-      `Search Results (${currentSearchFilteredCount} of ${total})`
-    );
+    // Update header with current count: prefer DB total unless client-only whole-words filter is active
+    if (wholeWordsCheckbox.checked && (searchInput.value || "").trim()) {
+      setSearchCount(`Search Results (${currentSearchFilteredCount})`);
+    } else {
+      setSearchCount(`Search Results (${total})`);
+    }
 
     // Update offset for next load (based on database results, not filtered)
     currentSearchOffset += results.length;
