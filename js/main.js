@@ -1,7 +1,6 @@
 // main.js - entry point (use <script type="module"> in index.html)
 import { loadSqlJs } from "./sqlLoader.js";
 import {
-  execRows,
   getActorNameById,
   getAllConversations,
   getAlternates,
@@ -22,7 +21,6 @@ import {
 import { buildTitleTree, renderTree } from "./treeBuilder.js";
 import {
   $,
-  getParsedIntOrDefault,
   highlightTerms,
   renderConversationOverview,
   getStringOrDefault,
@@ -113,6 +111,7 @@ const convoSidebarClose = $("convoSidebarClose");
 // Mobile elements
 // Use the single search input for both desktop and mobile to keep state unified
 export const mobileSearchTrigger = $("mobileSearchTrigger");
+const mobileSearchInputWrapper = $("mobileSearchInputWrapper");
 // The actual mobile header trigger element (readonly input)
 const mobileSearchTriggerEl = mobileSearchTrigger;
 export const mobileSearchScreen = $("mobileSearchScreen");
@@ -272,13 +271,13 @@ function setUpConvoListEvents() {
   convoListEl.addEventListener("click", async (e) => {
     const target = e.target.closest("[data-convo-id]");
     if (target) {
-      const convoId = getParsedIntOrDefault(target.dataset.convoId);
+      const convoId = target.dataset.convoId;
       await loadEntriesForConversation(convoId, true);
       return;
     }
     const topLabel = e.target.closest(".label");
     if (topLabel && topLabel.dataset.singleConvo) {
-      const convoId = getParsedIntOrDefault(topLabel.dataset.singleConvo);
+      const convoId = topLabel.dataset.singleConvo;
       await loadEntriesForConversation(convoId, true);
     }
   });
@@ -514,11 +513,19 @@ function moveSearchLoader() {
 function moveSearchInput() {
   const el = $("search");
   const elWrapper = $("searchInputWrapper");
-  const mobileElWrapper = $("mobileSearchInputWrapper");
+  const mobileElWrapper =mobileSearchInputWrapper;
+  const clearButtonElWrapper = document.querySelector(".clear-icon-btn-wrapper.desktop")
+  const mobileClearButtonElWrapper = document.querySelector(".clear-icon-btn-wrapper.mobile")
+  const searchButtonElWrapper = document.querySelector(".search-icon-btn-wrapper.desktop")
+  const mobileSearchButtonElWrapper = document.querySelector(".search-icon-btn-wrapper.mobile")
   if (mobileMediaQuery.matches) {
     mobileElWrapper.appendChild(el);
+    mobileClearButtonElWrapper.appendChild(searchClearBtn)
+    mobileSearchButtonElWrapper.appendChild(searchBtn)
   } else {
     elWrapper.appendChild(el);
+    clearButtonElWrapper.appendChild(searchClearBtn)
+    searchButtonElWrapper.appendChild(searchBtn)
   }
 }
 
@@ -932,8 +939,6 @@ function setUpFilterDropdowns() {
 }
 // #region Filter Dropdowns
 
-// TODO KA either prevent back button in mobile from navigating the user back while in the search screen OR map the back button to the back button of the convo filter
-
 // #region Conversation Filter Dropdown
 function setupConvoFilter() {
   const convoFilterSearch = $("convoSearch");
@@ -1213,7 +1218,6 @@ function updateActorFilterLabel() {
 
 // #region Conversation Type Filter Dropdown
 // Setup type filter
-// TODO KA consolidate with mobile
 function setupTypeFilter() {
   // Select All checkbox
   selectAllTypes.addEventListener("change", (e) => {
@@ -1259,7 +1263,7 @@ function setupTypeFilter() {
 
   updateTypeFilterLabel();
 }
-// TODO KA consolidate with mobile
+
 function updateTypeSelectAllState() {
   const typeCheckboxes = typeCheckboxList.querySelectorAll(
     'input[type="checkbox"][data-type]'
@@ -1273,7 +1277,7 @@ function updateTypeSelectAllState() {
   selectAllTypes.checked = allSelected;
   selectAllTypes.indeterminate = !allSelected && someSelected;
 }
-// TODO KA consolidate with mobile
+
 function updateTypeFilterLabel() {
   if (selectedTypeIds.size === 0 || selectedTypeIds.size === 3) {
     typeFilterLabel.textContent = "All Types";
@@ -1345,6 +1349,7 @@ function openConversationSection() {
 
 export function closeMobileSearchScreen() {
   toggleElementVisibility(mobileSearchScreen, false);
+  mobileSearchInputWrapper.classList.remove("expanded");
 }
 
 // Setup clear filters button
@@ -1436,7 +1441,6 @@ export function highlightConversationInTree(convoId) {
 
 /* Load entries listing for conversation */
 async function loadEntriesForConversation(convoId, resetHistory = false) {
-  convoId = getParsedIntOrDefault(convoId);
 
   // If we're coming from home (no current conversation), ensure home state exists
   if (!isHandlingPopState && currentConvoId === null) {
@@ -1551,7 +1555,7 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   }
 
   filtered.forEach((r) => {
-    const entryId = getParsedIntOrDefault(r.id);
+    const entryId = r.id;
     const title = getStringOrDefault(r.title, "(no title)");
 
     const text = r.dialoguetext || "";
@@ -1700,8 +1704,8 @@ async function jumpToHistoryPoint(targetIndex) {
   // Get the target entry
   const target = navigationHistory[targetIndex];
   if (target) {
-    const cid = getParsedIntOrDefault(target.convoId);
-    const eid = getParsedIntOrDefault(target.entryId);
+    const cid = target.convoId;
+    const eid = target.entryId;
 
     // Update current state
     currentConvoId = cid;
@@ -1818,10 +1822,6 @@ export async function navigateToEntry(
   selectedAlternateCondition = null,
   selectedAlternateLine = null
 ) {
-  // Ensure numeric Ids
-  convoId = getParsedIntOrDefault(convoId);
-  entryId = getParsedIntOrDefault(entryId);
-
   hideSearchCount();
   // Push browser history state (unless we're handling a popstate event)
   if (!isHandlingPopState && addToHistory) {
@@ -1847,11 +1847,9 @@ export async function navigateToEntry(
   }
 
   // Hide homepage, show dialogue content (important for mobile when coming from search)
-
   toggleElementVisibility(homePageContainer, false);
   toggleElementVisibility(dialogueContent, true);
   // Make visible
-  currentEntryContainerEl.style.overflowY = "auto"; // TODO KA add this to styles
   toggleElementVisibility(currentEntryContainerEl, true);
 
   // Auto-open More Details if setting enabled
@@ -2143,7 +2141,7 @@ export function createSearchResultDiv(r, query) {
   const convoType = convo ? convo.type || "flow" : "flow";
   const div = createCardItem(
     highlightedTitle,
-    getParsedIntOrDefault(r.conversationid),
+    r.conversationid,
     r.id,
     highlightedText,
     true,
@@ -2212,32 +2210,20 @@ function loadChildOptions(convoId, entryId) {
   }
 }
 
-// #region Mobile Setup
 function setupClearSearchInput() {
-  // TODO KA make one for desktop
-  const mobileSearchClearIcon = $("mobileSearchClearIcon");
-
-  mobileSearchClearIcon.addEventListener("click", () => {
-    // Clear the unified search input and focus it
-    if (searchInput) {
-      searchInput.value = "";
-      searchInput.focus();
-    }
-  });
-
   searchClearBtn.addEventListener("click", () => {
     // Clear the unified search input and focus it
     if (searchInput) {
       searchInput.value = "";
       searchInput.focus();
       // Change icon back to search icon
-      
       toggleElementVisibility(searchClearBtn, false)
       toggleElementVisibility(searchBtn, true)
     }
   });
 }
 
+// #region Mobile Setup
 function openMobileSearchScreen() {
   // Push browser history state for mobile search
   if (!isHandlingPopState) {
@@ -2245,6 +2231,7 @@ function openMobileSearchScreen() {
   }
   showSearchCount();
   toggleElementVisibility(mobileSearchScreen, true);
+  mobileSearchInputWrapper.classList.add("expanded");
   searchInput.focus();
 
   // If there are already mobile search results rendered, re-run the search with reset = true
@@ -2266,55 +2253,55 @@ function setupMobileSearch() {
     window.history.back();
   });
 
-  // Mobile search icon button
-  const mobileSearchIconBtn = $("mobileSearchIconBtn");
-  mobileSearchIconBtn.addEventListener("click", () => {
-    search();
-  });
-  // Clear filters button
-  if (mobileClearFilters) {
-    mobileClearFilters.addEventListener("click", () => {
-      // Clear conversation filter
-      selectedConvoIds.clear();
-      const convoCheckboxes = convoCheckboxList?.querySelectorAll(
-        'input[type="checkbox"]'
-      );
-      convoCheckboxes.forEach((cb) => {
-        cb.checked = false;
-      });
-      selectAllConvos.checked = true;
-      selectAllConvos.indeterminate = false;
-      updateConvoFilterLabel();
+  // // Mobile search icon button
+  // const mobileSearchIconBtn = $("mobileSearchIconBtn");
+  // mobileSearchIconBtn.addEventListener("click", () => {
+  //   search();
+  // });
+  // // Clear filters button
+  // if (mobileClearFilters) {
+  //   mobileClearFilters.addEventListener("click", () => {
+  //     // Clear conversation filter
+  //     selectedConvoIds.clear();
+  //     const convoCheckboxes = convoCheckboxList?.querySelectorAll(
+  //       'input[type="checkbox"]'
+  //     );
+  //     convoCheckboxes.forEach((cb) => {
+  //       cb.checked = false;
+  //     });
+  //     selectAllConvos.checked = true;
+  //     selectAllConvos.indeterminate = false;
+  //     updateConvoFilterLabel();
 
-      // Clear type filter
-      selectedTypeIds.clear();
-      selectedTypeIds.add("all");
-      const typeCheckboxes = typeCheckboxList?.querySelectorAll(
-        'input[type="checkbox"][data-type]'
-      );
-      typeCheckboxes.forEach((cb) => {
-        cb.checked = true;
-      });
-      selectAllTypes.checked = true;
-      selectAllTypes.indeterminate = false;
-      updateTypeFilterLabel();
+  //     // Clear type filter
+  //     selectedTypeIds.clear();
+  //     selectedTypeIds.add("all");
+  //     const typeCheckboxes = typeCheckboxList?.querySelectorAll(
+  //       'input[type="checkbox"][data-type]'
+  //     );
+  //     typeCheckboxes.forEach((cb) => {
+  //       cb.checked = true;
+  //     });
+  //     selectAllTypes.checked = true;
+  //     selectAllTypes.indeterminate = false;
+  //     updateTypeFilterLabel();
 
-      // Clear whole words
-      wholeWordsCheckbox.checked = false;
+  //     // Clear whole words
+  //     wholeWordsCheckbox.checked = false;
 
-      // Re-run search if there's an active query
-      if ($("search")?.value) {
-        // Prevent adding a history entry for this reset
-        const prevPop = isHandlingPopState;
-        isHandlingPopState = true;
-        try {
-          search(true);
-        } finally {
-          isHandlingPopState = prevPop;
-        }
-      }
-    });
-  }
+  //     // Re-run search if there's an active query
+  //     if ($("search")?.value) {
+  //       // Prevent adding a history entry for this reset
+  //       const prevPop = isHandlingPopState;
+  //       isHandlingPopState = true;
+  //       try {
+  //         search(true);
+  //       } finally {
+  //         isHandlingPopState = prevPop;
+  //       }
+  //     }
+  //   });
+  // }
 
   // Conversation filter
   if (mobileConvoFilter) {
@@ -2441,7 +2428,6 @@ function showMobileActorFilter() {
 
 function showMobileTypeFilter() {
   toggleElementVisibility(mobileTypeFilterSheet, true);
-  // TODO KA when filtering by task and no text, it does not show all tasks
   toggleElementVisibility(typeFilterDropdown, true);
 }
 
@@ -2519,11 +2505,11 @@ function setUpSearch() {
     if (mobileSearchTriggerEl)
       mobileSearchTriggerEl.value = e?.target?.value ?? "";
     if (e?.target?.value.length > 0) {
-      // TODO KA show clear icon
+      // Show clear icon
       toggleElementVisibility(searchClearBtn, true)
       toggleElementVisibility(searchBtn, false)
     } else {
-      // TODO KA show search icon
+      // TODO Show search icon
       toggleElementVisibility(searchClearBtn, false)
       toggleElementVisibility(searchBtn, true)
     }

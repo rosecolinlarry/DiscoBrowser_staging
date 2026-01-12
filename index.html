@@ -60,25 +60,9 @@
               id="mobileSearchInputWrapper"
               class="search-input-wrapper"
             ></div>
-            <button
-              class="button-icon search-icon-btn"
-              id="mobileSearchClearIcon"
-              style="padding: 8px"
-            >
-              <div
-                class="icon-placeholder"
-                data-icon-template="icon-close-template"
-                data-icon-size="24px"
-              ></div>
-            </button>
+            <div class="search-icon-btn-wrapper mobile"></div>
+            <div class="clear-icon-btn-wrapper mobile"></div>
           </div>
-          <button id="mobileSearchIconBtn" class="button-icon">
-            <div
-              class="icon-placeholder"
-              data-icon-template="icon-search-template"
-              data-icon-size="30px"
-            ></div>
-          </button>
         </div>
 
         <div class="search-controls">
@@ -393,17 +377,20 @@
                 placeholder="e.g. sandwich"
               />
             </div>
-            <button
-              id="searchBtn"
-              class="button-icon search-icon-btn"
-              title="Search"
-            >
-              <div
-                class="icon-placeholder"
-                data-icon-template="icon-search-template"
-                data-icon-size="30px"
-              ></div>
-            </button>
+            <div class="search-icon-btn-wrapper desktop">
+              <button
+                id="searchBtn"
+                class="button-icon search-icon-btn"
+                title="Search"
+              >
+                <div
+                  class="icon-placeholder"
+                  data-icon-template="icon-search-template"
+                  data-icon-size="24px"
+                ></div>
+              </button>
+            </div>
+            <div class="clear-icon-btn-wrapper desktop">
             <button
               id="searchClearBtn"
               class="button-icon search-icon-btn hidden"
@@ -413,9 +400,9 @@
                 class="icon-placeholder"
                 data-icon-template="icon-close-template"
                 data-icon-size="24px"
-                style="padding: 8px"
               ></div>
             </button>
+            </div>
           </div>
           <div id="wholeWordsButtonWrapper">
             <div id="wholeWordsButton" class="toggle-wrapper">

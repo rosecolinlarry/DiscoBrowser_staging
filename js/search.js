@@ -1,4 +1,4 @@
-import { searchDialogues as getSearchResults } from "./db.js";
+import { searchDialogues as getSearchResults, getConversationsByType } from "./db.js";
 import {
   isHandlingPopState,
   pushHistoryState,
@@ -32,9 +32,7 @@ import {
 } from "./main.js";
 import {
   $,
-  getParsedIntOrDefault,
-  toggleElementVisibility,
-  toggleElementVisibilityBySelector,
+  toggleElementVisibility
 } from "./ui.js";
 import { showHidden } from "./userSettings.js";
 
@@ -128,8 +126,8 @@ export function applyFiltersToCurrentResults(useMobile = false) {
     filtered.forEach((r) => {
       const div = createSearchResultDiv(r, rawQuery);
       div.addEventListener("click", () => {
-        const cid = getParsedIntOrDefault(r.conversationid);
-        const eid = getParsedIntOrDefault(r.id);
+        const cid = r.conversationid;
+        const eid = r.id;
 
         const alternateCondition = r.isAlternate ? r.alternatecondition : null;
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
@@ -168,8 +166,8 @@ export function applyFiltersToCurrentResults(useMobile = false) {
   filtered.forEach((r) => {
     const div = createSearchResultDiv(r, rawQuery);
     div.addEventListener("click", () => {
-      const cid = getParsedIntOrDefault(r.conversationid);
-      const eid = getParsedIntOrDefault(r.id);
+      const cid = r.conversationid;
+      const eid = r.id;
 
       setNavigationHistory([{ convoId: cid, entryId: null }]);
       const alternateCondition = r.isAlternate ? r.alternatecondition : null;
@@ -383,8 +381,8 @@ export function search(resetSearch = true) {
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
         div.addEventListener("click", () => {
-          const cid = getParsedIntOrDefault(r.conversationid);
-          const eid = getParsedIntOrDefault(r.id);
+          const cid = (r.conversationid);
+          const eid = (r.id);
 
           setNavigationHistory([{ convoId: cid, entryId: null }]);
           const alternateCondition = r.isAlternate
@@ -412,14 +410,13 @@ export function search(resetSearch = true) {
       // Update filtered count
       currentSearchFilteredCount += newFiltered.length;
       entryListHeaderEl.textContent = `Search Results`;
-      // TODO KA this number gets weird when filtering by types and needing to scroll. Consider just showing the total results and not pagination state.
       setSearchCount(`(${currentSearchFilteredCount} of ${total})`);
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
         div.addEventListener("click", () => {
-          const cid = getParsedIntOrDefault(r.conversationid);
-          const eid = getParsedIntOrDefault(r.id);
+          const cid = (r.conversationid);
+          const eid = (r.id);
 
           setNavigationHistory([{ convoId: cid, entryId: null }]);
           const alternateCondition = r.isAlternate
@@ -492,18 +489,29 @@ function performMobileSearch(resetSearch = true) {
 
   try {
     // Always query without whole-word restriction at DB layer; we'll filter client-side
-    const response = getSearchResults(
-      searchInput.value,
-      searchResultLimit,
-      currentSearchActorIds,
-      true,
-      currentSearchOffset,
-      currentSearchConvoIds,
-      showHidden()
-    );
+    let response;
+    const rawQuery = searchInput.value?.trim() ?? "";
+    if (
+      !rawQuery &&
+      selectedTypeIds &&
+      selectedTypeIds.size === 1 &&
+      (Array.from(selectedTypeIds)[0] === "task" || Array.from(selectedTypeIds)[0] === "orb")
+    ) {
+      const type = Array.from(selectedTypeIds)[0];
+      const convos = getConversationsByType(type, showHidden());
+      response = { results: convos, total: convos.length };
+    } else {
+      response = getSearchResults(
+        searchInput.value,
+        searchResultLimit,
+        currentSearchActorIds,
+        true, // filterStartInput
+        currentSearchOffset,
+        currentSearchConvoIds, // conversationIds
+        showHidden()
+      );
+    }
     const { results, total } = response;
-    currentSearchTotal = total;
-
     // Append to raw results
     if (resetSearch) {
       currentSearchRawResults = [...results];
@@ -536,8 +544,8 @@ function performMobileSearch(resetSearch = true) {
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
         div.addEventListener("click", () => {
-          const cid = getParsedIntOrDefault(r.conversationid);
-          const eid = getParsedIntOrDefault(r.id);
+          const cid = (r.conversationid);
+          const eid = (r.id);
 
           const alternateCondition = r.isAlternate
             ? r.alternatecondition
@@ -569,8 +577,8 @@ function performMobileSearch(resetSearch = true) {
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
         div.addEventListener("click", () => {
-          const cid = getParsedIntOrDefault(r.conversationid);
-          const eid = getParsedIntOrDefault(r.id);
+          const cid = (r.conversationid);
+          const eid = (r.id);
 
           const alternateCondition = r.isAlternate
             ? r.alternatecondition
