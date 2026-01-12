@@ -45,9 +45,7 @@
     <!-- #region Mobile Search Container -->
     <div class="mobile-container">
       <!-- #region Mobile Search Screen  -->
-      <div
-        id="mobileSearchScreen" class="mobile-search-screen hidden"
-      >
+      <div id="mobileSearchScreen" class="mobile-search-screen hidden">
         <div class="mobile-header">
           <button id="mobileSearchBack" class="button-icon">
             <div
@@ -155,7 +153,10 @@
       </div>
       <!-- #endregion -->
       <!-- #region Mobile Conversation Filter Screen -->
-      <div id="mobileConvoFilterWrapper" class="mobile-filter-screen filter-dropdown-wrapper hidden" >
+      <div
+        id="mobileConvoFilterWrapper"
+        class="mobile-filter-screen filter-dropdown-wrapper hidden"
+      >
         <div class="mobile-filter-header">
           <button class="button-icon back-button" id="mobileConvoFilterBack">
             <div
@@ -169,7 +170,10 @@
       </div>
       <!-- #endregion -->
       <!-- #region Mobile Actor Filter Screen -->
-      <div id="mobileActorFilterWrapper" class="mobile-filter-screen filter-dropdown-wrapper hidden">
+      <div
+        id="mobileActorFilterWrapper"
+        class="mobile-filter-screen filter-dropdown-wrapper hidden"
+      >
         <div class="mobile-filter-header">
           <button class="button-icon back-button" id="mobileActorFilterBack">
             <div
@@ -183,7 +187,10 @@
       </div>
       <!-- #endregion -->
       <!-- #region Mobile Type Filter Bottom Sheet -->
-      <div id="mobileTypeFilterSheet" class="mobile-bottom-sheet filter-dropdown-wrapper hidden">
+      <div
+        id="mobileTypeFilterSheet"
+        class="mobile-bottom-sheet filter-dropdown-wrapper hidden"
+      >
         <div class="bottom-sheet-handle"></div>
         <div class="bottom-sheet-content">
           <h4>Filter by Type</h4>
@@ -204,7 +211,11 @@
       <div id="historySidebar" class="sidebar sidebar-right"></div>
       <!-- #endregion -->
       <!-- #region Sidebar Toggle Buttons (Mobile/Tablet) -->
-      <div id="convoSidebarToggle" class="sidebar-toggle-btn sidebar-toggle-left hidden" title="Toggle conversations sidebar" >
+      <div
+        id="convoSidebarToggle"
+        class="sidebar-toggle-btn sidebar-toggle-left hidden"
+        title="Toggle conversations sidebar"
+      >
         <span class="toggle-icon">
           <div
             class="icon-placeholder"
@@ -214,7 +225,11 @@
         </span>
         <span class="toggle-label">Conversations</span>
       </div>
-      <div id="historySidebarToggle" class="sidebar-toggle-btn sidebar-toggle-right hidden" title="Toggle history sidebar">
+      <div
+        id="historySidebarToggle"
+        class="sidebar-toggle-btn sidebar-toggle-right hidden"
+        title="Toggle history sidebar"
+      >
         <span class="toggle-label">History</span>
         <span class="toggle-icon">
           <div
@@ -380,13 +395,25 @@
             </div>
             <button
               id="searchBtn"
-              class="search-icon-btn mobile-hide"
+              class="button-icon search-icon-btn"
               title="Search"
             >
               <div
                 class="icon-placeholder"
                 data-icon-template="icon-search-template"
                 data-icon-size="30px"
+              ></div>
+            </button>
+            <button
+              id="searchClearBtn"
+              class="button-icon search-icon-btn hidden"
+              title="Search"
+            >
+              <div
+                class="icon-placeholder"
+                data-icon-template="icon-close-template"
+                data-icon-size="24px"
+                style="padding: 8px"
               ></div>
             </button>
           </div>
@@ -421,7 +448,7 @@
                 ></div>
               </span>
             </button>
-            <div id="convoFilterDropdown" class="filter-dropdown  hidden">
+            <div id="convoFilterDropdown" class="filter-dropdown hidden">
               <label for="convoSearch" class="search-input-label"
                 >Filter by Title</label
               >
@@ -451,7 +478,7 @@
               <div id="convoCheckboxList" class="checkbox-list"></div>
             </div>
           </div>
-          
+
           <div id="actorFilterWrapper" class="filter-dropdown-wrapper">
             <button
               id="actorFilterBtn"
@@ -813,9 +840,12 @@
             </div>
           </div>
           <!-- Search Results (hidden by default) -->
-           <div id="searchResultsContainer" class="card search-results-card hidden">
-              <h3>Search Results</h3>
-           </div>
+          <div
+            id="searchResultsContainer"
+            class="card search-results-card hidden"
+          >
+            <h3>Search Results</h3>
+          </div>
           <!-- Dialogue content (hidden by default) -->
           <div id="dialogueContent" class="dialogue-content hidden">
             <h3>Dialogue</h3>

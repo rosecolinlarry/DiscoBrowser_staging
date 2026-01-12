@@ -115,14 +115,12 @@ const convoSidebarClose = $("convoSidebarClose");
 export const mobileSearchTrigger = $("mobileSearchTrigger");
 // The actual mobile header trigger element (readonly input)
 const mobileSearchTriggerEl = mobileSearchTrigger;
-const searchClearBtn = $("searchClearBtn");
 export const mobileSearchScreen = $("mobileSearchScreen");
 export const mobileSearchResults = $("mobileSearchResults");
 export const mobileSearchCount = $("mobileSearchCount");
 const mobileClearFilters = $("mobileClearFilters");
 
 const mobileSidebarToggle = $("mobileSidebarToggle");
-const mobileClearSearchBtn = $("mobileSearchClearIcon");
 
 const mobileSearchBack = $("mobileSearchBack");
 
@@ -137,7 +135,6 @@ const mobileNavSearch = $("mobileNavSearch");
 // Tree control elements
 const expandAllBtn = $("expandAllBtn");
 const collapseAllBtn = $("collapseAllBtn");
-const resetLayoutBtn = $("resetLayoutBtn");
 
 // Filter dropdowns
 
@@ -162,6 +159,10 @@ const actorFilterLabel = $("actorFilterLabel"); // Text
 const mobileTypeFilter = $("mobileTypeFilter"); // Button
 const mobileTypeFilterWrapper = $("mobileTypeFilterWrapper"); // Filter Wrapper
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
+
+// Search Bar
+const searchBtn = $("searchBtn");
+const searchClearBtn = $("searchClearBtn");
 
 // Clear filters button
 const clearFiltersBtn = $("clearFiltersBtn");
@@ -520,6 +521,7 @@ function moveSearchInput() {
     elWrapper.appendChild(el);
   }
 }
+
 function moveConvoFilterDropdown() {
   if (mobileMediaQuery.matches) {
     mobileConvoFilterWrapper.appendChild(convoFilterDropdown);
@@ -890,7 +892,9 @@ function setUpFilterDropdowns() {
   const allDropdowns = document.querySelectorAll(".filter-dropdown");
 
   // Prevent clicks inside any dropdown from bubbling to document
-  allDropdowns.forEach((dd) => dd.addEventListener("click", (ev) => ev.stopPropagation()));
+  allDropdowns.forEach((dd) =>
+    dd.addEventListener("click", (ev) => ev.stopPropagation())
+  );
 
   // Track currently open dropdown so we only allow one at a time
   let openDropdown = null;
@@ -907,7 +911,8 @@ function setUpFilterDropdowns() {
   dropdownButtons.forEach((dropdownButton) => {
     dropdownButton.addEventListener("click", (e) => {
       e.stopPropagation();
-      const filterDropdown = dropdownButton.parentElement?.querySelector(".filter-dropdown");
+      const filterDropdown =
+        dropdownButton.parentElement?.querySelector(".filter-dropdown");
       if (!filterDropdown) return;
 
       const shouldOpen = filterDropdown.classList.contains("hidden");
@@ -2219,6 +2224,18 @@ function setupClearSearchInput() {
       searchInput.focus();
     }
   });
+
+  searchClearBtn.addEventListener("click", () => {
+    // Clear the unified search input and focus it
+    if (searchInput) {
+      searchInput.value = "";
+      searchInput.focus();
+      // Change icon back to search icon
+      
+      toggleElementVisibility(searchClearBtn, false)
+      toggleElementVisibility(searchBtn, true)
+    }
+  });
 }
 
 function openMobileSearchScreen() {
@@ -2484,7 +2501,6 @@ function setUpWholeWordsToggle() {
 }
 
 function setUpSearch() {
-  const searchBtn = $("searchBtn");
   searchInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       search();
@@ -2500,19 +2516,18 @@ function setUpSearch() {
   searchInput.addEventListener("input", (e) => {
     // Keep mobile and desktop input unified (single element used)
     // If the mobile header trigger exists, mirror the value for display
-    if (mobileSearchTriggerEl) mobileSearchTriggerEl.value = e?.target?.value ?? "";
+    if (mobileSearchTriggerEl)
+      mobileSearchTriggerEl.value = e?.target?.value ?? "";
+    if (e?.target?.value.length > 0) {
+      // TODO KA show clear icon
+      toggleElementVisibility(searchClearBtn, true)
+      toggleElementVisibility(searchBtn, false)
+    } else {
+      // TODO KA show search icon
+      toggleElementVisibility(searchClearBtn, false)
+      toggleElementVisibility(searchBtn, true)
+    }
   });
-
-  // Desktop clear (X) button
-  if (searchClearBtn) {
-    searchClearBtn.addEventListener("click", () => {
-      if (searchInput) {
-        searchInput.value = "";
-        searchInput.focus();
-        // Optional: trigger a search update or UI refresh
-      }
-    });
-  }
   searchBtn.addEventListener("click", () => search());
 }
 
