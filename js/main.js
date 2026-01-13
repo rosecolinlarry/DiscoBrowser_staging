@@ -1322,9 +1322,10 @@ function triggerSearch(e) {
 // #region Sidebars
 // #region History Sidebar
 function openHistorySidebar() {
+  closeAllSidebars();
   toggleElementVisibility(historySidebar, true);
-  closeConversationSection();
   historySidebarClose.addEventListener("click", closeHistorySidebar);
+  toggleElementVisibility(sidebarOverlay, true);
 }
 function closeHistorySidebar() {
   toggleElementVisibility(historySidebar, false);
@@ -1333,15 +1334,15 @@ function closeHistorySidebar() {
 // #endregion
 
 // #region Conversation Tree Sidebar
-function closeConversationSection() {
-  toggleElementVisibility(convoSidebar, false);
-  toggleElementVisibility(sidebarOverlay, false);
-}
 function openConversationSection() {
-  closeHistorySidebar();
+  closeAllSidebars();
   toggleElementVisibility(convoSidebar, true);
   convoSidebarClose.addEventListener("click", closeConversationSection);
   toggleElementVisibility(sidebarOverlay, true);
+}
+function closeConversationSection() {
+  toggleElementVisibility(convoSidebar, false);
+  toggleElementVisibility(sidebarOverlay, false);
 }
 // #endregion
 // #endregion
@@ -2231,7 +2232,7 @@ function openMobileSearchScreen() {
     pushHistoryState("search");
   }
   showSearchCount();
-  closeMobileNavSidebar();
+  closeAllSidebars();
   toggleElementVisibility(mobileSearchScreen, true);
   mobileSearchInputWrapper.classList.add("expanded");
   searchInput.focus();
@@ -2351,10 +2352,10 @@ function setupMobileSidebar() {
 }
 
 function openMobileNavSidebar() {
+  closeAllSidebars();
   toggleElementVisibility(mobileNavPanel, true);
   toggleElementVisibility(sidebarOverlay, true);
   mobileNavSidebarClose.addEventListener("click", closeMobileNavSidebar);
-  closeConversationSection();
 }
 
 function closeMobileNavSidebar() {
@@ -2411,7 +2412,7 @@ function updateMobileNavButtons() {
 
 function closeAllSidebars() {
   const modals = document.querySelectorAll(".sidebar");
-  modals.forEach((modal) => toggleElementVisibility(modals, false));
+  modals.forEach((modal) => toggleElementVisibility(modal, false));
   toggleElementVisibility(sidebarOverlay, false);
 }
 
