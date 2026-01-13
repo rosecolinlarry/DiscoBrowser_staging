@@ -1932,10 +1932,12 @@ export async function navigateToEntry(
     );
   }
 
-  // Show More Details
-  if (moreDetailsEl) {
+  // Show More Details only if the setting is enabled or it was already open
+  if (moreDetailsEl && (alwaysShowMoreDetails() || moreDetailsEl.open)) {
     moreDetailsEl.open = true;
-    toggleElementVisibility(moreDetailsEl, true);
+  } else if (moreDetailsEl) {
+    // Keep it collapsed when the user hasn't enabled auto-open and didn't leave it open
+    moreDetailsEl.open = false;
   }
 
   // Disable/enable root button
@@ -2229,6 +2231,7 @@ function openMobileSearchScreen() {
     pushHistoryState("search");
   }
   showSearchCount();
+  closeMobileNavSidebar();
   toggleElementVisibility(mobileSearchScreen, true);
   mobileSearchInputWrapper.classList.add("expanded");
   searchInput.focus();
