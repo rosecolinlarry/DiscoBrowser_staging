@@ -250,13 +250,14 @@ export function hideSearchCount() {
 }
 
 export function search(resetSearch = true) {
+  window.dataLayer = window.dataLayer || [];
+
   if (mobileMediaQuery.matches) {
     performMobileSearch(resetSearch);
     return;
   }
 
   searchInput.value = searchInput?.value?.trim() ?? "";
-
   if (resetSearch) {
     // Push browser history state for search view
     if (!isHandlingPopState) {
@@ -279,6 +280,7 @@ export function search(resetSearch = true) {
       ? null
       : Array.from(selectedActorIds);
 
+  
   if (resetSearch) {
     toggleElementVisibility(searchLoader, true);
 
@@ -299,6 +301,15 @@ export function search(resetSearch = true) {
 
     entryListEl.innerHTML = ""; // This clears both innerHTML and textContent
   }
+
+  window.dataLayer.push({
+    'event': 'virtualSearch',
+    'searchTerm': searchInput.value,
+    'resetSearch': resetSearch,
+    'currentSearchOffset': currentSearchOffset,
+    'selectedActorIds': selectedActorIds,
+    'selectedConvoIds': selectedConvoIds
+  })
 
   if (isLoadingMore) return;
   isLoadingMore = true;
@@ -501,6 +512,15 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchResults.innerHTML = "";
     }
   }
+
+  window.dataLayer.push({
+    'event': 'virtualSearch',
+    'searchTerm': searchInput.value,
+    'resetSearch': resetSearch,
+    'currentSearchOffset': currentSearchOffset,
+    'selectedActorIds': selectedActorIds,
+    'selectedConvoIds': selectedConvoIds
+  })
 
   if (isLoadingMore) return;
   isLoadingMore = true;
