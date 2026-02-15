@@ -257,7 +257,6 @@ export function getRouteParamsFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const convoId = params.get('convo') ? parseInt(params.get('convo'), 10) : null;
   const entryId = params.get('entry') ? parseInt(params.get('entry'), 10) : null;
-  console.log(`getRouteParamsFromUrl: cid: ${convoId} | eid: ${entryId}`)
   return { convoId, entryId };
 }
 
@@ -268,7 +267,6 @@ export function getRouteParamsFromUrl() {
 export function getSearchParamsFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const searchQuery = params.get('q') || '';
-  console.log(`getSearchParamsFromUrl: ${searchQuery}`)
   const typeIds = params.get('types')
     ? new Set(params.get('types').split(','))
     : new Set();
@@ -285,7 +283,6 @@ export function getSearchParamsFromUrl() {
 async function handleInitialUrlNavigation() {
   const { convoId, entryId } = getRouteParamsFromUrl();
   const { searchQuery } = getSearchParamsFromUrl();
-  console.log(`handleInitialUrlNavigation: cid: ${convoId} | eid: ${entryId} | q: ${searchQuery}`)
   // If there's a search query in the URL, navigate to search
   if (searchQuery) {
     if (searchInput) {
@@ -2465,6 +2462,7 @@ function setupMobileSearch() {
   mobileSearchBack.addEventListener("click", () => {
     // Use browser back to return to previous state
     window.history.back();
+    closeMobileSearchScreen()
   });
 
   // Setup convo filter screen
