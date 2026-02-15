@@ -202,15 +202,9 @@ export const STORAGE_KEY = "discobrowser_grid_columns";
 injectUserSettingsTemplate();
 injectIconTemplates();
 
-export function setCurrentConvoId(value) {
-  currentConvoId = value;
-}
-
-// #region URL Management for GA Tracking
-
+// #region URL Management
 /**
  * Update the URL with route parameters for convo and entry IDs
- * This allows Google Analytics to track different pages/views
  */
 export function updateUrlWithRoute(convoId, entryId = null) {
   // Don't update URL during popstate handling to avoid double updates
@@ -231,9 +225,8 @@ export function updateUrlWithRoute(convoId, entryId = null) {
 
 /**
  * Update the URL with search query parameters
- * This allows Google Analytics to track search queries without needing a custom data layer
  */
-export function updateUrlWithSearchParams(searchQuery, convoIds, actorIds, typeIds) {
+export function updateUrlWithSearchParams(searchQuery, typeIds) {
   // Don't update URL during popstate handling to avoid double updates
   if (isHandlingPopState) return;
   
@@ -241,15 +234,6 @@ export function updateUrlWithSearchParams(searchQuery, convoIds, actorIds, typeI
   
   if (searchQuery && searchQuery.trim()) {
     params.set('q', searchQuery.trim());
-  }
-  
-  // Add filter information as comma-separated lists
-  if (convoIds && convoIds.size > 0) {
-    params.set('convos', Array.from(convoIds).join(','));
-  }
-  
-  if (actorIds && actorIds.size > 0) {
-    params.set('actors', Array.from(actorIds).join(','));
   }
   
   if (typeIds && typeIds.size > 0) {
@@ -269,7 +253,7 @@ export function getRouteParamsFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const convoId = params.get('convo') ? parseInt(params.get('convo'), 10) : null;
   const entryId = params.get('entry') ? parseInt(params.get('entry'), 10) : null;
-  
+  console.log(`getRouteParamsFromUrl: cid: ${convoId} | eid: ${entryId}`)
   return { convoId, entryId };
 }
 
@@ -280,21 +264,15 @@ export function getRouteParamsFromUrl() {
 export function getSearchParamsFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const searchQuery = params.get('q') || '';
-  
-  const convoIds = params.get('convos') 
-    ? new Set(params.get('convos').split(',').map(id => parseInt(id, 10)))
-    : new Set();
-    
-  const actorIds = params.get('actors')
-    ? new Set(params.get('actors').split(','))
-    : new Set();
-    
+  console.log(`getSearchParamsFromUrl: ${searchQuery}`)
   const typeIds = params.get('types')
     ? new Set(params.get('types').split(','))
     : new Set();
   
-  return { searchQuery, convoIds, actorIds, typeIds };
+  return { searchQuery, typeIds };
 }
+
+
 
 /**
  * Handle initial navigation from URL parameters on page load
@@ -303,7 +281,7 @@ export function getSearchParamsFromUrl() {
 async function handleInitialUrlNavigation() {
   const { convoId, entryId } = getRouteParamsFromUrl();
   const { searchQuery } = getSearchParamsFromUrl();
-  
+  console.log(`handleInitialUrlNavigation: cid: ${convoId} | eid: ${entryId} | q: ${searchQuery}`)
   // If there's a search query in the URL, navigate to search
   if (searchQuery) {
     if (searchInput) {
@@ -1644,7 +1622,7 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   currentConvoId = convoId;
   currentEntryId = null;
   
-  // Update URL with the conversation ID for GA tracking
+  // Update URL with the conversation ID
   updateUrlWithRoute(convoId, null);
 
   // Disable root button at conversation root
@@ -1753,10 +1731,6 @@ function updateBackButtonState() {
 }
 
 async function setupBrowserHistory() {
-  // Set initial state
-  window.history.replaceState({ view: "home" }, "", window.location.pathname);
-  currentAppState = "home";
-
   // Handle browser back/forward buttons
   window.addEventListener("popstate", async (event) => {
     if (isHandlingPopState) return;
@@ -2008,9 +1982,9 @@ function goToHomeView() {
 }
 
 /* Jump to conversation root */
-export async function jumpToConversationRoot() {
+export async function jumpToConversationRoot(newConvoId = null) {
+  currentConvoId = currentConvoId ?? newConvoId;
   if (currentConvoId === null) return;
-
   // Clear all entries except the first one (conversation root)
   if (chatLogEl) {
     const historyItems = chatLogEl.querySelectorAll(".card-item");
@@ -2136,7 +2110,7 @@ export async function navigateToEntry(
   currentAlternateCondition = selectedAlternateCondition;
   currentAlternateLine = selectedAlternateLine;
   
-  // Update URL with both convo and entry IDs for GA tracking
+  // Update URL with both convo and entry IDs
   updateUrlWithRoute(convoId, entryId);
 
   // Add current entry to history log (non-clickable)

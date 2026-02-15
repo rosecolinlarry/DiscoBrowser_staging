@@ -25,7 +25,6 @@ import {
   mobileMediaQuery,
   desktopMediaQuery,
   tabletMediaQuery,
-  setCurrentConvoId,
   homePageContainer,
   dialogueContent,
   searchInput,
@@ -133,8 +132,7 @@ export function applyFiltersToCurrentResults(useMobile = false) {
         const alternateCondition = r.isAlternate ? r.alternatecondition : null;
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
         if (cid && !eid) {
-          setCurrentConvoId(cid);
-          jumpToConversationRoot();
+          jumpToConversationRoot(cid);
         } else {
           navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
         }
@@ -183,8 +181,7 @@ export function applyFiltersToCurrentResults(useMobile = false) {
       const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
       if (cid && !eid) {
-        setCurrentConvoId(cid);
-        jumpToConversationRoot();
+        jumpToConversationRoot(cid);
         return;
       }
 
@@ -196,8 +193,8 @@ export function applyFiltersToCurrentResults(useMobile = false) {
     entryListEl.appendChild(div);
   });
   
-  // Update URL with search params for GA tracking
-  updateUrlWithSearchParams(rawQuery, selectedConvoIds, selectedActorIds, selectedTypeIds);
+  // Update URL with search params
+  updateUrlWithSearchParams(rawQuery, selectedTypeIds);
 }
 
 // Listen for whole-words toggle and re-filter existing results (do not re-run DB search)
@@ -398,7 +395,7 @@ export function search(resetSearch = true) {
         setSearchCount("(0)");
         entryListEl.innerHTML = "<div>(no matches)</div>";
         // Update URL with search params even if no results
-        updateUrlWithSearchParams(searchInput.value, selectedConvoIds, selectedActorIds, selectedTypeIds);
+        updateUrlWithSearchParams(searchInput.value, selectedTypeIds);
         return;
       }
 
@@ -425,8 +422,7 @@ export function search(resetSearch = true) {
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
           if (cid && !eid) {
-            setCurrentConvoId(cid);
-            jumpToConversationRoot();
+            jumpToConversationRoot(cid);
             return;
           }
 
@@ -438,8 +434,8 @@ export function search(resetSearch = true) {
         entryListEl.appendChild(div);
       });
       
-      // Update URL with search params for GA tracking
-      updateUrlWithSearchParams(searchInput.value, selectedConvoIds, selectedActorIds, selectedTypeIds);
+      // Update URL with search params
+      updateUrlWithSearchParams(searchInput.value, selectedTypeIds);
     } else {
       // Pagination: filter only the newly fetched items and append them
       const newFiltered = filterAndMatch(res);
@@ -463,8 +459,7 @@ export function search(resetSearch = true) {
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
           if (cid && !eid) {
-            setCurrentConvoId(cid);
-            jumpToConversationRoot();
+            jumpToConversationRoot(cid);
             return;
           }
 
@@ -601,8 +596,7 @@ function performMobileSearch(resetSearch = true) {
             : null;
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
           if (cid && !eid) {
-            setCurrentConvoId(cid);
-            jumpToConversationRoot();
+            jumpToConversationRoot(cid);
           } else {
             navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
           }
@@ -634,8 +628,7 @@ function performMobileSearch(resetSearch = true) {
             : null;
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
           if (cid && !eid) {
-            setCurrentConvoId(cid);
-            jumpToConversationRoot();
+            jumpToConversationRoot(cid);
           } else {
             navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
           }
@@ -657,9 +650,9 @@ function performMobileSearch(resetSearch = true) {
     // Update offset for next load (based on database results, not filtered)
     currentSearchOffset += results.length;
     
-    // Update URL with search params for GA tracking (on initial search)
+    // Update URL with search params (on initial search)
     if (resetSearch) {
-      updateUrlWithSearchParams(searchInput.value, selectedConvoIds, selectedActorIds, selectedTypeIds);
+      updateUrlWithSearchParams(searchInput.value, selectedTypeIds);
     }
 
     // Add loading indicator if there are more results in the database and we got results this time
