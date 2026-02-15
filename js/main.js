@@ -205,6 +205,144 @@ export function setCurrentConvoId(value) {
   currentConvoId = value;
 }
 
+// #region URL Management for GA Tracking
+
+/**
+ * Update the URL with route parameters for convo and entry IDs
+ * This allows Google Analytics to track different pages/views
+ */
+export function updateUrlWithRoute(convoId, entryId = null) {
+  if (isHandlingPopState) return;
+  
+  const params = new URLSearchParams();
+  if (convoId !== null && convoId !== undefined) {
+    params.set('convo', convoId);
+  }
+  if (entryId !== null && entryId !== undefined) {
+    params.set('entry', entryId);
+  }
+  
+  const queryString = params.toString();
+  const url = queryString ? `?${queryString}` : window.location.pathname;
+  window.history.replaceState(null, '', url);
+}
+
+/**
+ * Update the URL with search query parameters
+ * This allows Google Analytics to track search queries without needing a custom data layer
+ */
+export function updateUrlWithSearchParams(searchQuery, convoIds, actorIds, typeIds) {
+  if (isHandlingPopState) return;
+  
+  const params = new URLSearchParams();
+  
+  if (searchQuery && searchQuery.trim()) {
+    params.set('q', searchQuery.trim());
+  }
+  
+  // Add filter information as comma-separated lists
+  if (convoIds && convoIds.size > 0) {
+    params.set('convos', Array.from(convoIds).join(','));
+  }
+  
+  if (actorIds && actorIds.size > 0) {
+    params.set('actors', Array.from(actorIds).join(','));
+  }
+  
+  if (typeIds && typeIds.size > 0) {
+    params.set('types', Array.from(typeIds).join(','));
+  }
+  
+  const queryString = params.toString();
+  const url = queryString ? `?${queryString}` : window.location.pathname;
+  window.history.replaceState(null, '', url);
+}
+
+/**
+ * Parse route parameters from URL
+ * Returns {convoId, entryId}
+ */
+export function getRouteParamsFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const convoId = params.get('convo') ? parseInt(params.get('convo'), 10) : null;
+  const entryId = params.get('entry') ? parseInt(params.get('entry'), 10) : null;
+  
+  return { convoId, entryId };
+}
+
+/**
+ * Parse search parameters from URL
+ * Returns {searchQuery, convoIds, actorIds, typeIds}
+ */
+export function getSearchParamsFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const searchQuery = params.get('q') || '';
+  
+  const convoIds = params.get('convos') 
+    ? new Set(params.get('convos').split(',').map(id => parseInt(id, 10)))
+    : new Set();
+    
+  const actorIds = params.get('actors')
+    ? new Set(params.get('actors').split(','))
+    : new Set();
+    
+  const typeIds = params.get('types')
+    ? new Set(params.get('types').split(','))
+    : new Set();
+  
+  return { searchQuery, convoIds, actorIds, typeIds };
+}
+
+/**
+ * Handle initial navigation from URL parameters on page load
+ * Allows deep-linking to specific conversations and entries
+ */
+async function handleInitialUrlNavigation() {
+  const { convoId, entryId } = getRouteParamsFromUrl();
+  const { searchQuery } = getSearchParamsFromUrl();
+  
+  // If there's a search query in the URL, navigate to search
+  if (searchQuery) {
+    if (searchInput) {
+      searchInput.value = searchQuery;
+      // Trigger search (this will update GA)
+      const event = new Event('input', { bubbles: true });
+      searchInput.dispatchEvent(event);
+    }
+    return;
+  }
+  
+  // If there's a convo ID in the URL, navigate to it
+  if (convoId !== null) {
+    // Check if the conversation exists
+    const conversation = getConversationById(convoId);
+    if (!conversation) {
+      console.warn(`Conversation ${convoId} not found`);
+      return;
+    }
+    
+    // If there's also an entry ID, navigate to that entry
+    if (entryId !== null) {
+      const entry = getEntry(convoId, entryId);
+      if (!entry) {
+        console.warn(`Entry ${entryId} in conversation ${convoId} not found`);
+        // Still navigate to the convo root
+        await loadEntriesForConversation(convoId, true);
+      } else {
+        // Navigate to the entry
+        await loadEntriesForConversation(convoId, true);
+        await navigateToEntry(convoId, entryId, false);
+      }
+    } else {
+      // Just navigate to the conversation
+      await loadEntriesForConversation(convoId, true);
+      highlightConversationInTree(convoId);
+    }
+  }
+}
+
+// #endregion
+
 export function getConversationsForTree() {
   allConvos = getAllConversations(showHidden());
   return allConvos.map((c) => ({
@@ -1498,6 +1636,9 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
   // Update current state for conversation root
   currentConvoId = convoId;
   currentEntryId = null;
+  
+  // Update URL with the conversation ID for GA tracking
+  updateUrlWithRoute(convoId, null);
 
   // Disable root button at conversation root
   if (convoRootBtn) {
@@ -1953,6 +2094,9 @@ export async function navigateToEntry(
   currentEntryId = entryId;
   currentAlternateCondition = selectedAlternateCondition;
   currentAlternateLine = selectedAlternateLine;
+  
+  // Update URL with both convo and entry IDs for GA tracking
+  updateUrlWithRoute(convoId, entryId);
 
   // Add current entry to history log (non-clickable)
   if (addToHistory && chatLogEl) {
@@ -2660,6 +2804,9 @@ async function boot() {
 
   // Setup browser history handling
   setupBrowserHistory();
+  
+  // Handle direct URL navigation via route/query params
+  handleInitialUrlNavigation();
 
   // Set up conversation type modal
   setupConversationTypesModal();

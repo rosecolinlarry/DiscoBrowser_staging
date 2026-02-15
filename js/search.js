@@ -28,7 +28,8 @@ import {
   setCurrentConvoId,
   homePageContainer,
   dialogueContent,
-  searchInput
+  searchInput,
+  updateUrlWithSearchParams
 } from "./main.js";
 import {
   $,
@@ -194,6 +195,9 @@ export function applyFiltersToCurrentResults(useMobile = false) {
 
     entryListEl.appendChild(div);
   });
+  
+  // Update URL with search params for GA tracking
+  updateUrlWithSearchParams(rawQuery, selectedConvoIds, selectedActorIds, selectedTypeIds);
 }
 
 // Listen for whole-words toggle and re-filter existing results (do not re-run DB search)
@@ -393,6 +397,8 @@ export function search(resetSearch = true) {
       if (!initialFiltered.length) {
         setSearchCount("(0)");
         entryListEl.innerHTML = "<div>(no matches)</div>";
+        // Update URL with search params even if no results
+        updateUrlWithSearchParams(searchInput.value, selectedConvoIds, selectedActorIds, selectedTypeIds);
         return;
       }
 
@@ -431,6 +437,9 @@ export function search(resetSearch = true) {
 
         entryListEl.appendChild(div);
       });
+      
+      // Update URL with search params for GA tracking
+      updateUrlWithSearchParams(searchInput.value, selectedConvoIds, selectedActorIds, selectedTypeIds);
     } else {
       // Pagination: filter only the newly fetched items and append them
       const newFiltered = filterAndMatch(res);
@@ -647,6 +656,11 @@ function performMobileSearch(resetSearch = true) {
 
     // Update offset for next load (based on database results, not filtered)
     currentSearchOffset += results.length;
+    
+    // Update URL with search params for GA tracking (on initial search)
+    if (resetSearch) {
+      updateUrlWithSearchParams(searchInput.value, selectedConvoIds, selectedActorIds, selectedTypeIds);
+    }
 
     // Add loading indicator if there are more results in the database and we got results this time
     if (results.length > 0 && currentSearchOffset < currentSearchTotal) {
