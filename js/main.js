@@ -77,6 +77,10 @@ export const searchInput = $("search");
 export const homePageContainer = $("homePageContainer");
 export const dialogueContent = $("dialogueContent");
 
+// Homepage Loader
+const homepageLoader= $("homepageLoader");
+const homepageOverlay= $("homepageOverlay");
+
 // Mobile search state
 export const entryListEl = $("entryList");
 export const entryListHeaderEl = $("entryListHeader");
@@ -380,11 +384,11 @@ export function updateHandlePositions() {
   browserGrid.style.setProperty("--handle-right-pos", `calc(${col3} - 4px)`);
 }
 
-function setUpMediaQueries() {
+async function setUpMediaQueries() {
   desktopMediaQuery.addEventListener("change", handleMediaQueryChange);
   tabletMediaQuery.addEventListener("change", handleMediaQueryChange);
   mobileMediaQuery.addEventListener("change", handleMediaQueryChange);
-  handleMediaQueryChange();
+  await handleMediaQueryChange();
 }
 
 function setUpConvoListEvents() {
@@ -495,6 +499,11 @@ function initializeResizableGrid() {
   setUpResizeHandleRight(rightHandle);
 }
 
+function toggleHomepageLoader(isLoading) {
+  toggleElementVisibility(homepageLoader, isLoading);
+  toggleElementVisibility(homepageOverlay, isLoading);
+}
+
 function setUpResizeHandleLeft(leftHandle) {
   // Left handle: resize convo and entries sections
   leftHandle.addEventListener("mousedown", (e) => {
@@ -567,7 +576,7 @@ function setUpResizeHandleRight(rightHandle) {
   });
 }
 
-function handleMediaQueryChange() {
+async function handleMediaQueryChange() {
   closeAllSidebars();
   closeMobileSearchScreen();
   closeAllModals();
@@ -594,7 +603,7 @@ function handleMediaQueryChange() {
   }
   moveTypeFilterDropdown();
   moveConvoFilterDropdown();
-  moveActorFilterDropdown();
+  await moveActorFilterDropdown();
   moveWholeWordsButton();
   moveClearFiltersBtn();
   moveSearchLoader();
@@ -661,9 +670,9 @@ function moveConvoFilterDropdown() {
     convoFilterLabelWrapper.appendChild(convoFilterLabel);
   }
 }
-function moveActorFilterDropdown() {
+async function moveActorFilterDropdown() {
   if (!actorFilterDropdown) {
-    populateActorDropdown();
+    await populateActorDropdown();
     return;
   }
   if (mobileMediaQuery.matches) {
@@ -1700,7 +1709,7 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
 
     const text = r.dialoguetext || "";
     const el = createCardItem(title, convoId, entryId, text);
-    el.addEventListener("click", () => navigateToEntry(convoId, entryId));
+    el.addEventListener("click", async () => await navigateToEntry(convoId, entryId));
     entryListEl.appendChild(el);
   });
 }
@@ -2076,8 +2085,8 @@ export async function navigateToEntry(
       lastItem.classList.remove("current-entry");
       lastItem.style.cursor = "pointer";
       const historyIndex = parseInt(lastItem.dataset.historyIndex);
-      lastItem.addEventListener("click", () => {
-        jumpToHistoryPoint(historyIndex);
+      lastItem.addEventListener("click", async () => {
+        await jumpToHistoryPoint(historyIndex);
       });
     }
   }
@@ -2379,7 +2388,7 @@ function loadChildOptions(convoId, entryId) {
         c.d_id,
         dest.dialoguetext
       );
-      el.addEventListener("click", () => navigateToEntry(c.d_convo, c.d_id));
+      el.addEventListener("click", async () => await navigateToEntry(c.d_convo, c.d_id));
       entryListEl.appendChild(el);
     }
 
@@ -2722,9 +2731,9 @@ function setUpMainHeader() {
 
 function setUpHistoryConvoRootButton() {
   if (convoRootBtn) {
-    convoRootBtn.addEventListener("click", () => {
+    convoRootBtn.addEventListener("click", async () => {
       if (currentConvoId !== null) {
-        jumpToConversationRoot();
+        await jumpToConversationRoot();
       }
     });
   }
@@ -2740,13 +2749,14 @@ function setUpHistoryBackButton() {
 }
 
 async function boot() {
+  toggleHomepageLoader(true);
   // Initialize icons when DOM is ready
   document.addEventListener("DOMContentLoaded", initializeIcons);
   document.addEventListener("DOMContentLoaded", initializeUserSettings);
   // Load settings from localStorage
   applySettings();
 
-  setUpMediaQueries();
+  await setUpMediaQueries();
 
   const SQL = await loadSqlJs();
   await initDatabase(SQL, "db/discobase.sqlite3");
@@ -2818,7 +2828,7 @@ async function boot() {
   updateConvoFilterLabel();
 
   // Setup browser history handling
-  setupBrowserHistory();
+  await setupBrowserHistory();
   
   // Handle direct URL navigation via route/query params
   await handleInitialUrlNavigation();
@@ -2828,6 +2838,7 @@ async function boot() {
 
   // Initialize resizable grid
   initializeResizableGrid();
+  toggleHomepageLoader(false);
 }
 
 /* Initialize boot sequence */

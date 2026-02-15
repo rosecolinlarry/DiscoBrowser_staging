@@ -125,16 +125,16 @@ export function applyFiltersToCurrentResults(useMobile = false) {
     // TODO KA consolidate search results to one dom element
     filtered.forEach((r) => {
       const div = createSearchResultDiv(r, rawQuery);
-      div.addEventListener("click", () => {
+      div.addEventListener("click", async () => {
         const cid = r.conversationid;
         const eid = r.id;
 
         const alternateCondition = r.isAlternate ? r.alternatecondition : null;
         const alternateLine = r.isAlternate ? r.dialoguetext : null;
         if (cid && !eid) {
-          jumpToConversationRoot(cid);
+          await jumpToConversationRoot(cid);
         } else {
-          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+          await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
         }
 
         closeMobileSearchScreen();
@@ -172,7 +172,7 @@ export function applyFiltersToCurrentResults(useMobile = false) {
 
   filtered.forEach((r) => {
     const div = createSearchResultDiv(r, rawQuery);
-    div.addEventListener("click", () => {
+    div.addEventListener("click", async () => {
       const cid = r.conversationid;
       const eid = r.id;
 
@@ -181,11 +181,11 @@ export function applyFiltersToCurrentResults(useMobile = false) {
       const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
       if (cid && !eid) {
-        jumpToConversationRoot(cid);
+        await jumpToConversationRoot(cid);
         return;
       }
 
-      navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+      await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
       highlightConversationInTree(cid);
       document.querySelector(".selected")?.scrollIntoView(true);
     });
@@ -198,7 +198,7 @@ export function applyFiltersToCurrentResults(useMobile = false) {
 }
 
 // Listen for whole-words toggle and re-filter existing results (do not re-run DB search)
-wholeWordsCheckbox.addEventListener("change", () => {
+wholeWordsCheckbox.addEventListener("change", async () => {
   // Preserve the total count computed by the last DB search — whole-words
   // filtering should only affect the filtered count, not the underlying total
   // number of results available from the database.
@@ -411,7 +411,7 @@ export function search(resetSearch = true) {
       // Render initial set
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
-        div.addEventListener("click", () => {
+        div.addEventListener("click", async () => {
           const cid = (r.conversationid);
           const eid = (r.id);
 
@@ -422,11 +422,11 @@ export function search(resetSearch = true) {
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
           if (cid && !eid) {
-            jumpToConversationRoot(cid);
+            await jumpToConversationRoot(cid);
             return;
           }
 
-          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+          await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
           highlightConversationInTree(cid);
           document.querySelector(".selected")?.scrollIntoView(true);
         });
@@ -448,7 +448,7 @@ export function search(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
-        div.addEventListener("click", () => {
+        div.addEventListener("click", async () => {
           const cid = (r.conversationid);
           const eid = (r.id);
 
@@ -459,11 +459,11 @@ export function search(resetSearch = true) {
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
 
           if (cid && !eid) {
-            jumpToConversationRoot(cid);
+            await jumpToConversationRoot(cid);
             return;
           }
 
-          navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+          await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
           highlightConversationInTree(cid);
           document.querySelector(".selected")?.scrollIntoView(true);
         });
@@ -587,7 +587,7 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchResults.innerHTML = "";
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
-        div.addEventListener("click", () => {
+        div.addEventListener("click", async () => {
           const cid = (r.conversationid);
           const eid = (r.id);
 
@@ -596,9 +596,9 @@ function performMobileSearch(resetSearch = true) {
             : null;
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
           if (cid && !eid) {
-            jumpToConversationRoot(cid);
+            await jumpToConversationRoot(cid);
           } else {
-            navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+            await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
           }
 
           closeMobileSearchScreen();
@@ -619,7 +619,7 @@ function performMobileSearch(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
-        div.addEventListener("click", () => {
+        div.addEventListener("click", async () => {
           const cid = (r.conversationid);
           const eid = (r.id);
 
@@ -628,9 +628,9 @@ function performMobileSearch(resetSearch = true) {
             : null;
           const alternateLine = r.isAlternate ? r.dialoguetext : null;
           if (cid && !eid) {
-            jumpToConversationRoot(cid);
+            await jumpToConversationRoot(cid);
           } else {
-            navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+            await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
           }
 
           closeMobileSearchScreen();
