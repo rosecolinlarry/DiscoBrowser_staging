@@ -184,6 +184,7 @@ let filteredActors = [];
 // Browser history state tracking
 let currentAppState = "home"; // 'home', 'conversation', 'search'
 export let isHandlingPopState = false;
+let isInitialNavigation = true; // Flag to skip history push on initial URL-based navigation
 
 // Browser Grid
 const browserGrid = $("browser");
@@ -212,6 +213,7 @@ export function setCurrentConvoId(value) {
  * This allows Google Analytics to track different pages/views
  */
 export function updateUrlWithRoute(convoId, entryId = null) {
+  // Don't update URL during popstate handling to avoid double updates
   if (isHandlingPopState) return;
   
   const params = new URLSearchParams();
@@ -224,7 +226,7 @@ export function updateUrlWithRoute(convoId, entryId = null) {
   
   const queryString = params.toString();
   const url = queryString ? `?${queryString}` : window.location.pathname;
-  window.history.replaceState(null, '', url);
+  window.history.replaceState({ view: "conversation", convoId, entryId }, '', url);
 }
 
 /**
@@ -232,6 +234,7 @@ export function updateUrlWithRoute(convoId, entryId = null) {
  * This allows Google Analytics to track search queries without needing a custom data layer
  */
 export function updateUrlWithSearchParams(searchQuery, convoIds, actorIds, typeIds) {
+  // Don't update URL during popstate handling to avoid double updates
   if (isHandlingPopState) return;
   
   const params = new URLSearchParams();
@@ -255,7 +258,7 @@ export function updateUrlWithSearchParams(searchQuery, convoIds, actorIds, typeI
   
   const queryString = params.toString();
   const url = queryString ? `?${queryString}` : window.location.pathname;
-  window.history.replaceState(null, '', url);
+  window.history.replaceState({ view: "search", query: searchQuery }, '', url);
 }
 
 /**
@@ -305,10 +308,10 @@ async function handleInitialUrlNavigation() {
   if (searchQuery) {
     if (searchInput) {
       searchInput.value = searchQuery;
-      // Trigger search (this will update GA)
-      const event = new Event('input', { bubbles: true });
-      searchInput.dispatchEvent(event);
+      // Call search directly instead of relying on event
+      search(true);
     }
+    isInitialNavigation = false;
     return;
   }
   
@@ -318,6 +321,7 @@ async function handleInitialUrlNavigation() {
     const conversation = getConversationById(convoId);
     if (!conversation) {
       console.warn(`Conversation ${convoId} not found`);
+      isInitialNavigation = false;
       return;
     }
     
@@ -339,6 +343,9 @@ async function handleInitialUrlNavigation() {
       highlightConversationInTree(convoId);
     }
   }
+  
+  // Mark initial navigation as complete
+  isInitialNavigation = false;
 }
 
 // #endregion
@@ -1600,8 +1607,8 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
     window.history.replaceState({ view: "home" }, "", window.location.pathname);
   }
 
-  // Push browser history state (unless we're handling a popstate event)
-  if (!isHandlingPopState) {
+  // Push browser history state (unless we're handling a popstate event or in initial navigation)
+  if (!isHandlingPopState && !isInitialNavigation) {
     pushHistoryState("conversation", { convoId });
   }
 
@@ -1756,6 +1763,10 @@ async function setupBrowserHistory() {
     isHandlingPopState = true;
 
     const state = event.state;
+    
+    // Also check URL parameters on back/forward (for direct navigation or URL changes)
+    const { convoId: urlConvoId, entryId: urlEntryId } = getRouteParamsFromUrl();
+    const { searchQuery: urlSearchQuery } = getSearchParamsFromUrl();
 
     // Close mobile-only filter pages by default (only when on mobile)
     if (mobileMediaQuery.matches) {
@@ -1763,7 +1774,26 @@ async function setupBrowserHistory() {
       toggleElementVisibility(mobileActorFilterWrapper, false);
     }
 
-    if (!state || state.view === "home") {
+    // First priority: check if URL has search params (from direct URL or back button)
+    if (urlSearchQuery) {
+      // URL has search query - perform search
+      if (searchInput) {
+        searchInput.value = urlSearchQuery;
+        search(true);
+      }
+    } else if (urlConvoId !== null) {
+      // URL has convo params - navigate to conversation/entry
+      if (urlEntryId !== null) {
+        const entry = getEntry(urlConvoId, urlEntryId);
+        if (entry) {
+          await loadEntriesForConversation(urlConvoId, false);
+          await navigateToEntry(urlConvoId, urlEntryId, false);
+        }
+      } else {
+        await loadEntriesForConversation(urlConvoId, false);
+        highlightConversationInTree(urlConvoId);
+      }
+    } else if (!state || state.view === "home") {
       // Close mobile search and go to home view
       closeMobileSearchScreen();
       goToHomeView();
@@ -1884,6 +1914,9 @@ async function jumpToHistoryPoint(targetIndex) {
     // Update current state
     currentConvoId = cid;
     currentEntryId = eid;
+    
+    // Update URL with the navigation point
+    updateUrlWithRoute(cid, eid);
 
     // Update the UI
     const coreRow = getEntry(currentConvoId, currentEntryId);
@@ -1938,6 +1971,11 @@ function goToHomeView() {
   currentConvoId = null;
   currentEntryId = null;
   navigationHistory = [];
+  
+  // Update URL to home (remove params)
+  if (!isHandlingPopState) {
+    window.history.replaceState({ view: "home" }, "", window.location.pathname);
+  }
 
   // Clear chat log
   if (chatLogEl) {
@@ -1981,6 +2019,9 @@ export async function jumpToConversationRoot() {
 
   // Reset to just the conversation root
   navigationHistory = [{ convoId: currentConvoId, entryId: null }];
+  
+  // Update URL to reflect navigation to conversation root
+  updateUrlWithRoute(currentConvoId, null);
 
   // Load the conversation root
   await loadEntriesForConversation(currentConvoId, false);
@@ -1997,8 +2038,8 @@ export async function navigateToEntry(
   selectedAlternateLine = null
 ) {
   hideSearchCount();
-  // Push browser history state (unless we're handling a popstate event)
-  if (!isHandlingPopState && addToHistory) {
+  // Push browser history state (unless we're handling a popstate event or in initial navigation)
+  if (!isHandlingPopState && addToHistory && !isInitialNavigation) {
     pushHistoryState("conversation", { convoId, entryId });
   }
 
@@ -2806,7 +2847,7 @@ async function boot() {
   setupBrowserHistory();
   
   // Handle direct URL navigation via route/query params
-  handleInitialUrlNavigation();
+  await handleInitialUrlNavigation();
 
   // Set up conversation type modal
   setupConversationTypesModal();
