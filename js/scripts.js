@@ -303,6 +303,12 @@ let appSettings = {
   turnOffAnimations: false,
   alwaysShowMoreDetails: false,
 };
+// State for column resizing handlers
+let currentpointermoveHandler = null;
+let currentStartX = null;
+let currentResizeDirection = null; // 'left' or 'right'
+let currentInitialCol1 = null;
+let currentInitialCol3 = null;
 let _db = null;
 let SQL = null;
 
@@ -1196,10 +1202,7 @@ function updateResizeHandles() {
 }
 
 function updateHandlePositions() {
-  const browserGrid = $("browser");
-  const columns = (browserGrid.style.gridTemplateColumns || defaultColumns)
-    .split(" ")
-    .map((s) => s.trim());
+  const columns = getStartColumns();
   const col1 = columns[0];
   const col3 = columns[2];
   browserGrid.style.setProperty("--handle-left-pos", `calc(${col1} - 4px)`);
@@ -1213,38 +1216,30 @@ async function setUpMediaQueries() {
   await handleMediaQueryChange();
 }
 
-function setUpConvoListEvents() {
-  if (!convoListEl) return;
-  // event delegation: clicks in convoList
-  convoListEl.addEventListener("click", async (e) => {
-    const target = e.target.closest("[data-convo-id]");
-    if (target) {
-      const convoId = target.dataset.convoId;
-      await loadEntriesForConversation(convoId, true);
-      return;
-    }
-    const topLabel = e.target.closest(".label");
-    if (topLabel && topLabel.dataset.singleConvo) {
-      const convoId = topLabel.dataset.singleConvo;
-      await loadEntriesForConversation(convoId, true);
-    }
-  });
-
-  // Handle custom convoLeafClick events from tree builder
-  convoListEl.addEventListener("convoLeafClick", async (e) => {
-    const convoId = e.detail.convoId;
+async function handleConvoListClick(e) {
+  const target = e.target.closest("[data-convo-id]");
+  if (target) {
+    const convoId = target.dataset.convoId;
     await loadEntriesForConversation(convoId, true);
-    highlightConversationInTree(convoId);
-  });
+    return;
+  }
+  const topLabel = e.target.closest(".label");
+  if (topLabel && topLabel.dataset.singleConvo) {
+    const convoId = topLabel.dataset.singleConvo;
+    await loadEntriesForConversation(convoId, true);
+  }
 }
 
-function setUpChatLogEvents() {
-  if (!chatLogEl) return;
-  chatLogEl.addEventListener("navigateToConversation", async (e) => {
-    const convoId = e.detail.convoId;
-    await loadEntriesForConversation(convoId, true);
-    highlightConversationInTree(convoId);
-  });
+async function handleConvLeafClick(e) {
+  const convoId = e.detail.convoId;
+  await loadEntriesForConversation(convoId, true);
+  highlightConversationInTree(convoId);
+}
+
+async function handleNavigateToConversationClick(e) {
+  const convoId = e.detail.convoId;
+  await loadEntriesForConversation(convoId, true);
+  highlightConversationInTree(convoId);
 }
 
 function updateResizableGrid() {
@@ -1270,6 +1265,7 @@ function applySavedColumns(savedColumns) {
   }
 }
 
+// Helper function to update handle positions
 function initializeResizableGrid() {
   if (!browserGrid || !desktopMediaQuery.matches) return;
 
@@ -1297,17 +1293,6 @@ function initializeResizableGrid() {
   browserGrid.appendChild(leftHandle);
   browserGrid.appendChild(rightHandle);
 
-  // Helper function to update handle positions
-  function updateHandlePositions() {
-    const columns = (browserGrid.style.gridTemplateColumns || defaultColumns)
-      .split(" ")
-      .map((s) => s.trim());
-    const col1 = columns[0];
-    const col3 = columns[2];
-    browserGrid.style.setProperty("--handle-left-pos", `calc(${col1} - 4px)`);
-    browserGrid.style.setProperty("--handle-right-pos", `calc(${col3} - 4px)`);
-  }
-
   // Initialize handle positions
   updateHandlePositions();
 
@@ -1317,85 +1302,80 @@ function initializeResizableGrid() {
     rightHandle.classList.add("disabled");
   }
 
-  setUpResizeHandleLeft(leftHandle);
-  setUpResizeHandleRight(rightHandle);
+  leftHandle.addEventListener("pointerdown", handleLeftHandlePointerDown);
+  rightHandle.addEventListener("pointerdown", handleRightHandlePointerDown);
 }
 
 function toggleHomepageLoader(isLoading) {
   toggleElementVisibility(homepageLoader, isLoading);
   toggleElementVisibility(homepageOverlay, isLoading);
 }
-
-function setUpResizeHandleLeft(leftHandle) {
-  // Left handle: resize convo and entries sections
-  leftHandle.addEventListener("mousedown", (e) => {
-    if (disableColumnResizing()) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    const startColumns = (
-      browserGrid.style.gridTemplateColumns || defaultColumns
-    )
-      .split(" ")
-      .map((s) => s.trim());
-    const initialCol1 = parseFloat(startColumns[0]);
-
-    function handleMouseMove(moveEvent) {
-      const deltaX = moveEvent.clientX - startX;
-      const col1 = Math.max(200, Math.min(500, initialCol1 + deltaX));
-      const newColumns = `${col1}px 1fr ${startColumns[2]}`;
-      browserGrid.style.gridTemplateColumns = newColumns;
-      updateHandlePositions();
-    }
-
-    function handleMouseUp() {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      const currentColumns = browserGrid.style.gridTemplateColumns;
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(currentColumns.split(" ").map((s) => s.trim())),
-      );
-    }
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  });
+function getStartColumns() {
+  return (browserGrid.style.gridTemplateColumns || defaultColumns)
+    .split(" ")
+    .map((s) => s.trim());
+}
+function HandlePointerMoveLeft(moveEvent, startX) {
+  const deltaX = moveEvent.clientX - currentStartX;
+  const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
+  const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
+  const col1 = Math.max(200, Math.min(500, initialCol1 + deltaX));
+  const newColumns = `${col1}px 1fr ${initialCol3}px`;
+  browserGrid.style.gridTemplateColumns = newColumns;
+  updateHandlePositions();
 }
 
-function setUpResizeHandleRight(rightHandle) {
-  // Right handle: resize entries and history sections
-  rightHandle.addEventListener("mousedown", (e) => {
-    if (disableColumnResizing()) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    const startColumns = (
-      browserGrid.style.gridTemplateColumns || defaultColumns
-    )
-      .split(" ")
-      .map((s) => s.trim());
-    const initialCol3 = parseFloat(startColumns[2]);
+function HandlePointerMoveRight(moveEvent, startX) {
+  const deltaX = moveEvent.clientX - currentStartX;
+  const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
+  const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
+  const col3 = Math.max(200, Math.min(500, initialCol3 - deltaX));
+  const newColumns = `${initialCol1}px 1fr ${col3}px`;
+  browserGrid.style.gridTemplateColumns = newColumns;
+  updateHandlePositions();
+}
 
-    function handleMouseMove(moveEvent) {
-      const deltaX = moveEvent.clientX - startX;
-      const col3 = Math.max(200, Math.min(500, initialCol3 - deltaX));
-      const newColumns = `${startColumns[0]} 1fr ${col3}px`;
-      browserGrid.style.gridTemplateColumns = newColumns;
-      updateHandlePositions();
-    }
+function HandlePointerUp() {
+  if (currentpointermoveHandler) {
+    document.removeEventListener("pointermove", currentpointermoveHandler);
+    currentpointermoveHandler = null;
+  }
+  currentStartX = null;
+  currentResizeDirection = null;
+  currentInitialCol1 = null;
+  currentInitialCol3 = null;
+  const currentColumns = browserGrid.style.gridTemplateColumns;
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(currentColumns.split(" ").map((s) => s.trim())),
+  );
+  document.removeEventListener("pointerup", HandlePointerUp);
+}
 
-    function handleMouseUp() {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      const currentColumns = browserGrid.style.gridTemplateColumns;
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(currentColumns.split(" ").map((s) => s.trim())),
-      );
-    }
+function handleLeftHandlePointerDown(e) {
+  if (disableColumnResizing()) return;
+  e.preventDefault();
+  currentStartX = e.clientX;
+  currentResizeDirection = 'left';
+  const startCols = getStartColumns();
+  currentInitialCol1 = parseFloat(startCols[0]);
+  currentInitialCol3 = parseFloat(startCols[2]);
+  currentpointermoveHandler = (ev) => HandlePointerMoveLeft(ev);
+  document.addEventListener("pointermove", currentpointermoveHandler);
+  document.addEventListener("pointerup", HandlePointerUp);
+}
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  });
+function handleRightHandlePointerDown(e) {
+  if (disableColumnResizing()) return;
+  e.preventDefault();
+  currentStartX = e.clientX;
+  currentResizeDirection = 'right';
+  const startCols = getStartColumns();
+  currentInitialCol1 = parseFloat(startCols[0]);
+  currentInitialCol3 = parseFloat(startCols[2]);
+  currentpointermoveHandler = (ev) => HandlePointerMoveRight(ev);
+  document.addEventListener("pointermove", currentpointermoveHandler);
+  document.addEventListener("pointerup", HandlePointerUp);
 }
 
 async function handleMediaQueryChange() {
@@ -3609,10 +3589,22 @@ async function boot() {
   // Set up conversation filter
   setupConversationFilter();
   // Set up conversation list events
-  setUpConvoListEvents();
+
+  convoListEl.addEventListener(
+    "click",
+    async (e) => await handleConvoListClick(e),
+  );
+  // Handle custom convoLeafClick events from tree builder
+  convoListEl.addEventListener(
+    "convoLeafClick",
+    async (e) => await handleConvLeafClick(e),
+  );
 
   // Handle navigateToConversation events from history dividers
-  setUpChatLogEvents();
+  chatLogEl.addEventListener(
+    "navigateToConversation",
+    async (e) => await handleNavigateToConversationClick(e),
+  );
 
   // Set up filter dropdowns to open and close
   setUpFilterDropdowns();
