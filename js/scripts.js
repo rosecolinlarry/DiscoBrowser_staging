@@ -559,6 +559,7 @@ async function handleMobileConvoRootButtonClick(e) {
   }
 }
 async function handleConvoListClick(e) {
+  // Handle clicking anywhere in the conversation list, goes for the list item closest to the cursor
   const target = e.target.closest("[data-convo-id]");
   if (target) {
     const convoId = target.dataset.convoId;
@@ -571,12 +572,8 @@ async function handleConvoListClick(e) {
     await loadEntriesForConversation(convoId, true);
   }
 }
-async function handleConvLeafClick(e) {
-  const convoId = e.detail.convoId;
-  await loadEntriesForConversation(convoId, true);
-  highlightConversationInTree(convoId);
-}
-async function handleNavigateToConversationClick(e) {
+async function handleNavigateToConvoLeaf(e) {
+  // Handle going directly to a leaf if we know the element
   const convoId = e.detail.convoId;
   await loadEntriesForConversation(convoId, true);
   highlightConversationInTree(convoId);
@@ -594,15 +591,16 @@ function handleConvoTypeFilterButtonClick(e) {
   filterConversationTree();
 }
 function handleConvoLabelClick(e) {
+  // Handle clicking directly on a convo label
   e.stopPropagation();
-  const label = e.currentTarget;
-  const convoId = label.getAttribute("data-convo-id");
-  const wrapper = label.parentElement;
+  const target = e.currentTarget;
+  const convoId = target.getAttribute("data-convo-id");
+  const wrapper = target.parentElement;
   const nodeObj = wrapper._nodeObj;
 
   // Filtered conversations do not have a nodeObj and are all leaves
   if (!nodeObj) {
-    label.dispatchEvent(
+    target.dispatchEvent(
       new CustomEvent("convoLeafClick", {
         detail: { convoId: convoId },
         bubbles: true,
@@ -614,7 +612,7 @@ function handleConvoLabelClick(e) {
   // if this node's subtree is a single conversation, dispatch event
   const total = nodeObj?._subtreeSize || 0;
   if (total === 1 && nodeObj?.convoIds.length === 1) {
-    label.dispatchEvent(
+    target.dispatchEvent(
       new CustomEvent("convoLeafClick", {
         detail: { convoId: nodeObj.convoIds[0] },
         bubbles: true,
@@ -625,7 +623,7 @@ function handleConvoLabelClick(e) {
 
   // For non-leaf nodes, toggle expand/collapse
   const isExpanded = wrapper?.classList.toggle("expanded");
-  const toggle = label.querySelector(".toggle");
+  const toggle = target.querySelector(".toggle");
   setToggleIcon(toggle, isExpanded);
 }
 async function handleMoreDetailsClicked() {
@@ -676,11 +674,7 @@ async function handleMoreDetailsClicked() {
   }
 }
 function handleClickOutsideDropdown(e) {
-  if (!openDropdown) return;
-  if (!openDropdown.contains(e.target) && e.target !== typeFilterBtn) {
-    toggleElementVisibility(openDropdown, false);
-    openDropdown = null;
-  }
+  closeAllDropdowns();
 }
 function handleDropdownButtonClick(e) {
   e.stopPropagation();
@@ -703,8 +697,19 @@ function handleDropdownButtonClick(e) {
   openDropdown = shouldOpen ? filterDropdown : null;
 }
 function handleAddToSelectionButtonClick() {
-  selectedConvoIds = new Set(selectedConvoIds);
   const convoFilterSearch = $("convoSearch");
+  selectedConvoIds = new Set();
+  const checkboxes = convoCheckboxList.querySelectorAll(
+    'input[type="checkbox"]:checked',
+  );
+  checkboxes.forEach((cb) => {
+    if (!selectedConvoIds.has(cb.dataset.convoId)) {
+      selectedConvoIds.add(parseInt(cb.dataset.convoId));
+    }
+  });
+  // Clear search and show all with current selection
+  convoFilterSearch.value = "";
+  renderConvoList(allConvos)
   updateConvoFilterLabel();
   if (mobileMediaQuery.matches) {
     // Mobile: use history to close the mobile filter so history entries remain consistent
@@ -712,9 +717,7 @@ function handleAddToSelectionButtonClick() {
   } else {
     // Desktop: close the dropdown and apply search
     toggleElementVisibility(convoFilterDropdown, false);
-    if (convoFilterSearch.value.trim()) {
-      search();
-    }
+    search(true);
   }
 }
 function handleSelectAllCheckboxChange(e) {
@@ -741,7 +744,7 @@ function handleFilterCheckboxChange(e, conversations) {
   triggerSearch(e);
 }
 function handleConvoFilterSearchInput(e) {
-  const convoFilterSearch = e.target;
+  const convoFilterSearch = e.currentTarget;
   const query = convoFilterSearch.value.toLowerCase().trim();
   if (!query) {
     renderConvoList(allConvos);
@@ -756,98 +759,6 @@ function handleConvoFilterSearchInput(e) {
   });
 
   renderConvoList(filtered);
-}
-function handlePointerMoveLeft(moveEvent, startX) {
-  const deltaX = moveEvent.clientX - currentStartX;
-  const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
-  const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
-  const col1 = Math.max(200, Math.min(500, initialCol1 + deltaX));
-  const newColumns = `${col1}px 1fr ${initialCol3}px`;
-  browserGrid.style.gridTemplateColumns = newColumns;
-  updateHandlePositions();
-}
-function handlePointerMoveRight(moveEvent, startX) {
-  const deltaX = moveEvent.clientX - currentStartX;
-  const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
-  const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
-  const col3 = Math.max(200, Math.min(500, initialCol3 - deltaX));
-  const newColumns = `${initialCol1}px 1fr ${col3}px`;
-  browserGrid.style.gridTemplateColumns = newColumns;
-  updateHandlePositions();
-}
-function handlePointerUp() {
-  if (currentpointermoveHandler) {
-    document.removeEventListener("pointermove", currentpointermoveHandler);
-    currentpointermoveHandler = null;
-  }
-  currentStartX = null;
-  currentResizeDirection = null;
-  currentInitialCol1 = null;
-  currentInitialCol3 = null;
-  const currentColumns = browserGrid.style.gridTemplateColumns;
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(currentColumns.split(" ").map((s) => s.trim())),
-  );
-  document.removeEventListener("pointerup", handlePointerUp);
-}
-function handleLeftHandlePointerDown(e) {
-  if (disableColumnResizing()) return;
-  e.preventDefault();
-  currentStartX = e.clientX;
-  currentResizeDirection = "left";
-  const startCols = getStartColumns();
-  currentInitialCol1 = parseFloat(startCols[0]);
-  currentInitialCol3 = parseFloat(startCols[2]);
-  currentpointermoveHandler = (ev) => handlePointerMoveLeft(ev);
-  document.addEventListener("pointermove", currentpointermoveHandler);
-  document.addEventListener("pointerup", handlePointerUp);
-}
-function handleRightHandlePointerDown(e) {
-  if (disableColumnResizing()) return;
-  e.preventDefault();
-  currentStartX = e.clientX;
-  currentResizeDirection = "right";
-  const startCols = getStartColumns();
-  currentInitialCol1 = parseFloat(startCols[0]);
-  currentInitialCol3 = parseFloat(startCols[2]);
-  currentpointermoveHandler = (ev) => handlePointerMoveRight(ev);
-  document.addEventListener("pointermove", currentpointermoveHandler);
-  document.addEventListener("pointerup", handlePointerUp);
-}
-async function handleMediaQueryChange() {
-  closeAllSidebars();
-  closeMobileSearchScreen();
-  closeAllModals();
-  if (desktopMediaQuery.matches) {
-    toggleElementVisibilityBySelector("#historySidebarToggle", false);
-    toggleElementVisibilityBySelector("#convoSidebarToggle", false);
-    toggleElementVisibilityBySelector(".mobile-container", false);
-    browserEl?.prepend(convoSection);
-    browserEl?.appendChild(historySection);
-  } else if (tabletMediaQuery.matches) {
-    toggleElementVisibilityBySelector("#historySidebarToggle", true);
-    toggleElementVisibilityBySelector("#convoSidebarToggle", true);
-    toggleElementVisibilityBySelector(".mobile-container", false);
-    updateResizableGrid();
-    historySidebar?.appendChild(historySection);
-    convoSidebar?.appendChild(convoSection);
-  } else if (mobileMediaQuery.matches) {
-    toggleElementVisibilityBySelector("#historySidebarToggle", true);
-    toggleElementVisibilityBySelector("#convoSidebarToggle", false);
-    toggleElementVisibilityBySelector(".mobile-container", true);
-    updateResizableGrid();
-    historySidebar?.append(historySection);
-    convoSidebar?.appendChild(convoSection);
-  }
-  moveTypeFilterDropdown();
-  moveConvoFilterDropdown();
-  await moveActorFilterDropdown();
-  moveWholeWordsButton();
-  moveClearFiltersBtn();
-  moveSearchLoader();
-  moveSearchInput();
-  applySettings();
 }
 function handleSelectAllActorsCheckboxChange(e) {
   const isChecked = e.target.checked;
@@ -870,11 +781,14 @@ function handleSelectAllActorsCheckboxChange(e) {
   triggerSearch(e);
 }
 function handleActorAddToSelectionButtonClick(e) {
+  selectedActorIds = new Set();
   const checkboxes = actorCheckboxList.querySelectorAll(
     'input[type="checkbox"]:checked',
   );
   checkboxes.forEach((cb) => {
-    selectedActorIds.add(parseInt(cb.dataset.actorId));
+    if (!selectedActorIds.has(cb.dataset.actorId)) {
+      selectedActorIds.add(parseInt(cb.dataset.actorId));
+    }
   });
 
   // Clear search and show all with current selection
@@ -992,6 +906,102 @@ function handleConvoTypeModalOverlayClick(e) {
   if (e.target == modal) {
     closeModal();
   }
+}
+
+// #region Handlers for Resizing Columns
+function handlePointerMoveLeft(moveEvent, startX) {
+  const deltaX = moveEvent.clientX - currentStartX;
+  const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
+  const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
+  const col1 = Math.max(200, Math.min(500, initialCol1 + deltaX));
+  const newColumns = `${col1}px 1fr ${initialCol3}px`;
+  browserGrid.style.gridTemplateColumns = newColumns;
+  updateHandlePositions();
+}
+function handlePointerMoveRight(moveEvent, startX) {
+  const deltaX = moveEvent.clientX - currentStartX;
+  const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
+  const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
+  const col3 = Math.max(200, Math.min(500, initialCol3 - deltaX));
+  const newColumns = `${initialCol1}px 1fr ${col3}px`;
+  browserGrid.style.gridTemplateColumns = newColumns;
+  updateHandlePositions();
+}
+function handlePointerUp() {
+  if (currentpointermoveHandler) {
+    document.removeEventListener("pointermove", currentpointermoveHandler);
+    currentpointermoveHandler = null;
+  }
+  currentStartX = null;
+  currentResizeDirection = null;
+  currentInitialCol1 = null;
+  currentInitialCol3 = null;
+  const currentColumns = browserGrid.style.gridTemplateColumns;
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(currentColumns.split(" ").map((s) => s.trim())),
+  );
+  document.removeEventListener("pointerup", handlePointerUp);
+}
+function handleLeftHandlePointerDown(e) {
+  if (disableColumnResizing()) return;
+  e.preventDefault();
+  currentStartX = e.clientX;
+  currentResizeDirection = "left";
+  const startCols = getStartColumns();
+  currentInitialCol1 = parseFloat(startCols[0]);
+  currentInitialCol3 = parseFloat(startCols[2]);
+  currentpointermoveHandler = (ev) => handlePointerMoveLeft(ev);
+  document.addEventListener("pointermove", currentpointermoveHandler);
+  document.addEventListener("pointerup", handlePointerUp);
+}
+function handleRightHandlePointerDown(e) {
+  if (disableColumnResizing()) return;
+  e.preventDefault();
+  currentStartX = e.clientX;
+  currentResizeDirection = "right";
+  const startCols = getStartColumns();
+  currentInitialCol1 = parseFloat(startCols[0]);
+  currentInitialCol3 = parseFloat(startCols[2]);
+  currentpointermoveHandler = (ev) => handlePointerMoveRight(ev);
+  document.addEventListener("pointermove", currentpointermoveHandler);
+  document.addEventListener("pointerup", handlePointerUp);
+}
+// #endregion
+
+async function handleMediaQueryChange() {
+  closeAllSidebars();
+  closeMobileSearchScreen();
+  closeAllModals();
+  if (desktopMediaQuery.matches) {
+    toggleElementVisibilityBySelector("#historySidebarToggle", false);
+    toggleElementVisibilityBySelector("#convoSidebarToggle", false);
+    toggleElementVisibilityBySelector(".mobile-container", false);
+    browserEl?.prepend(convoSection);
+    browserEl?.appendChild(historySection);
+  } else if (tabletMediaQuery.matches) {
+    toggleElementVisibilityBySelector("#historySidebarToggle", true);
+    toggleElementVisibilityBySelector("#convoSidebarToggle", true);
+    toggleElementVisibilityBySelector(".mobile-container", false);
+    updateResizableGrid();
+    historySidebar?.appendChild(historySection);
+    convoSidebar?.appendChild(convoSection);
+  } else if (mobileMediaQuery.matches) {
+    toggleElementVisibilityBySelector("#historySidebarToggle", true);
+    toggleElementVisibilityBySelector("#convoSidebarToggle", false);
+    toggleElementVisibilityBySelector(".mobile-container", true);
+    updateResizableGrid();
+    historySidebar?.append(historySection);
+    convoSidebar?.appendChild(convoSection);
+  }
+  moveTypeFilterDropdown();
+  moveConvoFilterDropdown();
+  await moveActorFilterDropdown();
+  moveWholeWordsButton();
+  moveClearFiltersBtn();
+  moveSearchLoader();
+  moveSearchInput();
+  applySettings();
 }
 function handleDocumentKeyDownEvent(e) {
   const conversationTypesModalOverlay = $("conversationTypesModalOverlay");
@@ -3699,6 +3709,10 @@ function closeAllModals() {
   modals.forEach((modal) => toggleElementVisibility(modals, false));
 }
 
+function closeAllDropdowns() {
+  const dropdowns = document.querySelectorAll(".filter-dropdown");
+  dropdowns.forEach((dropdown) => toggleElementVisibility(dropdown, false));
+}
 function showMobileConvoFilter() {
   // Close the mobile search screen visually and push a history entry for the filter page (mobile only)
   closeMobileSearchScreen();
@@ -3798,20 +3812,14 @@ async function boot() {
   setupConversationFilter();
   // Set up conversation list events
 
-  convoListEl.addEventListener(
-    "click",
-    async (e) => await handleConvoListClick(e),
-  );
+  convoListEl.addEventListener("click", handleConvoListClick);
   // Handle custom convoLeafClick events from tree builder
-  convoListEl.addEventListener(
-    "convoLeafClick",
-    async (e) => await handleConvLeafClick(e),
-  );
+  convoListEl.addEventListener("convoLeafClick", handleNavigateToConvoLeaf);
 
   // Handle navigateToConversation events from history dividers
   chatLogEl.addEventListener(
     "navigateToConversation",
-    async (e) => await handleNavigateToConversationClick(e),
+    handleNavigateToConvoLeaf,
   );
 
   // Set up filter dropdowns to open and close
