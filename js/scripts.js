@@ -279,6 +279,8 @@ let selectedActorIds = new Set();
 let selectedTypeIds = new Set(["flow", "orb", "task"]); // All types selected by default
 let filteredActors = [];
 
+let filteredConvos = [];
+
 // Browser history state tracking
 let currentAppState = "home"; // 'home', 'conversation', 'search'
 let isHandlingPopState = false;
@@ -309,6 +311,10 @@ let currentStartX = null;
 let currentResizeDirection = null; // 'left' or 'right'
 let currentInitialCol1 = null;
 let currentInitialCol3 = null;
+
+// Track currently open dropdown so we only allow one at a time
+let openDropdown = null;
+
 let _db = null;
 let SQL = null;
 
@@ -1315,7 +1321,7 @@ function getStartColumns() {
     .split(" ")
     .map((s) => s.trim());
 }
-function HandlePointerMoveLeft(moveEvent, startX) {
+function handlePointerMoveLeft(moveEvent, startX) {
   const deltaX = moveEvent.clientX - currentStartX;
   const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
   const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
@@ -1325,7 +1331,7 @@ function HandlePointerMoveLeft(moveEvent, startX) {
   updateHandlePositions();
 }
 
-function HandlePointerMoveRight(moveEvent, startX) {
+function handlePointerMoveRight(moveEvent, startX) {
   const deltaX = moveEvent.clientX - currentStartX;
   const initialCol3 = currentInitialCol3 ?? parseFloat(getStartColumns()[2]);
   const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
@@ -1335,7 +1341,7 @@ function HandlePointerMoveRight(moveEvent, startX) {
   updateHandlePositions();
 }
 
-function HandlePointerUp() {
+function handlePointerUp() {
   if (currentpointermoveHandler) {
     document.removeEventListener("pointermove", currentpointermoveHandler);
     currentpointermoveHandler = null;
@@ -1349,33 +1355,33 @@ function HandlePointerUp() {
     STORAGE_KEY,
     JSON.stringify(currentColumns.split(" ").map((s) => s.trim())),
   );
-  document.removeEventListener("pointerup", HandlePointerUp);
+  document.removeEventListener("pointerup", handlePointerUp);
 }
 
 function handleLeftHandlePointerDown(e) {
   if (disableColumnResizing()) return;
   e.preventDefault();
   currentStartX = e.clientX;
-  currentResizeDirection = 'left';
+  currentResizeDirection = "left";
   const startCols = getStartColumns();
   currentInitialCol1 = parseFloat(startCols[0]);
   currentInitialCol3 = parseFloat(startCols[2]);
-  currentpointermoveHandler = (ev) => HandlePointerMoveLeft(ev);
+  currentpointermoveHandler = (ev) => handlePointerMoveLeft(ev);
   document.addEventListener("pointermove", currentpointermoveHandler);
-  document.addEventListener("pointerup", HandlePointerUp);
+  document.addEventListener("pointerup", handlePointerUp);
 }
 
 function handleRightHandlePointerDown(e) {
   if (disableColumnResizing()) return;
   e.preventDefault();
   currentStartX = e.clientX;
-  currentResizeDirection = 'right';
+  currentResizeDirection = "right";
   const startCols = getStartColumns();
   currentInitialCol1 = parseFloat(startCols[0]);
   currentInitialCol3 = parseFloat(startCols[2]);
-  currentpointermoveHandler = (ev) => HandlePointerMoveRight(ev);
+  currentpointermoveHandler = (ev) => handlePointerMoveRight(ev);
   document.addEventListener("pointermove", currentpointermoveHandler);
-  document.addEventListener("pointerup", HandlePointerUp);
+  document.addEventListener("pointerup", handlePointerUp);
 }
 
 async function handleMediaQueryChange() {
@@ -1520,40 +1526,36 @@ function setUpSidebarToggles() {
   sidebarOverlay.addEventListener("click", closeAllSidebars);
   sidebarOverlay.addEventListener("click", closeAllModals);
 }
+function handleConvoTypeFilterButtonClick(e) {
+  // Update active state
+  const btn = e.target;
+  convoTypeFilterBtns.forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+
+  // Update active filter
+  activeTypeFilter = btn.dataset.type;
+
+  // Apply filter
+  filterConversationTree();
+}
 function setupConversationFilter() {
   // Text search filter
   if (convoSearchInput) {
-    convoSearchInput.addEventListener("input", () => {
-      filterConversationTree();
-    });
+    convoSearchInput.addEventListener("input", filterConversationTree);
   }
 
   // Type filter buttons
   convoTypeFilterBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      // Update active state
-      convoTypeFilterBtns.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      // Update active filter
-      activeTypeFilter = btn.dataset.type;
-
-      // Apply filter
-      filterConversationTree();
-    });
+    btn.addEventListener("click", handleConvoTypeFilterButtonClick);
   });
 
   // Expand/Collapse all buttons
   if (expandAllBtn) {
-    expandAllBtn.addEventListener("click", () => {
-      expandAllTreeNodes();
-    });
+    expandAllBtn.addEventListener("click", expandAllTreeNodes);
   }
 
   if (collapseAllBtn) {
-    collapseAllBtn.addEventListener("click", () => {
-      collapseAllTreeNodes();
-    });
+    collapseAllBtn.addEventListener("click", collapseAllTreeNodes);
   }
 }
 function updateTreeControlButtons(enableButtons) {
@@ -1725,6 +1727,16 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
     }
   }
 }
+
+function handleConvoLabelClick(e) {
+  e.stopPropagation();
+  e.target.dispatchEvent(
+    new CustomEvent("convoLeafClick", {
+      detail: { convoId: match?.convoId },
+      bubbles: true,
+    }),
+  );
+}
 function createFilteredLeafItem(match, searchText, tree) {
   const wrapper = document.createElement("div");
   wrapper.className = "node leaf-result";
@@ -1776,15 +1788,7 @@ function createFilteredLeafItem(match, searchText, tree) {
   wrapper.appendChild(label);
 
   // Click handler to load conversation
-  label.addEventListener("click", (ev) => {
-    ev.stopPropagation();
-    label.dispatchEvent(
-      new CustomEvent("convoLeafClick", {
-        detail: { convoId: match?.convoId },
-        bubbles: true,
-      }),
-    );
-  });
+  label.addEventListener("click", handleConvoLabelClick);
 
   return wrapper;
 }
@@ -1835,7 +1839,33 @@ async function handleMoreDetailsClicked() {
     }
   }
 }
+function handleClickOutsideDropdown(e) {
+  if (!openDropdown) return;
+  if (!openDropdown.contains(e.target) && e.target !== typeFilterBtn) {
+    toggleElementVisibility(openDropdown, false);
+    openDropdown = null;
+  }
+}
+function handleDropdownButtonClick(e) {
+  e.stopPropagation();
 
+  const filterDropdown =
+    e.target.parentElement?.querySelector(".filter-dropdown");
+  if (!filterDropdown) return;
+
+  const shouldOpen = filterDropdown.classList.contains("hidden");
+
+  // Close any other open dropdown first
+  if (openDropdown && openDropdown !== filterDropdown) {
+    toggleElementVisibility(openDropdown, false);
+  }
+
+  // Toggle the clicked dropdown
+  toggleElementVisibility(filterDropdown, shouldOpen);
+
+  // Update currently open reference
+  openDropdown = shouldOpen ? filterDropdown : null;
+}
 function setUpFilterDropdowns() {
   const dropdownButtons = document.querySelectorAll(".filter-dropdown-button");
   const allDropdowns = document.querySelectorAll(".filter-dropdown");
@@ -1845,117 +1875,117 @@ function setUpFilterDropdowns() {
     dd.addEventListener("click", (ev) => ev.stopPropagation()),
   );
 
-  // Track currently open dropdown so we only allow one at a time
-  let openDropdown = null;
-
   // Single document-level click handler to close the open dropdown when clicking outside
-  document.addEventListener("click", (e) => {
-    if (!openDropdown) return;
-    if (!openDropdown.contains(e.target) && e.target !== typeFilterBtn) {
-      toggleElementVisibility(openDropdown, false);
-      openDropdown = null;
-    }
-  });
+  document.addEventListener("click", handleClickOutsideDropdown);
 
   dropdownButtons.forEach((dropdownButton) => {
-    dropdownButton.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const filterDropdown =
-        dropdownButton.parentElement?.querySelector(".filter-dropdown");
-      if (!filterDropdown) return;
-
-      const shouldOpen = filterDropdown.classList.contains("hidden");
-
-      // Close any other open dropdown first
-      if (openDropdown && openDropdown !== filterDropdown) {
-        toggleElementVisibility(openDropdown, false);
-      }
-
-      // Toggle the clicked dropdown
-      toggleElementVisibility(filterDropdown, shouldOpen);
-
-      // Update currently open reference
-      openDropdown = shouldOpen ? filterDropdown : null;
-    });
+    dropdownButton.addEventListener("click", handleDropdownButtonClick);
   });
 }
 // #region Filter Dropdowns
 
 // #region Conversation Filter Dropdown
+function handleAddToSelectionButtonClick() {
+  selectedConvoIds = new Set(selectedConvoIds);
+  const convoFilterSearch = $("convoSearch");
+  updateConvoFilterLabel();
+  if (mobileMediaQuery.matches) {
+    // Mobile: use history to close the mobile filter so history entries remain consistent
+    window.history.back();
+  } else {
+    // Desktop: close the dropdown and apply search
+    toggleElementVisibility(convoFilterDropdown, false);
+    if (convoFilterSearch.value.trim()) {
+      search();
+    }
+  }
+}
+function handleSelectAllCheckboxChange(e) {
+  if (e.target.checked) {
+    // Select all filtered convos
+    filteredConvos.forEach((c) => selectedConvoIds.add(c.id));
+  } else {
+    // Deselect all filtered convos
+    filteredConvos.forEach((c) => selectedConvoIds.delete(c.id));
+  }
+  renderConvoList(filteredConvos);
+}
+
+// Render conversation list
+function renderConvoList(conversations) {
+  const listContainer = $("convoCheckboxList");
+  listContainer.innerHTML = "";
+  filteredConvos = conversations;
+
+  // Add conversation items
+  conversations.forEach((convo) => {
+    const label = document.createElement("label");
+    label.className = "checkbox-item";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.dataset.convoId = convo.id;
+    checkbox.dataset.convoTitle = convo.title;
+    checkbox.checked = selectedConvoIds.has(convo.id);
+
+    checkbox.addEventListener("change", (e) =>
+      handleFilterCheckboxChange(e, conversations),
+    );
+    const span = document.createElement("span");
+    span.textContent = convo.title;
+
+    label.appendChild(checkbox);
+    label.appendChild(span);
+    convoCheckboxList.appendChild(label);
+  });
+}
+
+function handleFilterCheckboxChange(e, conversations) {
+  const checkbox = e.target;
+  const convoId = checkbox.dataset.convoId;
+  if (checkbox.checked) {
+    selectedConvoIds.add(convoId);
+  } else {
+    selectedConvoIds.delete(convoId);
+  }
+
+  updateConvoSelectAllState(conversations);
+  updateConvoFilterLabel();
+  triggerSearch(e);
+}
+function handleConvoFilterSearchInput(e) {
+  const convoFilterSearch = e.target;
+  const query = convoFilterSearch.value.toLowerCase().trim();
+  if (!query) {
+    renderConvoList(allConvos);
+    return;
+  }
+
+  const filtered = allConvos.filter((c) => {
+    return (
+      (c.title || "").toLowerCase().includes(query) ||
+      c.id.toString().includes(query)
+    );
+  });
+
+  renderConvoList(filtered);
+}
 function setupConvoFilter() {
   const convoFilterSearch = $("convoSearch");
-  const listContainer = $("convoCheckboxList");
   const selectAllCheckbox = $("selectAllConvos");
   const addToSelectionBtn = $("convoAddToSelection");
 
-  let filteredConvos = [];
-
   // Add to Selection button - apply changes
   if (addToSelectionBtn) {
-    addToSelectionBtn.addEventListener("click", () => {
-      selectedConvoIds = new Set(selectedConvoIds);
-      updateConvoFilterLabel();
-      if (mobileMediaQuery.matches) {
-        // Mobile: use history to close the mobile filter so history entries remain consistent
-        window.history.back();
-      } else {
-        // Desktop: close the dropdown and apply search
-        toggleElementVisibility(convoFilterDropdown, false);
-        if (convoFilterSearch.value.trim()) {
-          search();
-        }
-      }
-    });
+    addToSelectionBtn.addEventListener(
+      "click",
+      handleAddToSelectionButtonClick,
+    );
   }
 
   // Select All checkbox
   if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener("change", () => {
-      if (selectAllCheckbox.checked) {
-        // Select all filtered convos
-        filteredConvos.forEach((c) => selectedConvoIds.add(c.id));
-      } else {
-        // Deselect all filtered convos
-        filteredConvos.forEach((c) => selectedConvoIds.delete(c.id));
-      }
-      renderConvoList(filteredConvos);
-    });
-  }
-
-  // Render conversation list
-  function renderConvoList(conversations) {
-    listContainer.innerHTML = "";
-    filteredConvos = conversations;
-
-    // Add conversation items
-    conversations.forEach((convo) => {
-      const label = document.createElement("label");
-      label.className = "checkbox-item";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.dataset.convoId = convo.id;
-      checkbox.dataset.convoTitle = convo.title;
-      checkbox.checked = selectedConvoIds.has(convo.id);
-
-      checkbox.addEventListener("change", (e) => {
-        if (checkbox.checked) {
-          selectedConvoIds.add(convo.id);
-        } else {
-          selectedConvoIds.delete(convo.id);
-        }
-
-        updateConvoSelectAllState(conversations);
-        updateConvoFilterLabel();
-        triggerSearch(e);
-      });
-      const span = document.createElement("span");
-      span.textContent = convo.title;
-
-      label.appendChild(checkbox);
-      label.appendChild(span);
-      convoCheckboxList.appendChild(label);
-    });
+    selectAllCheckbox.addEventListener("change", handleSelectAllCheckboxChange);
   }
 
   // Initial render
@@ -1965,34 +1995,17 @@ function setupConvoFilter() {
   renderConvoList(allConvos);
 
   // Search filter
-  convoFilterSearch.addEventListener("input", () => {
-    const query = convoFilterSearch.value.toLowerCase().trim();
-    if (!query) {
-      renderConvoList(allConvos);
-      return;
-    }
-
-    const filtered = allConvos.filter((c) => {
-      return (
-        (c.title || "").toLowerCase().includes(query) ||
-        c.id.toString().includes(query)
-      );
-    });
-
-    renderConvoList(filtered);
-  });
-
-  function updateConvoSelectAllState(conversations) {
-    if (selectAllCheckbox) {
-      const allSelected =
-        conversations.length > 0 &&
-        conversations.every((c) => selectedConvoIds.has(c.id));
-      const someSelected = conversations.some((c) =>
-        selectedConvoIds.has(c.id),
-      );
-      selectAllCheckbox.checked = allSelected;
-      selectAllCheckbox.indeterminate = someSelected && !allSelected;
-    }
+  convoFilterSearch.addEventListener("input", handleConvoFilterSearchInput);
+}
+function updateConvoSelectAllState(conversations) {
+  const selectAllCheckbox = $("selectAllConvos");
+  if (selectAllCheckbox) {
+    const allSelected =
+      conversations.length > 0 &&
+      conversations.every((c) => selectedConvoIds.has(c.id));
+    const someSelected = conversations.some((c) => selectedConvoIds.has(c.id));
+    selectAllCheckbox.checked = allSelected;
+    selectAllCheckbox.indeterminate = someSelected && !allSelected;
   }
 }
 function updateConvoFilterLabel() {
@@ -2013,70 +2026,92 @@ function updateConvoFilterLabel() {
 // #endregion
 
 // #region Actor Filter Dropdown
+function handleSelectAllActorsCheckboxChange(e) {
+  const isChecked = e.target.checked;
+  const checkboxes = actorCheckboxList.querySelectorAll(
+    'input[type="checkbox"]',
+  );
+
+  checkboxes.forEach((cb) => {
+    const actorId = parseInt(cb.dataset.actorId);
+    cb.checked = isChecked;
+
+    if (isChecked) {
+      selectedActorIds.add(actorId);
+    } else {
+      selectedActorIds.delete(actorId);
+    }
+  });
+
+  updateActorFilterLabel();
+  triggerSearch(e);
+}
+function handleActorAddToSelectionButtonClick(e) {
+  const checkboxes = actorCheckboxList.querySelectorAll(
+    'input[type="checkbox"]:checked',
+  );
+  checkboxes.forEach((cb) => {
+    selectedActorIds.add(parseInt(cb.dataset.actorId));
+  });
+
+  // Clear search and show all with current selection
+  actorSearchInput.value = "";
+  filterActors(actorSearchInput);
+  updateActorFilterLabel();
+
+  if (mobileMediaQuery.matches) {
+    // Mobile: close via history so previous view is restored
+    window.history.back();
+  } else {
+    // Desktop: close the dropdown and re-run a reset search
+    toggleElementVisibility(actorFilterDropdown, false);
+    search(true);
+  }
+}
+
+function handleActorCheckboxChange(e) {
+  const checkbox = e.target;
+  const actorId = checkbox.dataset.actorId;
+  if (checkbox.checked) {
+    selectedActorIds.add(actorId);
+  } else {
+    selectedActorIds.delete(actorId);
+  }
+  updateActorSelectAllState();
+  updateActorFilterLabel();
+  triggerSearch(e);
+}
 async function populateActorDropdown() {
   allActors = getDistinctActors();
   filteredActors = [...allActors];
 
   // Search filter
   if (actorSearchInput) {
-    actorSearchInput.addEventListener("input", () => {
-      filterActors();
-    });
+    actorSearchInput.addEventListener("input", handleActorFilterInput);
   }
 
   // Select All checkbox
   if (selectAllActors) {
-    selectAllActors.addEventListener("change", (e) => {
-      const isChecked = e.target.checked;
-      const checkboxes = actorCheckboxList.querySelectorAll(
-        'input[type="checkbox"]',
-      );
-
-      checkboxes.forEach((cb) => {
-        const actorId = parseInt(cb.dataset.actorId);
-        cb.checked = isChecked;
-
-        if (isChecked) {
-          selectedActorIds.add(actorId);
-        } else {
-          selectedActorIds.delete(actorId);
-        }
-      });
-
-      updateActorFilterLabel();
-      triggerSearch(e);
-    });
+    selectAllActors.addEventListener(
+      "change",
+      handleSelectAllActorsCheckboxChange,
+    );
   }
 
   // Add to Selection button
   if (actorAddToSelectionBtn) {
-    actorAddToSelectionBtn.addEventListener("click", (e) => {
-      const checkboxes = actorCheckboxList.querySelectorAll(
-        'input[type="checkbox"]:checked',
-      );
-      checkboxes.forEach((cb) => {
-        selectedActorIds.add(parseInt(cb.dataset.actorId));
-      });
-
-      // Clear search and show all with current selection
-      actorSearchInput.value = "";
-      filterActors();
-      updateActorFilterLabel();
-
-      if (mobileMediaQuery.matches) {
-        // Mobile: close via history so previous view is restored
-        window.history.back();
-      } else {
-        // Desktop: close the dropdown and re-run a reset search
-        toggleElementVisibility(actorFilterDropdown, false);
-        search(true);
-      }
-    });
+    actorAddToSelectionBtn.addEventListener(
+      "click",
+      handleActorAddToSelectionButtonClick,
+    );
   }
 
   renderActorCheckboxes(allActors);
 }
-function filterActors() {
+function handleActorFilterInput(e) {
+  filterActors(e.target);
+}
+function filterActors(actorSearchInput) {
   const searchText = actorSearchInput
     ? actorSearchInput.value.toLowerCase().trim()
     : "";
@@ -2106,17 +2141,7 @@ function renderActorCheckboxes(actors) {
     checkbox.type = "checkbox";
     checkbox.dataset.actorId = actor.id;
     checkbox.checked = selectedActorIds.has(actor.id);
-
-    checkbox.addEventListener("change", (e) => {
-      if (checkbox.checked) {
-        selectedActorIds.add(actor.id);
-      } else {
-        selectedActorIds.delete(actor.id);
-      }
-      updateActorSelectAllState();
-      updateActorFilterLabel();
-      triggerSearch(e);
-    });
+    checkbox.addEventListener("change", handleActorCheckboxChange);
 
     const span = document.createElement("span");
     span.textContent = actor.name;
@@ -2166,47 +2191,50 @@ function updateActorFilterLabel() {
 
 // #region Conversation Type Filter Dropdown
 // Setup type filter
+function handleSelectAllConvoTypeChange(e) {
+  const isChecked = e.target.checked;
+  const checkboxes = typeCheckboxList.querySelectorAll(
+    'input[type="checkbox"][data-type]',
+  );
+
+  checkboxes.forEach((cb) => {
+    const type = cb.dataset.type;
+    cb.checked = isChecked;
+
+    if (isChecked) {
+      selectedTypeIds.add(type);
+    } else {
+      selectedTypeIds.delete(type);
+    }
+  });
+
+  updateTypeFilterLabel();
+  triggerSearch(e);
+}
+
+function handleConvoTypeCheckboxChange(e) {
+  const cb = e.target;
+  const type = cb.dataset.type;
+  if (cb.checked) {
+    selectedTypeIds.add(type);
+  } else {
+    selectedTypeIds.delete(type);
+  }
+
+  updateTypeSelectAllState();
+  updateTypeFilterLabel();
+  triggerSearch(e);
+}
 function setupTypeFilter() {
   // Select All checkbox
-  selectAllTypes.addEventListener("change", (e) => {
-    const isChecked = e.target.checked;
-    const checkboxes = typeCheckboxList.querySelectorAll(
-      'input[type="checkbox"][data-type]',
-    );
-
-    checkboxes.forEach((cb) => {
-      const type = cb.dataset.type;
-      cb.checked = isChecked;
-
-      if (isChecked) {
-        selectedTypeIds.add(type);
-      } else {
-        selectedTypeIds.delete(type);
-      }
-    });
-
-    updateTypeFilterLabel();
-    triggerSearch(e);
-  });
+  selectAllTypes.addEventListener("change", handleSelectAllConvoTypeChange);
 
   // Individual type checkboxes
   const typeCheckboxes = typeCheckboxList.querySelectorAll(
     'input[type="checkbox"][data-type]',
   );
   typeCheckboxes.forEach((cb) => {
-    cb.addEventListener("change", (e) => {
-      const type = cb.dataset.type;
-
-      if (cb.checked) {
-        selectedTypeIds.add(type);
-      } else {
-        selectedTypeIds.delete(type);
-      }
-
-      updateTypeSelectAllState();
-      updateTypeFilterLabel();
-      triggerSearch(e);
-    });
+    cb.addEventListener("change", handleConvoTypeCheckboxChange);
   });
 
   updateTypeFilterLabel();
@@ -2308,59 +2336,58 @@ function closeMobileSearchScreen() {
     toggleElementVisibility(mobileSearchCount, false);
   }
 }
+function handleClearFiltersButtonClick(e) {
+  // Reset convo filters
+  selectedConvoIds.clear();
+  const convoCheckboxes = convoCheckboxList?.querySelectorAll(
+    'input[type="checkbox"]',
+  );
+  convoCheckboxes.forEach((cb) => {
+    cb.checked = false;
+  });
+  selectAllConvos.checked = true;
+  selectAllConvos.indeterminate = false;
+  updateConvoFilterLabel();
 
+  // Reset actor filters
+  selectedActorIds.clear();
+  const actorCheckboxes = actorCheckboxList?.querySelectorAll(
+    'input[type="checkbox"]',
+  );
+  actorCheckboxes.forEach((cb) => {
+    cb.checked = false;
+  });
+  selectAllActors.checked = true;
+  selectAllActors.indeterminate = false;
+  updateActorFilterLabel();
+
+  // Reset type filters - select all
+  selectedTypeIds.clear();
+  selectedTypeIds.add("flow");
+  selectedTypeIds.add("orb");
+  selectedTypeIds.add("task");
+
+  const typeCheckboxes = typeCheckboxList?.querySelectorAll(
+    'input[type="checkbox"][data-type]',
+  );
+  typeCheckboxes.forEach((cb) => {
+    cb.checked = true;
+  });
+  selectAllTypes.checked = true;
+  selectAllTypes.indeterminate = false;
+  updateTypeFilterLabel();
+
+  // Reset whole words checkbox
+  const wholeWordsCheckbox = $("wholeWordsCheckbox");
+  wholeWordsCheckbox.checked = false;
+
+  // Trigger search with cleared filters
+  triggerSearch(e);
+}
 // Setup clear filters button
 function setupClearFiltersBtn() {
   if (!clearFiltersBtn) return;
-
-  clearFiltersBtn.addEventListener("click", (e) => {
-    // Reset convo filters
-    selectedConvoIds.clear();
-    const convoCheckboxes = convoCheckboxList?.querySelectorAll(
-      'input[type="checkbox"]',
-    );
-    convoCheckboxes.forEach((cb) => {
-      cb.checked = false;
-    });
-    selectAllConvos.checked = true;
-    selectAllConvos.indeterminate = false;
-    updateConvoFilterLabel();
-
-    // Reset actor filters
-    selectedActorIds.clear();
-    const actorCheckboxes = actorCheckboxList?.querySelectorAll(
-      'input[type="checkbox"]',
-    );
-    actorCheckboxes.forEach((cb) => {
-      cb.checked = false;
-    });
-    selectAllActors.checked = true;
-    selectAllActors.indeterminate = false;
-    updateActorFilterLabel();
-
-    // Reset type filters - select all
-    selectedTypeIds.clear();
-    selectedTypeIds.add("flow");
-    selectedTypeIds.add("orb");
-    selectedTypeIds.add("task");
-
-    const typeCheckboxes = typeCheckboxList?.querySelectorAll(
-      'input[type="checkbox"][data-type]',
-    );
-    typeCheckboxes.forEach((cb) => {
-      cb.checked = true;
-    });
-    selectAllTypes.checked = true;
-    selectAllTypes.indeterminate = false;
-    updateTypeFilterLabel();
-
-    // Reset whole words checkbox
-    const wholeWordsCheckbox = $("wholeWordsCheckbox");
-    wholeWordsCheckbox.checked = false;
-
-    // Trigger search with cleared filters
-    triggerSearch(e);
-  });
+  clearFiltersBtn.addEventListener("click", handleClearFiltersButtonClick);
 }
 
 // Expand and highlight conversation in the conversation tree
@@ -2552,121 +2579,121 @@ function updateBackButtonState() {
   }
 }
 
+async function handleWindowPopStateEvent(e) {
+  if (isHandlingPopState) return;
+  isHandlingPopState = true;
+
+  const state = event.state;
+
+  // Also check URL parameters on back/forward (for direct navigation or URL changes)
+  const { convoId: urlConvoId, entryId: urlEntryId } = getRouteParamsFromUrl();
+  const { searchQuery: urlSearchQuery } = getSearchParamsFromUrl();
+
+  // Close mobile-only filter pages by default (only when on mobile)
+  if (mobileMediaQuery.matches) {
+    toggleElementVisibility(mobileConvoFilterWrapper, false);
+    toggleElementVisibility(mobileActorFilterWrapper, false);
+  }
+
+  // First priority: check if URL has search params (from direct URL or back button)
+  if (urlSearchQuery) {
+    // URL has search query - perform search
+    if (searchInput) {
+      searchInput.value = urlSearchQuery;
+      search(true);
+    }
+  } else if (urlConvoId !== null) {
+    // URL has convo params - navigate to conversation/entry
+    if (urlEntryId !== null) {
+      const entry = getEntry(urlConvoId, urlEntryId);
+      if (entry) {
+        await loadEntriesForConversation(urlConvoId, false);
+        await navigateToEntry(urlConvoId, urlEntryId, false);
+      }
+    } else {
+      await loadEntriesForConversation(urlConvoId, false);
+      highlightConversationInTree(urlConvoId);
+    }
+  } else if (!state || state.view === "home") {
+    // Close mobile search and go to home view
+    closeMobileSearchScreen();
+    goToHomeView();
+  } else if (state.view === "search") {
+    if (mobileMediaQuery.matches) {
+      // Return to mobile search screen; openMobileSearchScreen() will re-run the search
+      openMobileSearchScreen();
+    } else {
+      // Desktop: search is treated as a forward-only action
+      goToHomeView();
+    }
+  } else if (state.view === "mobile-filter") {
+    // Only handle mobile-filter on mobile devices
+    if (mobileMediaQuery.matches) {
+      // Open the specific mobile filter page
+      if (state.filter === "convo") {
+        toggleElementVisibility(mobileConvoFilterWrapper, true);
+      } else if (state.filter === "actor") {
+        toggleElementVisibility(mobileActorFilterWrapper, true);
+      }
+    }
+  } else if (state.view === "conversation") {
+    if (state.convoId && state.entryId) {
+      // Going to a specific entry
+      // Determine if we're going backwards or forwards
+      const isGoingBack =
+        navigationHistory.length > 0 &&
+        navigationHistory[navigationHistory.length - 1] &&
+        (navigationHistory[navigationHistory.length - 1].convoId !==
+          state.convoId ||
+          navigationHistory[navigationHistory.length - 1].entryId !==
+            state.entryId);
+
+      if (isGoingBack) {
+        // Going backwards - remove current entry (non-clickable) and the last clickable entry
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
+        }
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
+        }
+        navigationHistory.pop();
+      }
+
+      // Navigate to the entry
+      await navigateToEntry(state.convoId, state.entryId, !isGoingBack);
+    } else if (state.convoId) {
+      // Going to conversation root
+      const isGoingBack = navigationHistory.length > 1;
+
+      if (isGoingBack) {
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
+        }
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
+        }
+        navigationHistory.pop();
+      }
+
+      await loadEntriesForConversation(state.convoId, false);
+    }
+  }
+
+  currentAppState = state?.view || "home";
+
+  // Update UI state
+  updateBackButtonState();
+  if (typeof updateMobileNavButtons === "function") {
+    updateMobileNavButtons();
+  }
+
+  setTimeout(() => {
+    isHandlingPopState = false;
+  }, 100);
+}
 async function setupBrowserHistory() {
   // Handle browser back/forward buttons
-  window.addEventListener("popstate", async (event) => {
-    if (isHandlingPopState) return;
-    isHandlingPopState = true;
-
-    const state = event.state;
-
-    // Also check URL parameters on back/forward (for direct navigation or URL changes)
-    const { convoId: urlConvoId, entryId: urlEntryId } =
-      getRouteParamsFromUrl();
-    const { searchQuery: urlSearchQuery } = getSearchParamsFromUrl();
-
-    // Close mobile-only filter pages by default (only when on mobile)
-    if (mobileMediaQuery.matches) {
-      toggleElementVisibility(mobileConvoFilterWrapper, false);
-      toggleElementVisibility(mobileActorFilterWrapper, false);
-    }
-
-    // First priority: check if URL has search params (from direct URL or back button)
-    if (urlSearchQuery) {
-      // URL has search query - perform search
-      if (searchInput) {
-        searchInput.value = urlSearchQuery;
-        search(true);
-      }
-    } else if (urlConvoId !== null) {
-      // URL has convo params - navigate to conversation/entry
-      if (urlEntryId !== null) {
-        const entry = getEntry(urlConvoId, urlEntryId);
-        if (entry) {
-          await loadEntriesForConversation(urlConvoId, false);
-          await navigateToEntry(urlConvoId, urlEntryId, false);
-        }
-      } else {
-        await loadEntriesForConversation(urlConvoId, false);
-        highlightConversationInTree(urlConvoId);
-      }
-    } else if (!state || state.view === "home") {
-      // Close mobile search and go to home view
-      closeMobileSearchScreen();
-      goToHomeView();
-    } else if (state.view === "search") {
-      if (mobileMediaQuery.matches) {
-        // Return to mobile search screen; openMobileSearchScreen() will re-run the search
-        openMobileSearchScreen();
-      } else {
-        // Desktop: search is treated as a forward-only action
-        goToHomeView();
-      }
-    } else if (state.view === "mobile-filter") {
-      // Only handle mobile-filter on mobile devices
-      if (mobileMediaQuery.matches) {
-        // Open the specific mobile filter page
-        if (state.filter === "convo") {
-          toggleElementVisibility(mobileConvoFilterWrapper, true);
-        } else if (state.filter === "actor") {
-          toggleElementVisibility(mobileActorFilterWrapper, true);
-        }
-      }
-    } else if (state.view === "conversation") {
-      if (state.convoId && state.entryId) {
-        // Going to a specific entry
-        // Determine if we're going backwards or forwards
-        const isGoingBack =
-          navigationHistory.length > 0 &&
-          navigationHistory[navigationHistory.length - 1] &&
-          (navigationHistory[navigationHistory.length - 1].convoId !==
-            state.convoId ||
-            navigationHistory[navigationHistory.length - 1].entryId !==
-              state.entryId);
-
-        if (isGoingBack) {
-          // Going backwards - remove current entry (non-clickable) and the last clickable entry
-          if (chatLogEl && chatLogEl.lastElementChild) {
-            chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
-          }
-          if (chatLogEl && chatLogEl.lastElementChild) {
-            chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
-          }
-          navigationHistory.pop();
-        }
-
-        // Navigate to the entry
-        await navigateToEntry(state.convoId, state.entryId, !isGoingBack);
-      } else if (state.convoId) {
-        // Going to conversation root
-        const isGoingBack = navigationHistory.length > 1;
-
-        if (isGoingBack) {
-          if (chatLogEl && chatLogEl.lastElementChild) {
-            chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
-          }
-          if (chatLogEl && chatLogEl.lastElementChild) {
-            chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
-          }
-          navigationHistory.pop();
-        }
-
-        await loadEntriesForConversation(state.convoId, false);
-      }
-    }
-
-    currentAppState = state?.view || "home";
-
-    // Update UI state
-    updateBackButtonState();
-    if (typeof updateMobileNavButtons === "function") {
-      updateMobileNavButtons();
-    }
-
-    setTimeout(() => {
-      isHandlingPopState = false;
-    }, 100);
-  });
+  window.addEventListener("popstate", handleWindowPopStateEvent);
 }
 
 function pushHistoryState(view, data = {}) {
@@ -3230,17 +3257,19 @@ function loadChildOptions(convoId, entryId) {
   }
 }
 
+function handleSearchClearButtonClick(e) {
+  // Clear the unified search input and focus it
+  if (searchInput) {
+    const searchClearBtn = e.target;
+    searchInput.value = "";
+    searchInput.focus();
+    // Change icon back to search icon
+    toggleElementVisibility(searchClearBtn, false);
+    toggleElementVisibility(searchBtn, true);
+  }
+}
 function setupClearSearchInput() {
-  searchClearBtn.addEventListener("click", () => {
-    // Clear the unified search input and focus it
-    if (searchInput) {
-      searchInput.value = "";
-      searchInput.focus();
-      // Change icon back to search icon
-      toggleElementVisibility(searchClearBtn, false);
-      toggleElementVisibility(searchBtn, true);
-    }
-  });
+  searchClearBtn.addEventListener("click", handleSearchClearButtonClick);
 }
 
 // #region Mobile Setup
@@ -3272,6 +3301,12 @@ function openMobileSearchScreen() {
   }
 }
 
+function handleMobileSearchBackClick() {
+  // Use browser back to return to previous state
+  window.history.back();
+  closeMobileSearchScreen();
+}
+
 function setupMobileSearch() {
   // Open mobile search screen when the mobile header trigger is clicked
   if (mobileSearchTriggerEl) {
@@ -3279,11 +3314,7 @@ function setupMobileSearch() {
   }
 
   // Close mobile search screen
-  mobileSearchBack.addEventListener("click", () => {
-    // Use browser back to return to previous state
-    window.history.back();
-    closeMobileSearchScreen();
-  });
+  mobileSearchBack.addEventListener("click", handleMobileSearchBackClick);
 
   // Setup convo filter screen
   setupConvoActorFilter();
@@ -3294,7 +3325,12 @@ function setupMobileSearch() {
   // Setup type filter sheet
   setupMobileTypeFilter();
 }
-
+async function handleConvoRootButtonClick(e) {
+  if (currentConvoId !== null) {
+    await loadEntriesForConversation(currentConvoId, false);
+    updateMobileNavButtons();
+  }
+}
 function setupMobileSidebar() {
   // Open sidebar
   if (mobileSidebarToggle) {
@@ -3314,12 +3350,7 @@ function setupMobileSidebar() {
 
   // Mobile root button
   if (convoRootBtn) {
-    convoRootBtn.addEventListener("click", async () => {
-      if (currentConvoId !== null) {
-        await loadEntriesForConversation(currentConvoId, false);
-        updateMobileNavButtons();
-      }
-    });
+    convoRootBtn.addEventListener("click", handleConvoRootButtonClick);
   }
 }
 
@@ -3334,35 +3365,46 @@ function closeMobileNavSidebar() {
   toggleElementVisibility(mobileNavPanel, false);
   toggleElementVisibility(sidebarOverlay, false);
 }
+function openModal() {
+  const conversationTypesModalOverlay = $("conversationTypesModalOverlay");
+  toggleElementVisibility(conversationTypesModalOverlay, true);
+}
 
+function closeModal() {
+  const conversationTypesModalOverlay = $("conversationTypesModalOverlay");
+  conversationTypesModalOverlay.classList.remove("open");
+  toggleElementVisibility(conversationTypesModalOverlay, false);
+}
+
+function handleConvoTypeModalOverlayClick(e) {
+  const modal = $("conversationTypesModalOverlay");
+  if (e.target == modal) {
+    closeModal();
+  }
+}
+function handleDocumentKeyDownEvent(e) {
+  const conversationTypesModalOverlay = $("conversationTypesModalOverlay");
+  if (
+    e.key === "Escape" &&
+    conversationTypesModalOverlay.style.display !== "none"
+  ) {
+    closeModal();
+  }
+}
 function setupConversationTypesModal() {
   const helpIcon = $("helpIcon");
-  const modal = $("conversationTypesModalOverlay");
-  const closeBtn = modal.querySelector(".modal-close");
-
-  function openModal() {
-    toggleElementVisibility(modal, true);
-  }
-
-  function closeModal() {
-    modal.classList.remove("open");
-    toggleElementVisibility(modal, false);
-  }
+  const conversationTypeModalOverlay = $("conversationTypesModalOverlay");
+  const closeBtn = conversationTypeModalOverlay.querySelector(".modal-close");
 
   helpIcon.addEventListener("click", openModal);
   closeBtn.addEventListener("click", closeModal);
-  modal.addEventListener("click", (e) => {
-    if (e.target == modal) {
-      closeModal();
-    }
-  });
+  conversationTypeModalOverlay.addEventListener(
+    "click",
+    handleConvoTypeModalOverlayClick,
+  );
 
   // ESC key to close
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modal.style.display !== "none") {
-      closeModal();
-    }
-  });
+  document.addEventListener("keydown", handleDocumentKeyDownEvent);
 }
 
 function updateMobileNavButtons() {
@@ -3421,6 +3463,7 @@ function setupConvoActorFilter() {
   if (!backBtn) return;
 
   // Use browser back on mobile to return to the previous view so history is kept in sync
+  // TODO KA Convert to handler function
   backBtn.addEventListener("click", () => {
     if (mobileMediaQuery.matches) {
       window.history.back();
@@ -3433,6 +3476,7 @@ function setupConvoActorFilter() {
 
   // Close when clicking outside the content area (mobile only)
   if (mobileConvoFilterWrapper) {
+    // TODO KA Convert to handler function
     mobileConvoFilterWrapper.addEventListener("click", (e) => {
       if (e.target === mobileConvoFilterWrapper) {
         if (mobileMediaQuery.matches) {
@@ -3451,6 +3495,7 @@ function setupMobileActorFilter() {
 
   if (!backBtn) return;
 
+  // TODO KA Convert to handler function
   backBtn.addEventListener("click", () => {
     if (mobileMediaQuery.matches) {
       window.history.back();
@@ -3462,6 +3507,7 @@ function setupMobileActorFilter() {
 
   // Close when clicking outside the content area
   if (mobileActorFilterWrapper) {
+    // TODO KA Convert to handler function
     mobileActorFilterWrapper.addEventListener("click", (e) => {
       if (e.target === mobileActorFilterWrapper) {
         if (mobileMediaQuery.matches) {
@@ -3480,6 +3526,7 @@ function setupMobileTypeFilter() {
   const applyBtn = $("mobileTypeApply");
 
   // Close sheet when clicking outside content
+  // TODO KA Convert to handler function
   mobileTypeFilterSheet.addEventListener("click", (e) => {
     if (e.target === mobileTypeFilterSheet) {
       toggleElementVisibility(mobileTypeFilterSheet, false);
@@ -3489,6 +3536,7 @@ function setupMobileTypeFilter() {
   });
 
   // Apply button
+  // TODO KA Convert to handler function
   applyBtn.addEventListener("click", () => {
     // Close sheet
     toggleElementVisibility(mobileTypeFilterSheet, false);
@@ -3509,18 +3557,21 @@ function setUpWholeWordsToggle() {
 }
 
 function setUpSearch() {
+  // TODO KA Convert to handler function
   searchInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       search();
     }
   });
   // On mobile, clicking the (visible) search input should open the mobile search screen
+  // TODO KA Convert to handler function
   searchInput.addEventListener("click", (e) => {
     if (mobileMediaQuery.matches) {
       openMobileSearchScreen();
     }
   });
 
+  // TODO KA Convert to handler function
   searchInput.addEventListener("input", (e) => {
     // Keep mobile and desktop input unified (single element used)
     // If the mobile header trigger exists, mirror the value for display
@@ -3549,6 +3600,7 @@ function setUpMainHeader() {
 
 function setUpHistoryConvoRootButton() {
   if (convoRootBtn) {
+    // TODO KA Convert to handler function
     convoRootBtn.addEventListener("click", async () => {
       if (currentConvoId !== null) {
         await jumpToConversationRoot();
@@ -3559,6 +3611,7 @@ function setUpHistoryConvoRootButton() {
 
 function setUpHistoryBackButton() {
   if (backBtn) {
+    // TODO KA Convert to handler function
     backBtn.addEventListener("click", () => {
       // Use browser back button instead of manual history management
       window.history.back();
@@ -3752,6 +3805,7 @@ function applyFiltersToCurrentResults(useMobile = false) {
     // TODO KA consolidate search results to one dom element
     filtered.forEach((r) => {
       const div = createSearchResultDiv(r, rawQuery);
+      // TODO KA Convert to handler function
       div.addEventListener("click", async () => {
         const cid = r.conversationid;
         const eid = r.id;
@@ -3805,6 +3859,7 @@ function applyFiltersToCurrentResults(useMobile = false) {
 
   filtered.forEach((r) => {
     const div = createSearchResultDiv(r, rawQuery);
+    // TODO KA Convert to handler function
     div.addEventListener("click", async () => {
       const cid = r.conversationid;
       const eid = r.id;
@@ -3831,6 +3886,7 @@ function applyFiltersToCurrentResults(useMobile = false) {
 }
 
 // Listen for whole-words toggle and re-filter existing results (do not re-run DB search)
+// TODO KA Convert to handler function
 wholeWordsCheckbox.addEventListener("change", async () => {
   // Preserve the total count computed by the last DB search — whole-words
   // filtering should only affect the filtered count, not the underlying total
@@ -4043,6 +4099,7 @@ function search(resetSearch = true) {
       // Render initial set
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
+        // TODO KA Convert to handler function
         div.addEventListener("click", async () => {
           const cid = r.conversationid;
           const eid = r.id;
@@ -4086,6 +4143,7 @@ function search(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
+        // TODO KA Convert to handler function
         div.addEventListener("click", async () => {
           const cid = r.conversationid;
           const eid = r.id;
@@ -4232,6 +4290,7 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchResults.innerHTML = "";
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
+        // TODO KA Convert to handler function
         div.addEventListener("click", async () => {
           const cid = r.conversationid;
           const eid = r.id;
@@ -4270,6 +4329,7 @@ function performMobileSearch(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
+        // TODO KA Convert to handler function
         div.addEventListener("click", async () => {
           const cid = r.conversationid;
           const eid = r.id;
@@ -4336,6 +4396,7 @@ function performMobileSearch(resetSearch = true) {
 
 // Setup infinite scroll for search results
 function setupSearchInfiniteScroll() {
+  // TODO KA Convert to handler function
   mobileSearchScreen.addEventListener("scroll", (e) => {
     // Check if we're near the bottom and have more results to load
     const scrollTop = e?.target?.scrollTop;
@@ -4356,6 +4417,7 @@ function setupSearchInfiniteScroll() {
     }
   });
 
+  // TODO KA Convert to handler function
   entryListEl.addEventListener("scroll", (e) => {
     // Check if we're near the bottom and have more results to load
     const scrollTop = e.target.scrollTop;
@@ -4626,6 +4688,7 @@ function makeNodeElement(name, nodeObj) {
   wrapper._childrenRendered = true;
 
   // click handler: navigate if leaf, or toggle expand
+  // TODO KA Convert to handler function
   label.addEventListener("click", (ev) => {
     ev.stopPropagation();
 
@@ -4926,6 +4989,7 @@ function appendHistoryItem(chatLogEl, title, text, historyIndex, onClick) {
   item.appendChild(titleDiv);
   item.appendChild(textDiv);
 
+  // TODO KA Convert to handler function
   if (onClick) item.addEventListener("click", onClick);
   chatLogEl.appendChild(item);
   chatLogEl.scrollTop = chatLogEl.scrollHeight;
@@ -5051,6 +5115,7 @@ function createAlternatesList(alternates, data) {
       const link = document.createElement("a");
       link.href = "#";
       link.textContent = a.alternateline;
+      // TODO KA Convert to handler function
       link.addEventListener("click", async (e) => {
         e.preventDefault();
         if (data.onNavigate) {
@@ -5091,6 +5156,7 @@ function createOriginalLineSection(data) {
   const link = document.createElement("a");
   link.href = "#";
   link.textContent = data.originalDialogueText;
+  // TODO KA Convert to handler function
   link.addEventListener("click", async (e) => {
     e.preventDefault();
     if (data.onNavigate) {
@@ -5139,6 +5205,7 @@ function createParentsList(parents, data) {
       a.href = "#";
       a.dataset.convo = p.o_convo;
       a.dataset.id = p.o_id;
+      // TODO KA Convert to handler function
       a.addEventListener("click", async (e) => {
         e.preventDefault();
         if (data.onNavigate) await data.onNavigate(p.o_convo, p.o_id);
@@ -5169,6 +5236,7 @@ function createChildrenList(children, data) {
       a.href = "#";
       a.dataset.convo = c.d_convo;
       a.dataset.id = c.d_id;
+      // TODO KA Convert to handler function
       a.addEventListener("click", async (e) => {
         e.preventDefault();
         if (data.onNavigate) await data.onNavigate(c.d_convo, c.d_id);
@@ -5505,6 +5573,7 @@ function setupSettingsModal() {
 
   // Close modal when clicking overlay
   if (settingsModalOverlay) {
+    // TODO KA Convert to handler function
     settingsModalOverlay.addEventListener("click", (e) => {
       if (e.target === settingsModalOverlay) {
         toggleElementVisibility(settingsModalOverlay, false);
