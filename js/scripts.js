@@ -320,8 +320,55 @@ let SQL = null;
 
 // #endregion
 
-// #region Handlers
+// #region Navigate to Entry Handlers
+async function handleEntryClick(e) {
+  // Clicking a result in "Next Dialogue Options" or a parent/child link in an entry container
+  const item = e.currentTarget;
+  const convoId = item.getAttribute("data-convo-id");
+  const entryId = item.getAttribute("data-id");
+  await navigateToEntry(convoId, entryId, true);
+}
 
+async function handleLineLinkClick(e) {
+  // Clicking the alternate line or original line in the current entry container if there is an alternate
+  e.preventDefault();
+  const link = e.currentTarget;
+  const cid = link.getAttribute("data-convo-id");
+  const eid = link.getAttribute("data-id");
+  const isAlternate = link.getAttribute("data-is-alternate");
+  const alternateCondition = link.getAttribute("data-alternate-condition");
+  const alternateLine = link.getAttribute("data-alternate-line");
+
+  if (isAlternate === "true") {
+    // Don't add to history when switching to alternate view
+    await navigateToEntry(cid, eid, false, alternateCondition, alternateLine);
+  } else {
+    // Don't add to history when switching back to original view
+    await navigateToEntry(cid, eid, false);
+  }
+}
+async function handleSearchResultClick(e) {
+  // Clicking a search result
+  const result = e.currentTarget;
+  const cid = result.getAttribute("data-convo-id");
+  const eid = result.getAttribute("data-id");
+  const dialogueText = result.getAttribute("data-dialogue-text"); // Already replaced with alternate at this point
+  const alternateCondition = result.getAttribute("data-alternate-condition");
+
+  setNavigationHistory([{ convoId: cid, entryId: null }]);
+  if (cid && !eid) {
+    await jumpToConversationRoot(cid);
+  } else {
+    await navigateToEntry(cid, eid, true, alternateCondition, dialogueText);
+  }
+
+  highlightConversationInTree(cid);
+  if (mobileMediaQuery.matches) {
+    closeMobileSearchScreen();
+  } else {
+    document.querySelector(".selected")?.scrollIntoView(true);
+  }
+}
 async function handleInitialUrlNavigation() {
   /**
    * Handle initial navigation from URL parameters on page load
@@ -372,13 +419,123 @@ async function handleInitialUrlNavigation() {
   // Mark initial navigation as complete
   isInitialNavigation = false;
 }
+async function handleWindowPopStateEvent(e) {
+  if (isHandlingPopState) return;
+  isHandlingPopState = true;
 
-async function handleEntryClick(e) {
-  const item = e.currentTarget;
-  const convoId = item.getAttribute("data-convo-id");
-  const entryId = item.getAttribute("data-id");
-  await navigateToEntry(convoId, entryId);
+  const state = event.state;
+
+  // Also check URL parameters on back/forward (for direct navigation or URL changes)
+  const { convoId: urlConvoId, entryId: urlEntryId } = getRouteParamsFromUrl();
+  const { searchQuery: urlSearchQuery } = getSearchParamsFromUrl();
+
+  // Close mobile-only filter pages by default (only when on mobile)
+  if (mobileMediaQuery.matches) {
+    toggleElementVisibility(mobileConvoFilterWrapper, false);
+    toggleElementVisibility(mobileActorFilterWrapper, false);
+  }
+
+  // First priority: check if URL has search params (from direct URL or back button)
+  if (urlSearchQuery) {
+    // URL has search query - perform search
+    if (searchInput) {
+      searchInput.value = urlSearchQuery;
+      search(true);
+    }
+  } else if (urlConvoId !== null) {
+    // URL has convo params - navigate to conversation/entry
+    if (urlEntryId !== null) {
+      const entry = getEntry(urlConvoId, urlEntryId);
+      if (entry) {
+        await loadEntriesForConversation(urlConvoId, false);
+        await navigateToEntry(urlConvoId, urlEntryId, false);
+      }
+    } else {
+      await loadEntriesForConversation(urlConvoId, false);
+      highlightConversationInTree(urlConvoId);
+    }
+  } else if (!state || state.view === "home") {
+    // Close mobile search and go to home view
+    closeMobileSearchScreen();
+    goToHomeView();
+  } else if (state.view === "search") {
+    if (mobileMediaQuery.matches) {
+      // Return to mobile search screen; openMobileSearchScreen() will re-run the search
+      openMobileSearchScreen();
+    } else {
+      // Desktop: search is treated as a forward-only action
+      goToHomeView();
+    }
+  } else if (state.view === "mobile-filter") {
+    // Only handle mobile-filter on mobile devices
+    if (mobileMediaQuery.matches) {
+      // Open the specific mobile filter page
+      if (state.filter === "convo") {
+        toggleElementVisibility(mobileConvoFilterWrapper, true);
+      } else if (state.filter === "actor") {
+        toggleElementVisibility(mobileActorFilterWrapper, true);
+      }
+    }
+  } else if (state.view === "conversation") {
+    if (state.convoId && state.entryId) {
+      // Going to a specific entry
+      // Determine if we're going backwards or forwards
+      const isGoingBack =
+        navigationHistory.length > 0 &&
+        navigationHistory[navigationHistory.length - 1] &&
+        (navigationHistory[navigationHistory.length - 1].convoId !==
+          state.convoId ||
+          navigationHistory[navigationHistory.length - 1].entryId !==
+            state.entryId);
+
+      if (isGoingBack) {
+        // Going backwards - remove current entry (non-clickable) and the last clickable entry
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
+        }
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
+        }
+        navigationHistory.pop();
+      }
+
+      // Navigate to the entry
+      await navigateToEntry(state.convoId, state.entryId, !isGoingBack);
+    } else if (state.convoId) {
+      // Going to conversation root
+      const isGoingBack = navigationHistory.length > 1;
+
+      if (isGoingBack) {
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
+        }
+        if (chatLogEl && chatLogEl.lastElementChild) {
+          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
+        }
+        navigationHistory.pop();
+      }
+
+      await loadEntriesForConversation(state.convoId, false);
+    }
+  }
+
+  currentAppState = state?.view || "home";
+
+  // Update UI state
+  updateBackButtonState();
+  if (typeof updateMobileNavButtons === "function") {
+    updateMobileNavButtons();
+  }
+
+  setTimeout(() => {
+    isHandlingPopState = false;
+  }, 100);
 }
+
+// #endregion
+
+// #region Handlers
+
 function handleSearchClearButtonClick(e) {
   // Clear the unified search input and focus it
   if (searchInput) {
@@ -830,118 +987,6 @@ function handleClearFiltersButtonClick(e) {
   // Trigger search with cleared filters
   triggerSearch(e);
 }
-async function handleWindowPopStateEvent(e) {
-  if (isHandlingPopState) return;
-  isHandlingPopState = true;
-
-  const state = event.state;
-
-  // Also check URL parameters on back/forward (for direct navigation or URL changes)
-  const { convoId: urlConvoId, entryId: urlEntryId } = getRouteParamsFromUrl();
-  const { searchQuery: urlSearchQuery } = getSearchParamsFromUrl();
-
-  // Close mobile-only filter pages by default (only when on mobile)
-  if (mobileMediaQuery.matches) {
-    toggleElementVisibility(mobileConvoFilterWrapper, false);
-    toggleElementVisibility(mobileActorFilterWrapper, false);
-  }
-
-  // First priority: check if URL has search params (from direct URL or back button)
-  if (urlSearchQuery) {
-    // URL has search query - perform search
-    if (searchInput) {
-      searchInput.value = urlSearchQuery;
-      search(true);
-    }
-  } else if (urlConvoId !== null) {
-    // URL has convo params - navigate to conversation/entry
-    if (urlEntryId !== null) {
-      const entry = getEntry(urlConvoId, urlEntryId);
-      if (entry) {
-        await loadEntriesForConversation(urlConvoId, false);
-        await navigateToEntry(urlConvoId, urlEntryId, false);
-      }
-    } else {
-      await loadEntriesForConversation(urlConvoId, false);
-      highlightConversationInTree(urlConvoId);
-    }
-  } else if (!state || state.view === "home") {
-    // Close mobile search and go to home view
-    closeMobileSearchScreen();
-    goToHomeView();
-  } else if (state.view === "search") {
-    if (mobileMediaQuery.matches) {
-      // Return to mobile search screen; openMobileSearchScreen() will re-run the search
-      openMobileSearchScreen();
-    } else {
-      // Desktop: search is treated as a forward-only action
-      goToHomeView();
-    }
-  } else if (state.view === "mobile-filter") {
-    // Only handle mobile-filter on mobile devices
-    if (mobileMediaQuery.matches) {
-      // Open the specific mobile filter page
-      if (state.filter === "convo") {
-        toggleElementVisibility(mobileConvoFilterWrapper, true);
-      } else if (state.filter === "actor") {
-        toggleElementVisibility(mobileActorFilterWrapper, true);
-      }
-    }
-  } else if (state.view === "conversation") {
-    if (state.convoId && state.entryId) {
-      // Going to a specific entry
-      // Determine if we're going backwards or forwards
-      const isGoingBack =
-        navigationHistory.length > 0 &&
-        navigationHistory[navigationHistory.length - 1] &&
-        (navigationHistory[navigationHistory.length - 1].convoId !==
-          state.convoId ||
-          navigationHistory[navigationHistory.length - 1].entryId !==
-            state.entryId);
-
-      if (isGoingBack) {
-        // Going backwards - remove current entry (non-clickable) and the last clickable entry
-        if (chatLogEl && chatLogEl.lastElementChild) {
-          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
-        }
-        if (chatLogEl && chatLogEl.lastElementChild) {
-          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
-        }
-        navigationHistory.pop();
-      }
-
-      // Navigate to the entry
-      await navigateToEntry(state.convoId, state.entryId, !isGoingBack);
-    } else if (state.convoId) {
-      // Going to conversation root
-      const isGoingBack = navigationHistory.length > 1;
-
-      if (isGoingBack) {
-        if (chatLogEl && chatLogEl.lastElementChild) {
-          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove current
-        }
-        if (chatLogEl && chatLogEl.lastElementChild) {
-          chatLogEl.removeChild(chatLogEl.lastElementChild); // Remove last clickable
-        }
-        navigationHistory.pop();
-      }
-
-      await loadEntriesForConversation(state.convoId, false);
-    }
-  }
-
-  currentAppState = state?.view || "home";
-
-  // Update UI state
-  updateBackButtonState();
-  if (typeof updateMobileNavButtons === "function") {
-    updateMobileNavButtons();
-  }
-
-  setTimeout(() => {
-    isHandlingPopState = false;
-  }, 100);
-}
 function handleConvoTypeModalOverlayClick(e) {
   const modal = $("conversationTypesModalOverlay");
   if (e.target == modal) {
@@ -1057,27 +1102,6 @@ function handleHistoryBackButtonClick(e) {
   // Use browser back button instead of manual history management
   window.history.back();
 }
-async function handleSearchResultClick(e) {
-  const result = e.currentTarget;
-  const cid = result.getAttribute("data-convo-id");
-  const eid = result.getAttribute("data-id");
-  const dialogueText = result.getAttribute("data-dialogue-text"); // Already replaced with alternate at this point
-  const alternateCondition = result.getAttribute("data-alternate-condition");
-
-  setNavigationHistory([{ convoId: cid, entryId: null }]);
-  if (cid && !eid) {
-    await jumpToConversationRoot(cid);
-  } else {
-    await navigateToEntry(cid, eid, true, alternateCondition, dialogueText);
-  }
-
-  highlightConversationInTree(cid);
-  if (mobileMediaQuery.matches) {
-    closeMobileSearchScreen();
-  } else {
-    document.querySelector(".selected")?.scrollIntoView(true);
-  }
-}
 async function handleWholeWordsCheckboxChange(e) {
   // Preserve the total count computed by the last DB search — whole-words
   // filtering should only affect the filtered count, not the underlying total
@@ -1109,25 +1133,7 @@ function handleInfiniteScroll(e) {
     search(false);
   }
 }
-async function handleLineLinkClick(e) {
-  e.preventDefault();
-  const link = e.currentTarget;
-  const cid = link.getAttribute("data-convo-id");
-  const eid = link.getAttribute("data-id");
-  const isAlternate = link.getAttribute("data-is-alternate");
-  const alternateCondition =
-    link.getAttribute("data-alternate-condition") === "undefined"
-      ? null
-      : link.getAttribute("data-alternate-condition");
-  const alternateLine = link.getAttribute("data-alternate-line");
-  if (isAlternate === "true") {
-    // Don't add to history when switching to alternate view
-    await navigateToEntry(cid, eid, false, alternateCondition, alternateLine);
-  } else {
-    // Don't add to history when switching back to original view
-    await navigateToEntry(cid, eid, false, null, null);
-  }
-}
+
 function handleSettingsModalOverlayClick(e) {
   const settingsModalOverlay = $(settingsModalOverlayId);
   if (e.target === settingsModalOverlay) {
