@@ -2574,10 +2574,7 @@ async function loadEntriesForConversation(convoId, resetHistory = false) {
 
     const text = r.dialoguetext || "";
     const el = createCardItem(title, convoId, entryId, text);
-    el.addEventListener(
-      "click",
-      async () => await navigateToEntry(convoId, entryId),
-    );
+    el.addEventListener("click", handleEntryClick);
     entryListEl.appendChild(el);
   });
 }
@@ -3112,7 +3109,6 @@ async function showEntryDetails(
         selectedAlternateLine: null,
         originalDialogueText:
           cached.originalDialogueText || coreRow?.dialoguetext,
-        onNavigate: navigateToEntry,
       });
       return;
     }
@@ -3123,8 +3119,8 @@ async function showEntryDetails(
   }
 
   // Fetch alternates, checks, parents/children
-  const alternates = coreRow.hasalts > 0 ? getAlternates(convoId, entryId) : [];
-  const checks = coreRow.hascheck > 0 ? getChecks(convoId, entryId) : [];
+  const alternates = coreRow.hasAlts > 0 ? getAlternates(convoId, entryId) : [];
+  const checks = coreRow.hasCheck > 0 ? getChecks(convoId, entryId) : [];
   const { parents, children } = getParentsChildren(convoId, entryId);
   // Get conversation data
   const convoRow = getConversationById(convoId) || {};
@@ -3180,7 +3176,6 @@ async function showEntryDetails(
     difficulty: convoRow.difficulty,
     totalEntries: convoRow.totalEntries,
     totalSubtasks: convoRow.totalSubtasks,
-    onNavigate: navigateToEntry,
   };
 
   // Only cache the base data without alternate-specific info
@@ -3228,6 +3223,12 @@ function createSearchResultDiv(r, query) {
   return div;
 }
 
+async function handleEntryClick(e) {
+  const item = e.currentTarget;
+  const convoId = item.getAttribute("data-convo-id");
+  const entryId = item.getAttribute("data-id");
+  await navigateToEntry(convoId, entryId);
+}
 // Helper: filter a list of results by a set of types (treat 'all' as no-op)
 function filterResultsByType(results, typeSet) {
   if (!typeSet || typeSet.has("all") || typeSet.size === 0) return results;
@@ -3263,10 +3264,7 @@ function loadChildOptions(convoId, entryId) {
         c.d_id,
         dest.dialoguetext,
       );
-      el.addEventListener(
-        "click",
-        async () => await navigateToEntry(c.d_convo, c.d_id),
-      );
+      el.addEventListener("click", handleEntryClick);
       entryListEl.appendChild(el);
     }
 
@@ -4110,7 +4108,7 @@ function search(resetSearch = true) {
 
       // Render initial set
       initialFiltered.forEach((r) => {
-        const div = createSearchResultDiv(r, rawQuery);        
+        const div = createSearchResultDiv(r, rawQuery);
         div.addEventListener("click", handleSearchResultClick);
 
         entryListEl.appendChild(div);
@@ -4961,7 +4959,11 @@ function renderEntryDetails(containerEl, data) {
   wrapper.appendChild(createConvoTable(data));
 
   // If viewing an alternate, show original line; otherwise show alternates list
-  if (data.selectedAlternateCondition && data.originalDialogueText) {
+  if (
+    data.selectedAlternateCondition !== "undefined" &&
+    data.selectedAlternateCondition &&
+    data.originalDialogueText
+  ) {
     wrapper.appendChild(createOriginalLineSection(data));
   } else if (data?.alternates.length) {
     wrapper.appendChild(createAlternatesList(data.alternates, data));
@@ -4970,25 +4972,6 @@ function renderEntryDetails(containerEl, data) {
   wrapper.appendChild(createMetaTable(data));
 
   containerEl.appendChild(wrapper);
-}
-async function handleAlternateLineLinkClick(e) {
-  e.preventDefault();
-  const link = e.currentTarget;
-  const cid = link.getAttribute("data-convo-id");
-  const eid = link.getAttribute("data-id");
-  const alternateCondition = link.getAttribute("data-alternate-condition");
-  const alternateLine = link.getAttribute("data-alternate-line");
-
-  if (data.onNavigate) {
-    // Don't add to history when switching to alternate view
-    await data.onNavigate(
-      cid,
-      eid,
-      false,
-      alternateCondition,
-      alternateLine,
-    );
-  }
 }
 function createAlternatesList(alternates, data) {
   const section = createDetailsSectionHeader("Alternates");
@@ -5025,6 +5008,28 @@ function createAlternatesList(alternates, data) {
   return section;
 }
 
+async function handleAlternateLineLinkClick(e) {
+  e.preventDefault();
+  const link = e.currentTarget;
+  const cid = link.getAttribute("data-convo-id");
+  const eid = link.getAttribute("data-id");
+  const alternateCondition = link.getAttribute("data-alternate-condition");
+  const alternateLine = link.getAttribute("data-alternate-line");
+
+  // Don't add to history when switching to alternate view
+  await navigateToEntry(cid, eid, false, alternateCondition, alternateLine);
+}
+
+async function handleOriginalLineSelectionEvent(e) {
+  e.preventDefault();
+  const link = e.currentTarget;
+  const cid = link.getAttribute("data-convo-id");
+  const eid = link.getAttribute("data-id");
+
+  // Don't add to history when switching back to original view
+  await navigateToEntry(cid, eid, false, null, null);
+}
+
 function createOriginalLineSection(data) {
   const section = createDetailsSectionHeader("Original Line");
   const list = document.createElement("div");
@@ -5037,14 +5042,11 @@ function createOriginalLineSection(data) {
   const link = document.createElement("a");
   link.href = "#";
   link.textContent = data.originalDialogueText;
-  // TODO KA Convert to handler function
-  link.addEventListener("click", async (e) => {
-    e.preventDefault();
-    if (data.onNavigate) {
-      // Don't add to history when switching back to original view
-      await data.onNavigate(data.convoId, data.entryId, false, null, null);
-    }
-  });
+
+  link.dataset.convoId = data.convoId;
+  link.dataset.id = data.entryId;
+
+  link.addEventListener("click", handleOriginalLineSelectionEvent);
 
   item.appendChild(link);
   list.appendChild(item);
@@ -5084,13 +5086,9 @@ function createParentsList(parents, data) {
       const a = document.createElement("a");
       a.textContent = `${p.o_convo}:${p.o_id}`;
       a.href = "#";
-      a.dataset.convo = p.o_convo;
+      a.dataset.convoId = p.o_convo;
       a.dataset.id = p.o_id;
-      // TODO KA Convert to handler function
-      a.addEventListener("click", async (e) => {
-        e.preventDefault();
-        if (data.onNavigate) await data.onNavigate(p.o_convo, p.o_id);
-      });
+      a.addEventListener("click", handleEntryClick);
       item.appendChild(a);
       const meta = document.createElement("span");
       meta.textContent = ` (priority: ${p.priority}, connector: ${p.isConnector})`;
@@ -5115,13 +5113,9 @@ function createChildrenList(children, data) {
       const a = document.createElement("a");
       a.textContent = `${c.d_convo}:${c.d_id}`;
       a.href = "#";
-      a.dataset.convo = c.d_convo;
+      a.dataset.convoId = c.d_convo;
       a.dataset.id = c.d_id;
-      // TODO KA Convert to handler function
-      a.addEventListener("click", async (e) => {
-        e.preventDefault();
-        if (data.onNavigate) await data.onNavigate(c.d_convo, c.d_id);
-      });
+      a.addEventListener("click", handleEntryClick);
       item.appendChild(a);
       const meta = document.createElement("span");
       meta.textContent = ` (priority: ${c.priority}, connector: ${c.isConnector})`;
@@ -5434,6 +5428,13 @@ function setUpSaveButton() {
   }
 }
 
+function handleSettingsModalOverlayClick(e) {
+  const settingsModalOverlay = $(settingsModalOverlayId);
+  if (e.target === settingsModalOverlay) {
+    toggleElementVisibility(settingsModalOverlay, false);
+  }
+}
+
 function setupSettingsModal() {
   // Open settings modal
 
@@ -5453,14 +5454,10 @@ function setupSettingsModal() {
   }
 
   // Close modal when clicking overlay
-  if (settingsModalOverlay) {
-    // TODO KA Convert to handler function
-    settingsModalOverlay.addEventListener("click", (e) => {
-      if (e.target === settingsModalOverlay) {
-        toggleElementVisibility(settingsModalOverlay, false);
-      }
-    });
-  }
+  settingsModalOverlay?.addEventListener(
+    "click",
+    handleSettingsModalOverlayClick,
+  );
 }
 
 // #endregion
