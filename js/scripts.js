@@ -3784,7 +3784,7 @@ function filterAndMatchResults(results, rawQuery, { useMobile = false } = {}) {
 }
 
 async function handleDesktopSearchResultClick(e) {
-    const result = e.currentTarget;
+  const result = e.currentTarget;
   const cid = result.getAttribute("data-convo-id");
   const eid = result.getAttribute("data-id");
   const isAlternate = result.getAttribute("data-is-alternate");
@@ -4225,29 +4225,7 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchResults.innerHTML = "";
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
-        // TODO KA Convert to handler function
-        div.addEventListener("click", async () => {
-          const cid = r.conversationid;
-          const eid = r.id;
-
-          const alternateCondition = r.isAlternate
-            ? r.alternatecondition
-            : null;
-          const alternateLine = r.isAlternate ? r.dialoguetext : null;
-          if (cid && !eid) {
-            await jumpToConversationRoot(cid);
-          } else {
-            await navigateToEntry(
-              cid,
-              eid,
-              true,
-              alternateCondition,
-              alternateLine,
-            );
-          }
-
-          closeMobileSearchScreen();
-        });
+        div.addEventListener("click", handleDesktopSearchResultClick);
 
         mobileSearchResults.appendChild(div);
       });
@@ -4264,29 +4242,7 @@ function performMobileSearch(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
-        // TODO KA Convert to handler function
-        div.addEventListener("click", async () => {
-          const cid = r.conversationid;
-          const eid = r.id;
-
-          const alternateCondition = r.isAlternate
-            ? r.alternatecondition
-            : null;
-          const alternateLine = r.isAlternate ? r.dialoguetext : null;
-          if (cid && !eid) {
-            await jumpToConversationRoot(cid);
-          } else {
-            await navigateToEntry(
-              cid,
-              eid,
-              true,
-              alternateCondition,
-              alternateLine,
-            );
-          }
-
-          closeMobileSearchScreen();
-        });
+        div.addEventListener("click", handleDesktopSearchResultClick);
 
         mobileSearchResults.appendChild(div);
       });
@@ -4330,48 +4286,29 @@ function performMobileSearch(resetSearch = true) {
 // Search pagination state
 
 // Setup infinite scroll for search results
+function handleInfiniteScroll(e) {
+  // Check if we're near the bottom and have more results to load
+  const target = e?.currentTarget;
+  const scrollTop = target.scrollTop;
+  const scrollHeight = target.scrollHeight;
+  const clientHeight = target.clientHeight;
+
+  const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 100;
+
+  if (
+    scrolledToBottom &&
+    !isLoadingMore &&
+    currentSearchOffset < currentSearchTotal
+  ) {
+    // Hide search indicator
+    toggleElementVisibility(searchLoader, false);
+    // Load more results
+    search(false);
+  }
+}
 function setupSearchInfiniteScroll() {
-  // TODO KA Convert to handler function
-  mobileSearchScreen.addEventListener("scroll", (e) => {
-    // Check if we're near the bottom and have more results to load
-    const scrollTop = e?.target?.scrollTop;
-    const scrollHeight = e?.target?.scrollHeight;
-    const clientHeight = e?.target?.clientHeight;
-
-    const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 100;
-
-    if (
-      scrolledToBottom &&
-      !isLoadingMore &&
-      currentSearchOffset < currentSearchTotal
-    ) {
-      // Hide search indicator
-      toggleElementVisibility(searchLoader, false);
-      // Load more results
-      search(false);
-    }
-  });
-
-  // TODO KA Convert to handler function
-  entryListEl.addEventListener("scroll", (e) => {
-    // Check if we're near the bottom and have more results to load
-    const scrollTop = e.target.scrollTop;
-    const scrollHeight = e.target.scrollHeight;
-    const clientHeight = e.target.clientHeight;
-
-    const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 100;
-
-    if (
-      scrolledToBottom &&
-      !isLoadingMore &&
-      currentSearchOffset < currentSearchTotal
-    ) {
-      // Hide search indicator
-      toggleElementVisibility(searchLoader, false);
-      // Load more results
-      search(false);
-    }
-  });
+  mobileSearchScreen.addEventListener("scroll", handleInfiniteScroll);
+  entryListEl.addEventListener("scroll", handleInfiniteScroll);
 }
 
 // #endregion
@@ -4928,7 +4865,6 @@ function appendHistoryItem(chatLogEl, title, text, historyIndex, onClick) {
   item.appendChild(titleDiv);
   item.appendChild(textDiv);
 
-  // TODO KA Convert to handler function
   if (onClick) item.addEventListener("click", onClick);
   chatLogEl.appendChild(item);
   chatLogEl.scrollTop = chatLogEl.scrollHeight;
