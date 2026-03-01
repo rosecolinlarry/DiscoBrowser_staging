@@ -3220,7 +3220,11 @@ function createSearchResultDiv(r, query) {
     convoType,
   );
   div.dataset.actor = r.actor;
+  div.dataset.dialogueText = r.dialoguetext;
   div.dataset.isHidden = r.isHidden;
+  div.dataset.title = r.title;
+  div.dataset.isAlternate = r.isAlternate === true;
+  div.dataset.alternateCondition = r.alternatecondition;
   return div;
 }
 
@@ -3811,21 +3815,18 @@ function filterAndMatchResults(results, rawQuery, { useMobile = false } = {}) {
   return filtered;
 }
 
-async function handleDesktopSearchResultClick(e) {
+async function handleSearchResultClick(e) {
   const result = e.currentTarget;
   const cid = result.getAttribute("data-convo-id");
   const eid = result.getAttribute("data-id");
-  const isAlternate = result.getAttribute("data-is-alternate");
-  const alternatecondition = result.getAttribute("data-alternate-condition");
-  const dialoguetext = result.getAttribute("data-dialogue-text");
-  const alternateCondition = isAlternate ? alternatecondition : null;
-  const alternateLine = isAlternate ? dialoguetext : null;
+  const dialogueText = result.getAttribute("data-dialogue-text"); // Already replaced with alternate at this point
+  const alternateCondition = result.getAttribute("data-alternate-condition");
 
   setNavigationHistory([{ convoId: cid, entryId: null }]);
   if (cid && !eid) {
     await jumpToConversationRoot(cid);
   } else {
-    await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+    await navigateToEntry(cid, eid, true, alternateCondition, dialogueText);
   }
 
   highlightConversationInTree(cid);
@@ -3864,7 +3865,7 @@ function applyFiltersToCurrentResults(useMobile = false) {
     }
     filtered.forEach((r) => {
       const div = createSearchResultDiv(r, rawQuery);
-      div.addEventListener("click", handleDesktopSearchResultClick(e));
+      div.addEventListener("click", handleSearchResultClick);
       mobileSearchResults.appendChild(div);
     });
 
@@ -3897,7 +3898,7 @@ function applyFiltersToCurrentResults(useMobile = false) {
 
   filtered.forEach((r) => {
     const div = createSearchResultDiv(r, rawQuery);
-    div.addEventListener("click", handleDesktopSearchResultClick);
+    div.addEventListener("click", handleSearchResultClick);
 
     entryListEl.appendChild(div);
   });
@@ -4109,10 +4110,8 @@ function search(resetSearch = true) {
 
       // Render initial set
       initialFiltered.forEach((r) => {
-        const div = createSearchResultDiv(r, rawQuery);
-        // Add data attributes
-
-        div.addEventListener("click", handleDesktopSearchResultClick);
+        const div = createSearchResultDiv(r, rawQuery);        
+        div.addEventListener("click", handleSearchResultClick);
 
         entryListEl.appendChild(div);
       });
@@ -4131,7 +4130,7 @@ function search(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
-        div.addEventListener("click", handleDesktopSearchResultClick);
+        div.addEventListener("click", handleSearchResultClick);
 
         entryListEl.appendChild(div);
       });
@@ -4253,7 +4252,7 @@ function performMobileSearch(resetSearch = true) {
       mobileSearchResults.innerHTML = "";
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
-        div.addEventListener("click", handleDesktopSearchResultClick);
+        div.addEventListener("click", handleSearchResultClick);
 
         mobileSearchResults.appendChild(div);
       });
@@ -4270,7 +4269,7 @@ function performMobileSearch(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, searchInput.value);
-        div.addEventListener("click", handleDesktopSearchResultClick);
+        div.addEventListener("click", handleSearchResultClick);
 
         mobileSearchResults.appendChild(div);
       });
@@ -4793,8 +4792,6 @@ function createCardItem(
 
   el.dataset.convoId = convoId;
   el.dataset.id = entryId;
-  el.dataset.dialogueText = contentText;
-  el.dataset.title = titleText;
   return el;
 }
 
@@ -4974,7 +4971,25 @@ function renderEntryDetails(containerEl, data) {
 
   containerEl.appendChild(wrapper);
 }
+async function handleAlternateLineLinkClick(e) {
+  e.preventDefault();
+  const link = e.currentTarget;
+  const cid = link.getAttribute("data-convo-id");
+  const eid = link.getAttribute("data-id");
+  const alternateCondition = link.getAttribute("data-alternate-condition");
+  const alternateLine = link.getAttribute("data-alternate-line");
 
+  if (data.onNavigate) {
+    // Don't add to history when switching to alternate view
+    await data.onNavigate(
+      cid,
+      eid,
+      false,
+      alternateCondition,
+      alternateLine,
+    );
+  }
+}
 function createAlternatesList(alternates, data) {
   const section = createDetailsSectionHeader("Alternates");
   const list = document.createElement("div");
@@ -4988,20 +5003,13 @@ function createAlternatesList(alternates, data) {
       const link = document.createElement("a");
       link.href = "#";
       link.textContent = a.alternateline;
-      // TODO KA Convert to handler function
-      link.addEventListener("click", async (e) => {
-        e.preventDefault();
-        if (data.onNavigate) {
-          // Don't add to history when switching to alternate view
-          await data.onNavigate(
-            a.conversationid,
-            a.dialogueid,
-            false,
-            a.condition,
-            a.alternateline,
-          );
-        }
-      });
+
+      link.dataset.convoId = a.conversationid;
+      link.dataset.id = a.dialogueid;
+      link.dataset.alternateCondition = a.condition;
+      link.dataset.alternateLine = a.alternateLine;
+
+      link.addEventListener("click", handleAlternateLineLinkClick);
 
       item.appendChild(link);
       const conditionSpan = document.createElement("span");
