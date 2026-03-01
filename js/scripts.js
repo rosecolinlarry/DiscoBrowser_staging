@@ -1730,14 +1730,42 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
 
 function handleConvoLabelClick(e) {
   e.stopPropagation();
-  e.target.dispatchEvent(
-    new CustomEvent("convoLeafClick", {
-      detail: { convoId: match?.convoId },
-      bubbles: true,
-    }),
-  );
+  const label = e.currentTarget;
+  const convoId = label.getAttribute("data-convo-id");
+  const wrapper = label.parentElement;
+  const nodeObj = wrapper._nodeObj;
+
+  // Filtered conversations do not have a nodeObj and are all leaves
+  if (!nodeObj) {
+    label.dispatchEvent(
+      new CustomEvent("convoLeafClick", {
+        detail: { convoId: convoId },
+        bubbles: true,
+      }),
+    );
+    return;
+  }
+
+  // if this node's subtree is a single conversation, dispatch event
+  const total = nodeObj?._subtreeSize || 0;
+  if (total === 1 && nodeObj?.convoIds.length === 1) {
+    label.dispatchEvent(
+      new CustomEvent("convoLeafClick", {
+        detail: { convoId: nodeObj.convoIds[0] },
+        bubbles: true,
+      }),
+    );
+    return;
+  }
+
+  // For non-leaf nodes, toggle expand/collapse
+  const isExpanded = wrapper?.classList.toggle("expanded");
+  const toggle = label.querySelector(".toggle");
+  setToggleIcon(toggle, isExpanded);
 }
+
 function createFilteredLeafItem(match, searchText, tree) {
+  // Filter the conversation tree by text and create the results as leaves
   const wrapper = document.createElement("div");
   wrapper.className = "node leaf-result";
 
@@ -4560,37 +4588,7 @@ function makeNodeElement(name, nodeObj) {
   wrapper._childrenRendered = true;
 
   // click handler: navigate if leaf, or toggle expand
-  // TODO KA Convert to handler function
-  label.addEventListener("click", (ev) => {
-    ev.stopPropagation();
-
-    // if this is a collapsed leaf (has single convoId, no children)
-    if (hasCollapsedLeaf) {
-      label.dispatchEvent(
-        new CustomEvent("convoLeafClick", {
-          detail: { convoId: nodeObj.convoIds[0] },
-          bubbles: true,
-        }),
-      );
-      return;
-    }
-
-    // if this node's subtree is a single conversation, dispatch event
-    const total = nodeObj._subtreeSize || 0;
-    if (total === 1 && nodeObj.convoIds.length === 1) {
-      label.dispatchEvent(
-        new CustomEvent("convoLeafClick", {
-          detail: { convoId: nodeObj.convoIds[0] },
-          bubbles: true,
-        }),
-      );
-      return;
-    }
-
-    // For non-leaf nodes, toggle expand/collapse
-    const isExpanded = wrapper.classList.toggle("expanded");
-    setToggleIcon(toggle, isExpanded);
-  });
+  label.addEventListener("click", handleConvoLabelClick);
 
   return wrapper;
 }
