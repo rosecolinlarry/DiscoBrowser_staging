@@ -3191,6 +3191,8 @@ function createSearchResultDiv(r, query) {
     true,
     convoType,
   );
+  div.dataset.actor = r.actor;
+  div.dataset.isHidden = r.isHidden;
   return div;
 }
 
@@ -3325,7 +3327,7 @@ function setupMobileSearch() {
   // Setup type filter sheet
   setupMobileTypeFilter();
 }
-async function handleConvoRootButtonClick(e) {
+async function handleMobileConvoRootButtonClick(e) {
   if (currentConvoId !== null) {
     await loadEntriesForConversation(currentConvoId, false);
     updateMobileNavButtons();
@@ -3350,7 +3352,7 @@ function setupMobileSidebar() {
 
   // Mobile root button
   if (convoRootBtn) {
-    convoRootBtn.addEventListener("click", handleConvoRootButtonClick);
+    convoRootBtn.addEventListener("click", handleMobileConvoRootButtonClick);
   }
 }
 
@@ -3458,93 +3460,95 @@ function showMobileTypeFilter() {
   toggleElementVisibility(typeFilterDropdown, true);
 }
 
-function setupConvoActorFilter() {
-  const backBtn = $("mobileConvoFilterBack");
-  if (!backBtn) return;
-
+function handleMobileConvoFilterBackButtonClick(e) {
   // Use browser back on mobile to return to the previous view so history is kept in sync
-  // TODO KA Convert to handler function
-  backBtn.addEventListener("click", () => {
+  const wrapper = $("mobileConvoFilterWrapper"); // Checklist
+  if (mobileMediaQuery.matches) {
+    window.history.back();
+  } else {
+    // Desktop: just close the filter screen and apply changes
+    toggleElementVisibility(wrapper, false);
+    search(true);
+  }
+}
+function handleMobileConvoFilterWrapperClick(e) {
+  // Close when clicking outside the content area (mobile only)
+  const wrapper = $("mobileConvoFilterWrapper"); // Checklist
+  if (e.target === wrapper) {
     if (mobileMediaQuery.matches) {
       window.history.back();
     } else {
-      // Desktop: just close the filter screen and apply changes
-      toggleElementVisibility(mobileConvoFilterWrapper, false);
+      toggleElementVisibility(wrapper, false);
       search(true);
     }
-  });
-
-  // Close when clicking outside the content area (mobile only)
-  if (mobileConvoFilterWrapper) {
-    // TODO KA Convert to handler function
-    mobileConvoFilterWrapper.addEventListener("click", (e) => {
-      if (e.target === mobileConvoFilterWrapper) {
-        if (mobileMediaQuery.matches) {
-          window.history.back();
-        } else {
-          toggleElementVisibility(mobileConvoFilterWrapper, false);
-          search(true);
-        }
-      }
-    });
+  }
+}
+function setupConvoActorFilter() {
+  backBtn?.addEventListener("click", handleMobileConvoFilterBackButtonClick);
+  mobileConvoFilterWrapper?.addEventListener(
+    "click",
+    handleMobileConvoFilterWrapperClick,
+  );
+}
+function handleMobileActorFilterBackButtonClick() {
+  const wrapper = $("mobileActorFilterWrapper");
+  if (mobileMediaQuery.matches) {
+    window.history.back();
+  } else {
+    toggleElementVisibility(e.target, false);
+    search(true);
   }
 }
 
+function handleMobileActorFilterWrapperClick(e) {
+  const wrapper = $("mobileActorFilterWrapper");
+  // Close when clicking outside the content area
+  if (e.target === wrapper) {
+    if (mobileMediaQuery.matches) {
+      window.history.back();
+    } else {
+      toggleElementVisibility(e.target, false);
+      search(true);
+    }
+  }
+}
 function setupMobileActorFilter() {
   const backBtn = $("mobileActorFilterBack");
-
-  if (!backBtn) return;
-
-  // TODO KA Convert to handler function
-  backBtn.addEventListener("click", () => {
-    if (mobileMediaQuery.matches) {
-      window.history.back();
-    } else {
-      toggleElementVisibility(mobileActorFilterWrapper, false);
-      search(true);
-    }
-  });
-
-  // Close when clicking outside the content area
-  if (mobileActorFilterWrapper) {
-    // TODO KA Convert to handler function
-    mobileActorFilterWrapper.addEventListener("click", (e) => {
-      if (e.target === mobileActorFilterWrapper) {
-        if (mobileMediaQuery.matches) {
-          window.history.back();
-        } else {
-          toggleElementVisibility(mobileActorFilterWrapper, false);
-          search(true);
-        }
-      }
-    });
+  backBtn?.addEventListener("click", handleMobileActorFilterBackButtonClick);
+  mobileActorFilterWrapper?.addEventListener(
+    "click",
+    handleMobileActorFilterWrapperClick,
+  );
+}
+function handleMobileTypeFilterSheetClick(e) {
+  const wrapper = $("mobileTypeFilterSheet");
+  // Close sheet when clicking outside content
+  if (e.target === wrapper) {
+    toggleElementVisibility(e.target, false);
+    // Apply changes and re-run search with reset
+    search(true);
   }
 }
-
+function handleMobileConvoTypeButtonClick(e) {
+  const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
+  // Close sheet
+  toggleElementVisibility(mobileTypeFilterSheet, false);
+  mobileTypeFilterSheet.classList.remove("active");
+  typeFilterDropdown.classList.remove("show");
+  // Explicitly run a reset search so mobile results reflect the new selection
+  search(true);
+}
 function setupMobileTypeFilter() {
   // Skip setup if required elements are missing (indicates refactored HTML)
   const applyBtn = $("mobileTypeApply");
 
-  // Close sheet when clicking outside content
-  // TODO KA Convert to handler function
-  mobileTypeFilterSheet.addEventListener("click", (e) => {
-    if (e.target === mobileTypeFilterSheet) {
-      toggleElementVisibility(mobileTypeFilterSheet, false);
-      // Apply changes and re-run search with reset
-      search(true);
-    }
-  });
+  mobileTypeFilterSheet?.addEventListener(
+    "click",
+    handleMobileTypeFilterSheetClick,
+  );
 
   // Apply button
-  // TODO KA Convert to handler function
-  applyBtn.addEventListener("click", () => {
-    // Close sheet
-    toggleElementVisibility(mobileTypeFilterSheet, false);
-    mobileTypeFilterSheet.classList.remove("active");
-    typeFilterDropdown.classList.remove("show");
-    // Explicitly run a reset search so mobile results reflect the new selection
-    search(true);
-  });
+  applyBtn?.addEventListener("click", () => handleMobileConvoTypeButtonClick);
 }
 // #endregion
 
@@ -3556,38 +3560,42 @@ function setUpWholeWordsToggle() {
   });
 }
 
-function setUpSearch() {
-  // TODO KA Convert to handler function
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      search();
-    }
-  });
-  // On mobile, clicking the (visible) search input should open the mobile search screen
-  // TODO KA Convert to handler function
-  searchInput.addEventListener("click", (e) => {
-    if (mobileMediaQuery.matches) {
-      openMobileSearchScreen();
-    }
-  });
+function handleSearchInputKeyDown(e) {
+  if (e.key === "Enter") {
+    search();
+  }
+}
 
-  // TODO KA Convert to handler function
-  searchInput.addEventListener("input", (e) => {
-    // Keep mobile and desktop input unified (single element used)
-    // If the mobile header trigger exists, mirror the value for display
-    if (mobileSearchTriggerEl)
-      mobileSearchTriggerEl.value = e?.target?.value ?? "";
-    if (e?.target?.value.length > 0) {
-      // Show clear icon
-      toggleElementVisibility(searchClearBtn, true);
-      toggleElementVisibility(searchBtn, false);
-    } else {
-      // Show search icon
-      toggleElementVisibility(searchClearBtn, false);
-      toggleElementVisibility(searchBtn, true);
-    }
-  });
-  searchBtn.addEventListener("click", () => search());
+function handleSearchInputClick(e) {
+  // On mobile, clicking the (visible) search input should open the mobile search screen
+  if (mobileMediaQuery.matches) {
+    openMobileSearchScreen();
+  }
+}
+function handleSearchButtonClick(e) {
+  search();
+}
+function handleSearchInputEvent(e) {
+  // Keep mobile and desktop input unified (single element used)
+  // If the mobile header trigger exists, mirror the value for display
+  if (mobileSearchTriggerEl)
+    mobileSearchTriggerEl.value = e?.target?.value ?? "";
+  if (e?.target?.value.length > 0) {
+    // Show clear icon
+    toggleElementVisibility(searchClearBtn, true);
+    toggleElementVisibility(searchBtn, false);
+  } else {
+    // Show search icon
+    toggleElementVisibility(searchClearBtn, false);
+    toggleElementVisibility(searchBtn, true);
+  }
+}
+
+function setUpSearch() {
+  searchInput.addEventListener("keydown", handleSearchInputKeyDown);
+  searchInput.addEventListener("click", handleSearchInputClick);
+  searchInput.addEventListener("input", handleSearchInputEvent);
+  searchBtn.addEventListener("click", handleSearchButtonClick);
 }
 
 function setUpMainHeader() {
@@ -3598,25 +3606,14 @@ function setUpMainHeader() {
   }
 }
 
-function setUpHistoryConvoRootButton() {
-  if (convoRootBtn) {
-    // TODO KA Convert to handler function
-    convoRootBtn.addEventListener("click", async () => {
-      if (currentConvoId !== null) {
-        await jumpToConversationRoot();
-      }
-    });
+async function handleConvoRootButtonClick(e) {
+  if (currentConvoId !== null) {
+    await jumpToConversationRoot();
   }
 }
-
-function setUpHistoryBackButton() {
-  if (backBtn) {
-    // TODO KA Convert to handler function
-    backBtn.addEventListener("click", () => {
-      // Use browser back button instead of manual history management
-      window.history.back();
-    });
-  }
+function handleHistoryBackButtonClick(e) {
+  // Use browser back button instead of manual history management
+  window.history.back();
 }
 
 async function boot() {
@@ -3683,9 +3680,9 @@ async function boot() {
   // Whole words toggle - trigger search when changed
   setUpWholeWordsToggle();
 
-  setUpHistoryBackButton();
-
-  setUpHistoryConvoRootButton();
+  // Desktop History Buttons
+  backBtn?.addEventListener("click", handleHistoryBackButtonClick);
+  convoRootBtn?.addEventListener("click", handleConvoRootButtonClick);
 
   updateBackButtonState();
 
@@ -3786,6 +3783,41 @@ function filterAndMatchResults(results, rawQuery, { useMobile = false } = {}) {
   return filtered;
 }
 
+async function handleDesktopSearchResultClick(e) {
+    const result = e.currentTarget;
+  const cid = result.getAttribute("data-convo-id");
+  const eid = result.getAttribute("data-id");
+  const isAlternate = result.getAttribute("data-is-alternate");
+  const alternatecondition = result.getAttribute("data-alternate-condition");
+  const dialoguetext = result.getAttribute("data-dialogue-text");
+  const alternateCondition = isAlternate ? alternatecondition : null;
+  const alternateLine = isAlternate ? dialoguetext : null;
+
+  setNavigationHistory([{ convoId: cid, entryId: null }]);
+  if (cid && !eid) {
+    await jumpToConversationRoot(cid);
+  } else {
+    await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
+  }
+
+  highlightConversationInTree(cid);
+  if (mobileMediaQuery.matches) {
+    closeMobileSearchScreen();
+  } else {
+    document.querySelector(".selected")?.scrollIntoView(true);
+  }
+}
+async function handleWholeWordsCheckboxChange(e) {
+  // Preserve the total count computed by the last DB search — whole-words
+  // filtering should only affect the filtered count, not the underlying total
+  // number of results available from the database.
+  const prevTotal = currentSearchTotal;
+  applyFiltersToCurrentResults(mobileMediaQuery.matches);
+  if (prevTotal > 0 && currentSearchTotal === 0) {
+    setCurrentSearchTotal(prevTotal);
+  }
+}
+
 function applyFiltersToCurrentResults(useMobile = false) {
   const rawQuery = searchInput?.value ?? "";
 
@@ -3802,31 +3834,9 @@ function applyFiltersToCurrentResults(useMobile = false) {
       toggleElementVisibility(mobileSearchCount, false);
       return;
     }
-    // TODO KA consolidate search results to one dom element
     filtered.forEach((r) => {
       const div = createSearchResultDiv(r, rawQuery);
-      // TODO KA Convert to handler function
-      div.addEventListener("click", async () => {
-        const cid = r.conversationid;
-        const eid = r.id;
-
-        const alternateCondition = r.isAlternate ? r.alternatecondition : null;
-        const alternateLine = r.isAlternate ? r.dialoguetext : null;
-        if (cid && !eid) {
-          await jumpToConversationRoot(cid);
-        } else {
-          await navigateToEntry(
-            cid,
-            eid,
-            true,
-            alternateCondition,
-            alternateLine,
-          );
-        }
-
-        closeMobileSearchScreen();
-      });
-
+      div.addEventListener("click", handleDesktopSearchResultClick(e));
       mobileSearchResults.appendChild(div);
     });
 
@@ -3859,24 +3869,7 @@ function applyFiltersToCurrentResults(useMobile = false) {
 
   filtered.forEach((r) => {
     const div = createSearchResultDiv(r, rawQuery);
-    // TODO KA Convert to handler function
-    div.addEventListener("click", async () => {
-      const cid = r.conversationid;
-      const eid = r.id;
-
-      setNavigationHistory([{ convoId: cid, entryId: null }]);
-      const alternateCondition = r.isAlternate ? r.alternatecondition : null;
-      const alternateLine = r.isAlternate ? r.dialoguetext : null;
-
-      if (cid && !eid) {
-        await jumpToConversationRoot(cid);
-        return;
-      }
-
-      await navigateToEntry(cid, eid, true, alternateCondition, alternateLine);
-      highlightConversationInTree(cid);
-      document.querySelector(".selected")?.scrollIntoView(true);
-    });
+    div.addEventListener("click", handleDesktopSearchResultClick);
 
     entryListEl.appendChild(div);
   });
@@ -3886,17 +3879,7 @@ function applyFiltersToCurrentResults(useMobile = false) {
 }
 
 // Listen for whole-words toggle and re-filter existing results (do not re-run DB search)
-// TODO KA Convert to handler function
-wholeWordsCheckbox.addEventListener("change", async () => {
-  // Preserve the total count computed by the last DB search — whole-words
-  // filtering should only affect the filtered count, not the underlying total
-  // number of results available from the database.
-  const prevTotal = currentSearchTotal;
-  applyFiltersToCurrentResults(mobileMediaQuery.matches);
-  if (prevTotal > 0 && currentSearchTotal === 0) {
-    setCurrentSearchTotal(prevTotal);
-  }
-});
+wholeWordsCheckbox.addEventListener("change", handleWholeWordsCheckboxChange);
 
 function setCurrentSearchOffset(value) {
   currentSearchOffset = value;
@@ -4099,32 +4082,9 @@ function search(resetSearch = true) {
       // Render initial set
       initialFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
-        // TODO KA Convert to handler function
-        div.addEventListener("click", async () => {
-          const cid = r.conversationid;
-          const eid = r.id;
+        // Add data attributes
 
-          setNavigationHistory([{ convoId: cid, entryId: null }]);
-          const alternateCondition = r.isAlternate
-            ? r.alternatecondition
-            : null;
-          const alternateLine = r.isAlternate ? r.dialoguetext : null;
-
-          if (cid && !eid) {
-            await jumpToConversationRoot(cid);
-            return;
-          }
-
-          await navigateToEntry(
-            cid,
-            eid,
-            true,
-            alternateCondition,
-            alternateLine,
-          );
-          highlightConversationInTree(cid);
-          document.querySelector(".selected")?.scrollIntoView(true);
-        });
+        div.addEventListener("click", handleDesktopSearchResultClick);
 
         entryListEl.appendChild(div);
       });
@@ -4143,32 +4103,7 @@ function search(resetSearch = true) {
 
       newFiltered.forEach((r) => {
         const div = createSearchResultDiv(r, rawQuery);
-        // TODO KA Convert to handler function
-        div.addEventListener("click", async () => {
-          const cid = r.conversationid;
-          const eid = r.id;
-
-          setNavigationHistory([{ convoId: cid, entryId: null }]);
-          const alternateCondition = r.isAlternate
-            ? r.alternatecondition
-            : null;
-          const alternateLine = r.isAlternate ? r.dialoguetext : null;
-
-          if (cid && !eid) {
-            await jumpToConversationRoot(cid);
-            return;
-          }
-
-          await navigateToEntry(
-            cid,
-            eid,
-            true,
-            alternateCondition,
-            alternateLine,
-          );
-          highlightConversationInTree(cid);
-          document.querySelector(".selected")?.scrollIntoView(true);
-        });
+        div.addEventListener("click", handleDesktopSearchResultClick);
 
         entryListEl.appendChild(div);
       });
@@ -4921,6 +4856,10 @@ function createCardItem(
   el.appendChild(header);
   el.appendChild(body);
 
+  el.dataset.convoId = convoId;
+  el.dataset.id = entryId;
+  el.dataset.dialogueText = contentText;
+  el.dataset.title = titleText;
   return el;
 }
 
