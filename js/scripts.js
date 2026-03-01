@@ -356,7 +356,7 @@ async function handleSearchResultClick(e) {
   const alternateCondition = result.getAttribute("data-alternate-condition");
 
   setNavigationHistory([{ convoId: cid, entryId: null }]);
-  if (cid && !eid) {
+  if (cid && !eid || eid ==="null") {
     await jumpToConversationRoot(cid);
   } else {
     await navigateToEntry(cid, eid, true, alternateCondition, dialogueText);
@@ -1290,6 +1290,8 @@ function getDistinctActors() {
 }
 
 function getActorNameById(actorId) {
+  actorId = parseInt(actorId)
+  if(!Number.isInteger(actorId)) { return }
   if (!actorId || actorId === 0) {
     return "";
   }
@@ -1305,6 +1307,8 @@ function getActorNameById(actorId) {
 // #region Conversations
 function getConversationById(convoId, showHidden) {
   // Get the conversation's task related fields
+  convoId = parseInt(convoId)
+  if(!Number.isInteger(convoId)) { return }
   let convoSQL = `SELECT  
       id, title, onUse, overrideDialogueCondition, alternateOrbText
       , checkType, condition, instruction
@@ -1334,6 +1338,8 @@ function getAllConversations(showHidden) {
 // #region Entries
 /* Load dentries for a conversation (summary listing) */
 function getEntriesForConversation(convoId, showHidden) {
+  convoId = parseInt(convoId)
+  if(!Number.isInteger(convoId)) { return }
   if (showHidden) {
     return execRows(`
     SELECT id, title, dialoguetext, actor, isHidden
@@ -1353,6 +1359,9 @@ function getEntriesForConversation(convoId, showHidden) {
 
 /* Fetch a single entry row (core fields) */
 function getEntry(convoId, entryId) {
+  entryId = parseInt(entryId)
+  convoId = parseInt(convoId)
+  if(!Number.isInteger(entryId) || !Number.isInteger(convoId)) { return }
   return execRowsFirstOrDefault(
     `SELECT de.id, de.title, de.dialoguetext, de.actor, de.hasCheck,de.hasAlts
     , de.sequence, de.conditionstring, de.userscript, de.isHidden, c.difficulty as difficultypass
@@ -1367,6 +1376,9 @@ function getEntry(convoId, entryId) {
 
 /* Fetch alternates for an entry */
 function getAlternates(convoId, entryId) {
+  entryId = parseInt(entryId)
+  convoId = parseInt(convoId)
+  if(!Number.isInteger(entryId) || !Number.isInteger(convoId)) { return }
   return execRows(
     `SELECT conversationid, dialogueid, alternateline, condition 
       FROM alternates 
@@ -1377,6 +1389,9 @@ function getAlternates(convoId, entryId) {
 
 /* Fetch check(s) for an entry */
 function getChecks(convoId, entryId) {
+  entryId = parseInt(entryId)
+  convoId = parseInt(convoId)
+  if(!Number.isInteger(entryId) || !Number.isInteger(convoId)) { return }
   return execRows(
     `SELECT checktype, difficulty, flagName, forced, a.name
       FROM checks c
@@ -1389,6 +1404,9 @@ function getChecks(convoId, entryId) {
 
 /* Fetch parents and children dlinks for an entry */
 function getParentsChildren(convoId, entryId) {
+  entryId = parseInt(entryId)
+  convoId = parseInt(convoId)
+  if(!Number.isInteger(entryId) || !Number.isInteger(convoId)) { return }
   const parents = execRows(`
     SELECT originconversationid AS o_convo, origindialogueid AS o_id, priority, isConnector
       FROM dlinks
