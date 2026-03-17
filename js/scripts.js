@@ -1106,30 +1106,8 @@ function execRowsFirstOrDefault(sql) {
   return null;
 }
 
-// #region Actors
-function getDistinctActors() {
-  return execRows(
-    `SELECT DISTINCT id, name FROM actors WHERE name IS NOT NULL AND name != '' ORDER BY name;`,
-  );
-}
 
-function getActorNameById(actorId) {
-  actorId = parseInt(actorId);
-  if (!Number.isInteger(actorId)) {
-    return;
-  }
-  if (!actorId || actorId === 0) {
-    return "";
-  }
-  const actor = execRowsFirstOrDefault(
-    `SELECT id, name, color
-        FROM actors
-        WHERE id='${actorId}'`,
-  );
-  return actor;
-}
-// #endregion
-
+// #region SQL Queries
 // #region Conversations
 function getConversationById(convoId, showHidden) {
   // Get the conversation's task related fields
@@ -1162,8 +1140,6 @@ function getAllConversations(showHidden) {
   return execRows(q);
 }
 // #endregion
-
-// #region SQL Queries
 /* Load dentries for a conversation (summary listing) */
 function getEntriesForConversation(convoId, showHidden) {
   convoId = parseInt(convoId);
@@ -1186,6 +1162,30 @@ function getEntriesForConversation(convoId, showHidden) {
   `);
   }
 }
+
+// #region Actors
+function getDistinctActors() {
+  return execRows(
+    `SELECT DISTINCT id, name FROM actors WHERE name IS NOT NULL AND name != '' ORDER BY name;`,
+  );
+}
+
+function getActorNameById(actorId) {
+  actorId = parseInt(actorId);
+  if (!Number.isInteger(actorId)) {
+    return;
+  }
+  if (!actorId || actorId === 0) {
+    return "";
+  }
+  const actor = execRowsFirstOrDefault(
+    `SELECT id, name, color
+        FROM actors
+        WHERE id='${actorId}'`,
+  );
+  return actor;
+}
+// #endregion
 
 /* Fetch a single entry row (core fields) */
 function getEntry(convoId, entryId) {
@@ -1301,10 +1301,6 @@ function getEntriesBulk(pairs = [], showHidden) {
 
 // #region Search
 /** Search entry dialogues and conversation dialogues */
-// Helper: escape single quotes
-function esc(s) {
-  return s.replace(/'/g, "''");
-}
 
 function searchDialogues(
   q,
@@ -1315,11 +1311,10 @@ function searchDialogues(
   conversationIds = null,
   showHidden,
 ) {
-  // Build WHERE clause - only include text search if query is provided
-  let dentriesWhere = "";
-
   // Search dentries table
   const limitClause = ` LIMIT ${limit} OFFSET ${offset}`;
+  
+  let dentriesWhere = "";
   dentriesWhere = buildEntriesWhereAndLimitClause(
     q,
     dentriesWhere,
@@ -1367,13 +1362,15 @@ function searchDialogues(
   };
 }
 
-// Helper: build conditions for a set of columns using parsed tokens
-function buildConditionsForColumns(q, columns) {
-  const raw = (q || "").trim();
-  // Extract Variable["..."] / Variable['...'] tokens so internal quotes don't break parsing
-  const { variableTokenRegex, variableTokens } = extractVariableTokens(raw);
+function esc(s) {
+  // Escape single quotes
+  return s.replace(/'/g, "''");
+}
 
-  // Extract simple function-like tokens (e.g., CheckItem("x"), HasShirt(), once(1), CheckEquipped('y'))
+function buildConditionsForColumns(q, columns) {
+  // Build conditions for a set of columns using parsed tokens
+  const raw = (q || "").trim();
+  const { variableTokenRegex, variableTokens } = extractVariableTokens(raw);
   const { functionTokenRegex, functionTokens } = extractFunctionTokens(raw);
 
   // Remove variable and function tokens from the string we parse for quoted phrases / words
@@ -1382,7 +1379,6 @@ function buildConditionsForColumns(q, columns) {
     .replace(functionTokenRegex, " ")
     .trim();
 
-  // Parse query for quoted phrases and regular words from the processed raw string
   const quotedPhrases = extractQuotedPhrases(processedRaw);
 
   // Remove quoted phrases from processedRaw to get remaining words
@@ -1416,9 +1412,9 @@ function buildConditionsForColumns(q, columns) {
   });
   if (
     quotedPhrases.length > 0 ||
-    words.length > 0 ||
     variableTokens.length > 0 ||
-    functionTokens.length > 0
+    functionTokens.length > 0 ||
+    words.length > 0
   ) {
     return conds;
   }
@@ -1426,6 +1422,7 @@ function buildConditionsForColumns(q, columns) {
 }
 
 function extractQuotedPhrases(processedRaw) {
+  // Parse query for quoted phrases and regular words from the processed raw string
   const quotedPhrases = [];
   const quotedPhrasesRegex = /"([^"]+)"/g;
   let match;
@@ -1435,6 +1432,7 @@ function extractQuotedPhrases(processedRaw) {
   return quotedPhrases;
 }
 function extractFunctionTokens(raw) {
+  // Extract simple function-like tokens (e.g., CheckItem("x"), HasShirt(), once(1), CheckEquipped('y'))
   const functionTokens = [];
   const functionTokenRegex = /\b[A-Za-z_][A-Za-z0-9_]*\([^)]*\)/g;
   let fmatch;
@@ -1444,6 +1442,7 @@ function extractFunctionTokens(raw) {
   return { functionTokenRegex, functionTokens };
 }
 function extractVariableTokens(raw) {
+  // Extract Variable["..."] / Variable['...'] tokens so internal quotes don't break parsing
   const variableTokens = [];
   const variableTokenRegex = /Variable\[\s*(['"])(.*?)\1\s*\]/g;
   let vmatch;
@@ -3522,6 +3521,7 @@ function showMobileTypeFilter() {
   toggleElementVisibility(typeFilterDropdown, true);
 }
 function setupConvoActorFilter() {
+  const backBtn = $("mobileConvoFilterBack")
   backBtn?.addEventListener("click", handleMobileConvoFilterBackButtonClick);
   mobileConvoFilterWrapper?.addEventListener(
     "click",
