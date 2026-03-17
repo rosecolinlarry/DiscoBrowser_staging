@@ -4796,20 +4796,30 @@ function createChecksList(checks) {
   const section = createDetailsSectionHeader("Checks");
   const list = document.createElement("div");
   list.className = "details-list";
-  let item;
   if (checks && checks.length) {
     checks.forEach((check) => {
-      item = document.createElement("div");
-      item.className = "details-item";
-      const checkText = document.createElement("span");
-      checkText.textContent = getStringOrDefault(check);
-      item.appendChild(checkText);
+      const item = createChecksTable(check)
+      list.appendChild(item);
     });
-    list.appendChild(item);
+    section.appendChild(list);
   } else {
     section.append(createPlaceholderItem());
   }
   return section;
+}
+
+function createChecksTable(data) {
+  const tableDiv = createDetailsSectionHeader("Check");
+  const rows = [
+    ["Check Type", data.checktype],
+    ["Difficulty", data.difficulty],
+    ["Flag Name", data.flagName],
+    ["Forced", data.forced],
+    ["Name", data.name],
+  ];
+
+  tableDiv.appendChild(buildTable(rows));
+  return tableDiv;
 }
 
 function createParentsList(parents) {
