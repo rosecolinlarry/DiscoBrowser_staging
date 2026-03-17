@@ -169,7 +169,7 @@ let appSettings = {
   alwaysShowMoreDetails: false,
 };
 // State for column resizing handlers
-let currentpointermoveHandler = null;
+let currentPointerMoveHandler = null;
 let currentStartX = null;
 let currentInitialCol1 = null;
 let currentInitialCol3 = null;
@@ -788,9 +788,9 @@ function handlePointerMoveRight(moveEvent) {
   updateHandlePositions();
 }
 function handlePointerUp() {
-  if (currentpointermoveHandler) {
-    document.removeEventListener("pointermove", currentpointermoveHandler);
-    currentpointermoveHandler = null;
+  if (currentPointerMoveHandler) {
+    document.removeEventListener("pointermove", currentPointerMoveHandler);
+    currentPointerMoveHandler = null;
   }
   currentStartX = null;
   currentInitialCol1 = null;
@@ -809,8 +809,8 @@ function handleLeftHandlePointerDown(e) {
   const startCols = getStartColumns();
   currentInitialCol1 = parseFloat(startCols[0]);
   currentInitialCol3 = parseFloat(startCols[2]);
-  currentpointermoveHandler = (ev) => handlePointerMoveLeft(ev);
-  document.addEventListener("pointermove", currentpointermoveHandler);
+  currentPointerMoveHandler = (ev) => handlePointerMoveLeft(ev);
+  document.addEventListener("pointermove", currentPointerMoveHandler);
   document.addEventListener("pointerup", handlePointerUp);
 }
 function handleRightHandlePointerDown(e) {
@@ -820,8 +820,8 @@ function handleRightHandlePointerDown(e) {
   const startCols = getStartColumns();
   currentInitialCol1 = parseFloat(startCols[0]);
   currentInitialCol3 = parseFloat(startCols[2]);
-  currentpointermoveHandler = (ev) => handlePointerMoveRight(ev);
-  document.addEventListener("pointermove", currentpointermoveHandler);
+  currentPointerMoveHandler = (ev) => handlePointerMoveRight(ev);
+  document.addEventListener("pointermove", currentPointerMoveHandler);
   document.addEventListener("pointerup", handlePointerUp);
 }
 // #endregion
@@ -2950,7 +2950,7 @@ async function navigateToEntry(
 // #endregion
 
 // #region Show Details
-/* Show convo detais */
+/* Show convo details */
 async function showConvoDetails(convoId) {
   if (!entryDetailsEl) return;
 
