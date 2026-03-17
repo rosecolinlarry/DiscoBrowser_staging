@@ -193,8 +193,8 @@ let SQL = null;
 async function handleEntryClick(e) {
   // Clicking a result in "Next Dialogue Options" or a parent/child link in an entry container
   const item = e.currentTarget;
-  const convoId = item.getAttribute("data-convo-id");
-  const entryId = item.getAttribute("data-id");
+  const convoId = item.dataset.convoId;
+  const entryId = item.dataset.id;
   await navigateToEntry(convoId, entryId, true);
 }
 
@@ -202,11 +202,11 @@ async function handleLineLinkClick(e) {
   // Clicking the alternate line or original line in the current entry container if there is an alternate
   e.preventDefault();
   const link = e.currentTarget;
-  const cid = link.getAttribute("data-convo-id");
-  const eid = link.getAttribute("data-id");
-  const isAlternate = link.getAttribute("data-is-alternate");
-  const alternateCondition = link.getAttribute("data-alternate-condition");
-  const alternateLine = link.getAttribute("data-alternate-line");
+  const cid = link.dataset.convoId;
+  const eid = link.dataset.id;
+  const isAlternate = link.dataset.isAlternate;
+  const alternateCondition = link.dataset.alternateCondition;
+  const alternateLine = link.dataset.alternateLine;
 
   if (isAlternate === "true") {
     // Don't add to history when switching to alternate view
@@ -219,10 +219,10 @@ async function handleLineLinkClick(e) {
 async function handleSearchResultClick(e) {
   // Clicking a search result
   const result = e.currentTarget;
-  const cid = result.getAttribute("data-convo-id");
-  const eid = result.getAttribute("data-id");
-  const dialogueText = result.getAttribute("data-dialogue-text"); // Already replaced with alternate at this point
-  const alternateCondition = result.getAttribute("data-alternate-condition");
+  const cid = result.dataset.convoId;
+  const eid = result.dataset.id;
+  const dialogueText = result.dataset.dialogueText; // Already replaced with alternate at this point
+  const alternateCondition = result.dataset.alternateCondition;
 
   setNavigationHistory([{ convoId: cid, entryId: null }]);
   if ((cid && !eid) || eid === "null") {
@@ -463,7 +463,7 @@ function handleConvoLabelClick(e) {
   // Handle clicking directly on a convo label
   e.stopPropagation();
   const target = e.currentTarget;
-  const convoId = target.getAttribute("data-convo-id");
+  const convoId = target.dataset.convoId;
   const wrapper = target.parentElement;
   const nodeObj = wrapper._nodeObj;
 
@@ -528,17 +528,17 @@ async function handleMoreDetailsClicked() {
     const entryListContainer = entryListEl?.closest(".entry-list");
     if (
       entryListContainer &&
-      entryListContainer.getAttribute("data-was-expanded") === "true"
+      entryListContainer.dataset.wasExpanded === "true"
     ) {
       entryListContainer.classList.remove("compact");
-      entryListContainer.removeAttribute("data-was-expanded");
+      delete entryListContainer.dataset.wasExpanded;
     }
     if (
       currentEntryContainerEl &&
-      currentEntryContainerEl.getAttribute("data-was-expanded") === "true"
+      currentEntryContainerEl.dataset.wasExpanded === "true"
     ) {
       currentEntryContainerEl.classList.remove("expanded");
-      currentEntryContainerEl.removeAttribute("data-was-expanded");
+      delete currentEntryContainerEl.dataset.wasExpanded;
     }
   }
 }
@@ -4473,7 +4473,7 @@ function $(sel) {
 function processExternalLinks(element) {
   const links = element.querySelectorAll("a[href]");
   links.forEach((link) => {
-    const href = link.getAttribute("href");
+    const href = link.href;
     // Check if it's an external link (starts with http/https and not #)
     if (
       href &&
@@ -4561,6 +4561,9 @@ function createCardItem(
 
 /* #region Visibility helpers */
 function toggleElementVisibility(el, showElement) {
+  if(!el) {
+    return;
+  }
   if (el instanceof NodeList) {
     el.forEach((element) => {
       toggleElementVisibility(element, showElement);
@@ -5330,9 +5333,7 @@ function updateAnimationsToggle() {
 function openSettings() {
   setCurrentUserSettings();
   const settingsModalOverlay = $(settingsModalOverlayId);
-  if (settingsModalOverlay) {
-    toggleElementVisibility(settingsModalOverlay, true);
-  }
+  toggleElementVisibility(settingsModalOverlay, true);
 }
 // #endregion
 
@@ -5358,16 +5359,12 @@ async function boot() {
   // Set up conversation filter
   setupConversationFilter();
   // Set up conversation list events
-
-  convoListEl.addEventListener("click", handleConvoListClick);
+  convoListEl?.addEventListener("click", handleConvoListClick);
   // Handle custom convoLeafClick events from tree builder
-  convoListEl.addEventListener("convoLeafClick", handleNavigateToConvoLeaf);
+  convoListEl?.addEventListener("convoLeafClick", handleNavigateToConvoLeaf);
 
   // Handle navigateToConversation events from history dividers
-  chatLogEl.addEventListener(
-    "navigateToConversation",
-    handleNavigateToConvoLeaf,
-  );
+  chatLogEl?.addEventListener("navigateToConversation", handleNavigateToConvoLeaf);
 
   // Set up filter dropdowns to open and close
   setUpFilterDropdowns();
@@ -5396,9 +5393,7 @@ async function boot() {
 
   updateBackButtonState();
 
-  if (moreDetailsEl) {
-    moreDetailsEl.addEventListener("toggle", handleMoreDetailsClicked);
-  }
+  moreDetailsEl?.addEventListener("toggle", handleMoreDetailsClicked);
 
   // Setup infinite scroll for search
   setupSearchInfiniteScroll();
