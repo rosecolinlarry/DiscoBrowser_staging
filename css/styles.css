@@ -1106,7 +1106,7 @@ button.button-icon {
   background-color: transparent;
   color: var(--teal);
   box-shadow: none;
-  z-index: 1000;
+  z-index: 100;
 
   &.hidden {
     display: none;

@@ -41,8 +41,6 @@ const convoRootBtn = $("convoRootBtn");
 const sidebarOverlay = $("sidebarOverlay");
 
 const historySidebar = $("historySidebar");
-
-const convoSidebarToggle = $("convoSidebarToggle");
 const convoSidebar = $("convoSidebar");
 
 // Mobile elements
@@ -67,22 +65,16 @@ const collapseAllBtn = $("collapseAllBtn");
 
 // Filter dropdowns
 
-const convoFilterDropdownWrapper = $("convoFilterWrapper"); // Filter Wrapper
 const mobileConvoFilter = $("mobileConvoFilter"); // Button
 const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
 const mobileConvoFilterWrapper = $("mobileConvoFilterWrapper"); // Checklist
 
-const convoFilterLabelWrapper = $("convoFilterLabelWrapper"); // Text Wrapper
-const mobileConvoFilterLabelWrapper = $("mobileConvoFilterLabelWrapper"); // Text Wrapper
 const convoFilterLabel = $("convoFilterLabel"); // Text
 
-const actorFilterWrapper = $("actorFilterWrapper"); // Filter Wrapper
 const mobileActorFilter = $("mobileActorFilter"); // Button
 const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
 const mobileActorFilterWrapper = $("mobileActorFilterWrapper"); // Checklist
 
-const actorFilterLabelWrapper = $("actorFilterLabelWrapper"); // Text Wrapper
-const mobileActorFilterLabelWrapper = $("mobileActorFilterLabelWrapper"); // Test Wrapper
 const actorFilterLabel = $("actorFilterLabel"); // Text
 
 const mobileTypeFilter = $("mobileTypeFilter"); // Button
@@ -863,7 +855,7 @@ async function handleMediaQueryChange() {
   }
   moveTypeFilterDropdown();
   moveConvoFilterDropdown();
-  await moveActorFilterDropdown();
+  moveActorFilterDropdown();
   moveWholeWordsButton();
   moveClearFiltersBtn();
   moveSearchLoader();
@@ -2207,39 +2199,15 @@ function toggleHomepageLoader(isLoading) {
 
 //#region Move Elements
 function moveWholeWordsButton() {
-  const el = $("wholeWordsButton");
-  const elWrapper = $("wholeWordsButtonWrapper");
-  const mobileElWrapper = $("mobileWholeWordsButtonWrapper");
-  if (mobileMediaQuery.matches) {
-    mobileElWrapper.appendChild(el);
-  } else {
-    elWrapper.appendChild(el);
-  }
+  moveElementsById("wholeWordsButton", "wholeWordsButtonWrapper", "mobileWholeWordsButtonWrapper");
 }
 function moveClearFiltersBtn() {
-  const el = $("clearFiltersBtn");
-  const elWrapper = $("clearFiltersBtnWrapper");
-  const mobileElWrapper = $("mobileClearFiltersBtnWrapper");
-  if (mobileMediaQuery.matches) {
-    mobileElWrapper.appendChild(el);
-  } else {
-    elWrapper.appendChild(el);
-  }
+  moveElementsById("clearFiltersBtn", "clearFiltersBtnWrapper", "mobileClearFiltersBtnWrapper");
 }
 function moveSearchLoader() {
-  const el = $("searchLoader");
-  const elWrapper = $("searchLoaderWrapper");
-  const mobileElWrapper = $("mobileSearchLoaderWrapper");
-  if (mobileMediaQuery.matches) {
-    mobileElWrapper.appendChild(el);
-  } else {
-    elWrapper.appendChild(el);
-  }
+  moveElementsById("searchLoader", "searchLoaderWrapper", "mobileSearchLoaderWrapper");
 }
 function moveSearchInput() {
-  const el = $("search");
-  const elWrapper = $("searchInputWrapper");
-  const mobileElWrapper = mobileSearchInputWrapper;
   const clearButtonElWrapper = document.querySelector(
     ".clear-icon-btn-wrapper.desktop",
   );
@@ -2252,66 +2220,48 @@ function moveSearchInput() {
   const mobileSearchButtonElWrapper = document.querySelector(
     ".search-icon-btn-wrapper.mobile",
   );
-  if (mobileMediaQuery.matches) {
-    mobileElWrapper.appendChild(el);
-    mobileClearButtonElWrapper.appendChild(searchClearBtn);
-    mobileSearchButtonElWrapper.appendChild(searchBtn);
-  } else {
-    elWrapper.appendChild(el);
-    clearButtonElWrapper.appendChild(searchClearBtn);
-    searchButtonElWrapper.appendChild(searchBtn);
-  }
+  moveElementsById("search", "searchInputWrapper", "mobileSearchInputWrapper");
+  moveElements(searchClearBtn, clearButtonElWrapper, mobileClearButtonElWrapper);
+  moveElements(searchBtn, searchButtonElWrapper, mobileSearchButtonElWrapper);
 }
 
 function moveConvoFilterDropdown() {
-  if (mobileMediaQuery.matches) {
-    mobileConvoFilterWrapper.appendChild(convoFilterDropdown);
-    mobileConvoFilterLabelWrapper.appendChild(convoFilterLabel);
-    mobileConvoFilter.addEventListener("click", showMobileConvoFilter);
-  } else {
-    convoFilterDropdownWrapper.appendChild(convoFilterDropdown);
-    convoFilterLabelWrapper.appendChild(convoFilterLabel);
-  }
+  moveElementsById("convoFilterDropdown", "convoFilterWrapper", "mobileConvoFilterWrapper")
+  moveElementsById("convoFilterLabel", "convoFilterLabelWrapper", "mobileConvoFilterLabelWrapper")
 }
-async function moveActorFilterDropdown() {
-  if (!actorFilterDropdown) {
-    await populateActorDropdown();
-    return;
-  }
-  if (mobileMediaQuery.matches) {
-    mobileActorFilterWrapper.appendChild(actorFilterDropdown);
-    mobileActorFilterLabelWrapper.appendChild(actorFilterLabel);
-    mobileActorFilter.addEventListener("click", showMobileActorFilter);
-  } else {
-    actorFilterWrapper.appendChild(actorFilterDropdown);
-    actorFilterLabelWrapper.appendChild(actorFilterLabel);
-  }
+function moveActorFilterDropdown() {
+  moveElementsById("actorFilterDropdown", "actorFilterWrapper", "mobileActorFilterWrapper")
+  moveElementsById("actorFilterLabel", "actorFilterLabelWrapper", "mobileActorFilterLabelWrapper")
 }
 function moveTypeFilterDropdown() {
-  const el = $("typeFilterDropdown");
-  const elWrapper = $("typeFilterWrapper");
-  const mobileElWrapper = $("mobileTypeFilterWrapper");
+  moveElementsById("typeFilterDropdown", "typeFilterWrapper", "mobileTypeFilterWrapper")
+  moveElementsById("typeFilterLabel", "typeFilterDropdownLabelWrapper", "mobileTypeFilterWrapperLabel")
+}
 
-  const elLabel = $("typeFilterLabel");
-  const elLabelWrapper = $("typeFilterDropdownLabelWrapper");
-  const mobileElLabelWrapper = $("mobileTypeFilterWrapperLabel");
+function moveElementsById(elId, srcElWrapperId, destElWrapperId, mediaQuery = mobileMediaQuery) {
+  // Move elements when media query changes
+  const el = $(elId)
+  const srcElWrapper = $(srcElWrapperId);
+  const destElWrapper = $(destElWrapperId);
+  moveElements(el, srcElWrapper, destElWrapper, mediaQuery)
+}
 
-  if (mobileMediaQuery.matches) {
-    mobileElWrapper.appendChild(el);
-    mobileElLabelWrapper.appendChild(elLabel);
-    mobileTypeFilter.addEventListener("click", showMobileTypeFilter);
+function moveElements(el, srcElWrapper, destElWrapper, mediaQuery = mobileMediaQuery) {
+  // Move elements when media query changes
+  if (mediaQuery?.matches) {
+    destElWrapper?.appendChild(el);
   } else {
-    elWrapper.appendChild(el);
-    elLabelWrapper.appendChild(elLabel);
+    srcElWrapper?.appendChild(el);
   }
 }
 //#endregion
 
 //#region Sidebar Toggles
 function setUpSidebarToggles() {
-  convoSidebarToggle.addEventListener("click", openConversationSection);
+  const convoSidebarToggle = $("convoSidebarToggle");
+  convoSidebarToggle?.addEventListener("click", openConversationSection);
   const historySidebarToggle = $("historySidebarToggle");
-  historySidebarToggle.addEventListener("click", openHistorySidebar);
+  historySidebarToggle?.addEventListener("click", openHistorySidebar);
   mobileNavBtn.addEventListener("click", openMobileNavSidebar);
   sidebarOverlay.addEventListener("click", closeAllSidebars);
   sidebarOverlay.addEventListener("click", closeAllModals);
@@ -2366,32 +2316,26 @@ function renderConvoList(conversations) {
   });
 }
 function setupConvoFilter() {
-  const convoFilterSearch = $("convoSearch");
+  const convoFilterSearchInput = $("convoSearch");
   const selectAllCheckbox = $("selectAllConvos");
   const addToSelectionBtn = $("convoAddToSelection");
 
+  // Search filter
+  convoFilterSearchInput?.addEventListener("input", handleConvoFilterSearchInput);
+
   // Add to Selection button - apply changes
-  if (addToSelectionBtn) {
-    addToSelectionBtn.addEventListener(
-      "click",
-      handleAddToSelectionButtonClick,
-    );
-  }
+  addToSelectionBtn?.addEventListener("click", handleAddToSelectionButtonClick)
 
   // Select All checkbox
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener("change", handleSelectAllCheckboxChange);
-  }
+  selectAllCheckbox?.addEventListener("change", handleSelectAllCheckboxChange);
 
   // Initial render
   if (!allConvos || allConvos.length === 0) {
     allConvos = getConversationsForTree();
   }
   renderConvoList(allConvos);
-
-  // Search filter
-  convoFilterSearch.addEventListener("input", handleConvoFilterSearchInput);
 }
+
 function updateConvoSelectAllState(conversations) {
   const selectAllCheckbox = $("selectAllConvos");
   if (selectAllCheckbox) {
@@ -2440,43 +2384,23 @@ function filterActors(actorSearchInput) {
   renderActorCheckboxes(filteredActors);
   updateActorSelectAllState();
 }
-function setUpRestoreDefaultSettingsButton() {
-  // Restore default settings and updates checkbox values.
-  const restoreDefaultSettingsBtn = $(restoreDefaultSettingsBtnId);
-  if (restoreDefaultSettingsBtn) {
-    restoreDefaultSettingsBtn.addEventListener(
-      "click",
-      resetCurrentUserSettings,
-    );
-  }
-}
-async function populateActorDropdown() {
+
+function populateActorDropdown() {
   allActors = getDistinctActors();
   filteredActors = [...allActors];
 
   // Search filter
-  if (actorSearchInput) {
-    actorSearchInput.addEventListener("input", handleActorFilterInput);
-  }
+  actorSearchInput?.addEventListener("input", handleActorFilterInput);
 
   // Select All checkbox
-  if (selectAllActors) {
-    selectAllActors.addEventListener(
-      "change",
-      handleSelectAllActorsCheckboxChange,
-    );
-  }
+  selectAllActors?.addEventListener("change",handleSelectAllActorsCheckboxChange);
 
   // Add to Selection button
-  if (actorAddToSelectionBtn) {
-    actorAddToSelectionBtn.addEventListener(
-      "click",
-      handleActorAddToSelectionButtonClick,
-    );
-  }
+  actorAddToSelectionBtn?.addEventListener("click",handleActorAddToSelectionButtonClick);
 
   renderActorCheckboxes(allActors);
 }
+
 function renderActorCheckboxes(actors) {
   actorCheckboxList.innerHTML = "";
 
@@ -3427,6 +3351,9 @@ function closeMobileSearchScreen() {
 }
 
 function setupMobileSearch() {
+  mobileConvoFilter.addEventListener("click", showMobileConvoFilter);
+  mobileActorFilter.addEventListener("click", showMobileActorFilter);
+  mobileTypeFilter.addEventListener("click", showMobileTypeFilter);
   // Open mobile search screen when the mobile header trigger is clicked
   if (mobileSearchTrigger) {
     mobileSearchTrigger.addEventListener("click", openMobileSearchScreen);
@@ -3437,7 +3364,7 @@ function setupMobileSearch() {
   mobileSearchBack?.addEventListener("click", handleMobileSearchBackClick);
 
   // Setup convo filter screen
-  setupConvoActorFilter();
+  setupMobileConvoFilter();
 
   // Setup actor filter screen
   setupMobileActorFilter();
@@ -3451,9 +3378,6 @@ function setupMobileSidebar() {
   const mobileSidebarToggle = $("mobileSidebarToggle");
   if (mobileSidebarToggle) {
     mobileSidebarToggle.addEventListener("click", openConversationSection);
-  }
-  if (convoSidebarToggle) {
-    convoSidebarToggle.addEventListener("click", openConversationSection);
   }
 
   // Mobile back button
@@ -3477,12 +3401,10 @@ function openMobileNavSidebar() {
   const mobileNavSidebarClose = $("navSidebarClose");
   mobileNavSidebarClose?.addEventListener("click", closeMobileNavSidebar);
 }
-
 function closeMobileNavSidebar() {
   toggleElementVisibility(mobileNavPanel, false);
   toggleElementVisibility(sidebarOverlay, false);
 }
-
 function updateMobileNavButtons() {
   if (!backBtn || !convoRootBtn) return;
 
@@ -3520,7 +3442,7 @@ function showMobileTypeFilter() {
   toggleElementVisibility(mobileTypeFilterSheet, true);
   toggleElementVisibility(typeFilterDropdown, true);
 }
-function setupConvoActorFilter() {
+function setupMobileConvoFilter() {
   const backBtn = $("mobileConvoFilterBack")
   backBtn?.addEventListener("click", handleMobileConvoFilterBackButtonClick);
   mobileConvoFilterWrapper?.addEventListener(
@@ -5132,7 +5054,16 @@ async function injectTemplate(templateFileName, containerId) {
     console.error("Error fetching modal content:", error);
   }
 }
-
+function setUpRestoreDefaultSettingsButton() {
+  // Restore default settings and updates checkbox values.
+  const restoreDefaultSettingsBtn = $(restoreDefaultSettingsBtnId);
+  if (restoreDefaultSettingsBtn) {
+    restoreDefaultSettingsBtn.addEventListener(
+      "click",
+      resetCurrentUserSettings,
+    );
+  }
+}
 function initializeUserSettings() {
   loadSettingsFromStorage();
   applySettings();
@@ -5384,7 +5315,7 @@ async function boot() {
   setupConvoFilter();
 
   // actor filter dropdown
-  await populateActorDropdown();
+  populateActorDropdown();
 
   // type filter dropdown
   setupTypeFilter();
