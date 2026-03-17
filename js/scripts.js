@@ -113,6 +113,7 @@ const tabletMediaQuery = window.matchMedia(
 const desktopMediaQuery = window.matchMedia("(min-width: 1025px)");
 
 const defaultColumns = "352px 1fr 280px";
+const defaultMobileColumns = "1fr";
 const STORAGE_KEY = "discobrowser_grid_columns";
 
 const SETTINGS_STORAGE_KEY = "discobrowser_settings";
@@ -835,6 +836,8 @@ async function handleMediaQueryChange() {
     toggleElementVisibilityBySelector("#historySidebarToggle", false);
     toggleElementVisibilityBySelector("#convoSidebarToggle", false);
     toggleElementVisibilityBySelector(".mobile-container", false);
+    browserGrid.style.gridTemplateColumns = defaultColumns;
+    initializeResizableGrid();
     const browserEl = $("browser");
     browserEl?.prepend(convoSection);
     browserEl?.appendChild(historySection);
@@ -842,14 +845,16 @@ async function handleMediaQueryChange() {
     toggleElementVisibilityBySelector("#historySidebarToggle", true);
     toggleElementVisibilityBySelector("#convoSidebarToggle", true);
     toggleElementVisibilityBySelector(".mobile-container", false);
-    updateResizableGrid();
+    browserGrid.style.gridTemplateColumns = defaultMobileColumns;
+    toggleElementVisibilityBySelector(".resize-handle", false);
     historySidebar?.appendChild(historySection);
     convoSidebar?.appendChild(convoSection);
   } else if (mobileMediaQuery.matches) {
     toggleElementVisibilityBySelector("#historySidebarToggle", true);
     toggleElementVisibilityBySelector("#convoSidebarToggle", false);
     toggleElementVisibilityBySelector(".mobile-container", true);
-    updateResizableGrid();
+    browserGrid.style.gridTemplateColumns = defaultMobileColumns;
+    toggleElementVisibilityBySelector(".resize-handle", false);
     historySidebar?.append(historySection);
     convoSidebar?.appendChild(convoSection);
   }
@@ -1098,7 +1103,6 @@ function execRowsFirstOrDefault(sql) {
   return null;
 }
 
-
 // #region SQL Queries
 // #region Conversations
 function getConversationById(convoId, showHidden) {
@@ -1305,7 +1309,7 @@ function searchDialogues(
 ) {
   // Search dentries table
   const limitClause = ` LIMIT ${limit} OFFSET ${offset}`;
-  
+
   let dentriesWhere = "";
   dentriesWhere = buildEntriesWhereAndLimitClause(
     q,
@@ -2124,15 +2128,11 @@ async function setUpMediaQueries() {
   mobileMediaQuery.addEventListener("change", handleMediaQueryChange);
   await handleMediaQueryChange();
 }
-function updateResizableGrid() {
-  if (!browserGrid || !desktopMediaQuery.matches) {
-    browserGrid.style.removeProperty("gridTemplateColumns");
-  } else {
-    initializeResizableGrid();
-  }
-}
 
 function applySavedColumns(savedColumns) {
+  if (!desktopMediaQuery.matches) {
+    browserGrid.style.gridTemplateColumns = defaultMobileColumns;
+  }
   if (savedColumns) {
     try {
       const columns = JSON.parse(savedColumns);
@@ -2141,9 +2141,6 @@ function applySavedColumns(savedColumns) {
       console.error("Failed to restore grid columns", e);
       browserGrid.style.gridTemplateColumns = defaultColumns;
     }
-  } else {
-    // Set default columns on first load / hard refresh
-    browserGrid.style.gridTemplateColumns = defaultColumns;
   }
 }
 
@@ -2163,17 +2160,26 @@ function initializeResizableGrid() {
   applySavedColumns(savedColumns);
 
   // Create resize handles
-  const leftHandle = document.createElement("div");
-  leftHandle.className = "resize-handle resize-handle-left";
-  leftHandle.title = "Drag to resize sections";
-
-  const rightHandle = document.createElement("div");
-  rightHandle.className = "resize-handle resize-handle-right";
-  rightHandle.title = "Drag to resize sections";
-
-  // Append handles to grid
-  browserGrid.appendChild(leftHandle);
-  browserGrid.appendChild(rightHandle);
+  let leftHandle = document.querySelector(".resize-handle.resize-handle-left");
+  if (!leftHandle) {
+    leftHandle = document.createElement("div");
+    leftHandle.className = "resize-handle resize-handle-left";
+    leftHandle.title = "Drag to resize sections";
+    browserGrid.appendChild(leftHandle);
+  } else {
+    toggleElementVisibility(leftHandle, true);
+  }
+  let rightHandle = document.querySelector(
+    ".resize-handle.resize-handle-right",
+  );
+  if (!rightHandle) {
+    rightHandle = document.createElement("div");
+    rightHandle.className = "resize-handle resize-handle-right";
+    rightHandle.title = "Drag to resize sections";
+    browserGrid.appendChild(rightHandle);
+  } else {
+    toggleElementVisibility(rightHandle, true);
+  }
 
   // Initialize handle positions
   updateHandlePositions();
@@ -2199,13 +2205,25 @@ function toggleHomepageLoader(isLoading) {
 
 //#region Move Elements
 function moveWholeWordsButton() {
-  moveElementsById("wholeWordsButton", "wholeWordsButtonWrapper", "mobileWholeWordsButtonWrapper");
+  moveElementsById(
+    "wholeWordsButton",
+    "wholeWordsButtonWrapper",
+    "mobileWholeWordsButtonWrapper",
+  );
 }
 function moveClearFiltersBtn() {
-  moveElementsById("clearFiltersBtn", "clearFiltersBtnWrapper", "mobileClearFiltersBtnWrapper");
+  moveElementsById(
+    "clearFiltersBtn",
+    "clearFiltersBtnWrapper",
+    "mobileClearFiltersBtnWrapper",
+  );
 }
 function moveSearchLoader() {
-  moveElementsById("searchLoader", "searchLoaderWrapper", "mobileSearchLoaderWrapper");
+  moveElementsById(
+    "searchLoader",
+    "searchLoaderWrapper",
+    "mobileSearchLoaderWrapper",
+  );
 }
 function moveSearchInput() {
   const clearButtonElWrapper = document.querySelector(
@@ -2221,32 +2239,70 @@ function moveSearchInput() {
     ".search-icon-btn-wrapper.mobile",
   );
   moveElementsById("search", "searchInputWrapper", "mobileSearchInputWrapper");
-  moveElements(searchClearBtn, clearButtonElWrapper, mobileClearButtonElWrapper);
+  moveElements(
+    searchClearBtn,
+    clearButtonElWrapper,
+    mobileClearButtonElWrapper,
+  );
   moveElements(searchBtn, searchButtonElWrapper, mobileSearchButtonElWrapper);
 }
 
 function moveConvoFilterDropdown() {
-  moveElementsById("convoFilterDropdown", "convoFilterWrapper", "mobileConvoFilterWrapper")
-  moveElementsById("convoFilterLabel", "convoFilterLabelWrapper", "mobileConvoFilterLabelWrapper")
+  moveElementsById(
+    "convoFilterDropdown",
+    "convoFilterWrapper",
+    "mobileConvoFilterWrapper",
+  );
+  moveElementsById(
+    "convoFilterLabel",
+    "convoFilterLabelWrapper",
+    "mobileConvoFilterLabelWrapper",
+  );
 }
 function moveActorFilterDropdown() {
-  moveElementsById("actorFilterDropdown", "actorFilterWrapper", "mobileActorFilterWrapper")
-  moveElementsById("actorFilterLabel", "actorFilterLabelWrapper", "mobileActorFilterLabelWrapper")
+  moveElementsById(
+    "actorFilterDropdown",
+    "actorFilterWrapper",
+    "mobileActorFilterWrapper",
+  );
+  moveElementsById(
+    "actorFilterLabel",
+    "actorFilterLabelWrapper",
+    "mobileActorFilterLabelWrapper",
+  );
 }
 function moveTypeFilterDropdown() {
-  moveElementsById("typeFilterDropdown", "typeFilterWrapper", "mobileTypeFilterWrapper")
-  moveElementsById("typeFilterLabel", "typeFilterDropdownLabelWrapper", "mobileTypeFilterWrapperLabel")
+  moveElementsById(
+    "typeFilterDropdown",
+    "typeFilterWrapper",
+    "mobileTypeFilterWrapper",
+  );
+  moveElementsById(
+    "typeFilterLabel",
+    "typeFilterDropdownLabelWrapper",
+    "mobileTypeFilterWrapperLabel",
+  );
 }
 
-function moveElementsById(elId, srcElWrapperId, destElWrapperId, mediaQuery = mobileMediaQuery) {
+function moveElementsById(
+  elId,
+  srcElWrapperId,
+  destElWrapperId,
+  mediaQuery = mobileMediaQuery,
+) {
   // Move elements when media query changes
-  const el = $(elId)
+  const el = $(elId);
   const srcElWrapper = $(srcElWrapperId);
   const destElWrapper = $(destElWrapperId);
-  moveElements(el, srcElWrapper, destElWrapper, mediaQuery)
+  moveElements(el, srcElWrapper, destElWrapper, mediaQuery);
 }
 
-function moveElements(el, srcElWrapper, destElWrapper, mediaQuery = mobileMediaQuery) {
+function moveElements(
+  el,
+  srcElWrapper,
+  destElWrapper,
+  mediaQuery = mobileMediaQuery,
+) {
   // Move elements when media query changes
   if (mediaQuery?.matches) {
     destElWrapper?.appendChild(el);
@@ -2321,10 +2377,13 @@ function setupConvoFilter() {
   const addToSelectionBtn = $("convoAddToSelection");
 
   // Search filter
-  convoFilterSearchInput?.addEventListener("input", handleConvoFilterSearchInput);
+  convoFilterSearchInput?.addEventListener(
+    "input",
+    handleConvoFilterSearchInput,
+  );
 
   // Add to Selection button - apply changes
-  addToSelectionBtn?.addEventListener("click", handleAddToSelectionButtonClick)
+  addToSelectionBtn?.addEventListener("click", handleAddToSelectionButtonClick);
 
   // Select All checkbox
   selectAllCheckbox?.addEventListener("change", handleSelectAllCheckboxChange);
@@ -2393,10 +2452,16 @@ function populateActorDropdown() {
   actorSearchInput?.addEventListener("input", handleActorFilterInput);
 
   // Select All checkbox
-  selectAllActors?.addEventListener("change",handleSelectAllActorsCheckboxChange);
+  selectAllActors?.addEventListener(
+    "change",
+    handleSelectAllActorsCheckboxChange,
+  );
 
   // Add to Selection button
-  actorAddToSelectionBtn?.addEventListener("click",handleActorAddToSelectionButtonClick);
+  actorAddToSelectionBtn?.addEventListener(
+    "click",
+    handleActorAddToSelectionButtonClick,
+  );
 
   renderActorCheckboxes(allActors);
 }
@@ -3443,7 +3508,7 @@ function showMobileTypeFilter() {
   toggleElementVisibility(typeFilterDropdown, true);
 }
 function setupMobileConvoFilter() {
-  const backBtn = $("mobileConvoFilterBack")
+  const backBtn = $("mobileConvoFilterBack");
   backBtn?.addEventListener("click", handleMobileConvoFilterBackButtonClick);
   mobileConvoFilterWrapper?.addEventListener(
     "click",
