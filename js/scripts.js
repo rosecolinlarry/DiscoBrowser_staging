@@ -542,9 +542,7 @@ async function handleMoreDetailsClicked() {
     }
   }
 }
-function handleClickOutsideDropdown() {
-  closeAllDropdowns();
-}
+
 function handleDropdownButtonClick(e) {
   e.stopPropagation();
 
@@ -953,9 +951,6 @@ function handleSearchInputClick() {
     openMobileSearchScreen();
   }
 }
-function handleSearchButtonClick() {
-  search();
-}
 function handleSearchInputEvent(e) {
   // Keep mobile and desktop input unified (single element used)
   // If the mobile header trigger exists, mirror the value for display
@@ -968,11 +963,6 @@ function handleSearchInputEvent(e) {
     // Show search icon
     toggleElementVisibility(searchClearBtn, false);
     toggleElementVisibility(searchBtn, true);
-  }
-}
-async function handleConvoRootButtonClick() {
-  if (currentConvoId !== null) {
-    await jumpToConversationRoot();
   }
 }
 function handleHistoryBackButtonClick() {
@@ -1010,7 +1000,6 @@ function handleInfiniteScroll(e) {
     search(false);
   }
 }
-
 function handleSettingsModalOverlayClick(e) {
   const settingsModalOverlay = $(settingsModalOverlayId);
   if (e.target === settingsModalOverlay) {
@@ -1068,21 +1057,6 @@ function handleSaveSettingsButtonClick() {
     toggleElementVisibility(settingsModalOverlay, false);
   }
 }
-// #endregion
-
-// #region cacheEntry.js
-
-/* Cache helpers */
-function cacheEntry(convoId, entryId, payload) {
-  entryCache.set(`${convoId}:${entryId}`, payload);
-}
-function getCachedEntry(convoId, entryId) {
-  return entryCache.get(`${convoId}:${entryId}`);
-}
-function clearCacheForEntry(convoId, entryId) {
-  entryCache.delete(`${convoId}:${entryId}`);
-}
-
 // #endregion
 
 // #region db.js
@@ -1189,7 +1163,7 @@ function getAllConversations(showHidden) {
 }
 // #endregion
 
-// #region Entries
+// #region SQL Queries
 /* Load dentries for a conversation (summary listing) */
 function getEntriesForConversation(convoId, showHidden) {
   convoId = parseInt(convoId);
@@ -1327,6 +1301,11 @@ function getEntriesBulk(pairs = [], showHidden) {
 
 // #region Search
 /** Search entry dialogues and conversation dialogues */
+// Helper: escape single quotes
+function esc(s) {
+  return s.replace(/'/g, "''");
+}
+
 function searchDialogues(
   q,
   limit = 1000,
@@ -1336,23 +1315,66 @@ function searchDialogues(
   conversationIds = null,
   showHidden,
 ) {
-  const raw = (q || "").trim();
+  // Build WHERE clause - only include text search if query is provided
+  let dentriesWhere = "";
 
+  // Search dentries table
+  const limitClause = ` LIMIT ${limit} OFFSET ${offset}`;
+  dentriesWhere = buildEntriesWhereAndLimitClause(
+    q,
+    dentriesWhere,
+    actorIds,
+    conversationIds,
+    filterStartInput,
+    showHidden,
+  );
+  const { dentriesCount, dentriesResults } = getEntries(
+    dentriesWhere,
+    limitClause,
+  );
+
+  // Search dialogues table
+  let dialoguesWhere = buildDialoguesWhereClause(
+    q,
+    actorIds,
+    conversationIds,
+    showHidden,
+  );
+  const { dialoguesCount, dialoguesResults } = getDialogues(
+    dialoguesWhere,
+    limitClause,
+  );
+
+  // Search alternates table
+  let alternatesWhere = buildAlternatesWhereClause(
+    q,
+    actorIds,
+    conversationIds,
+    filterStartInput,
+  );
+  let { alternatesCount, alternatesResults } = getAlternateLines(
+    alternatesWhere,
+    limitClause,
+  );
+
+  // Calculate total count
+  const totalCount = dentriesCount + dialoguesCount + alternatesCount;
+
+  // Combine results
+  return {
+    results: [...dentriesResults, ...dialoguesResults, ...alternatesResults],
+    total: totalCount,
+  };
+}
+
+// Helper: build conditions for a set of columns using parsed tokens
+function buildConditionsForColumns(q, columns) {
+  const raw = (q || "").trim();
   // Extract Variable["..."] / Variable['...'] tokens so internal quotes don't break parsing
-  const variableTokens = [];
-  const variableTokenRegex = /Variable\[\s*(['"])(.*?)\1\s*\]/g;
-  let vmatch;
-  while ((vmatch = variableTokenRegex.exec(raw)) !== null) {
-    variableTokens.push(vmatch[0]);
-  }
+  const { variableTokenRegex, variableTokens } = extractVariableTokens(raw);
 
   // Extract simple function-like tokens (e.g., CheckItem("x"), HasShirt(), once(1), CheckEquipped('y'))
-  const functionTokens = [];
-  const functionTokenRegex = /\b[A-Za-z_][A-Za-z0-9_]*\([^)]*\)/g;
-  let fmatch;
-  while ((fmatch = functionTokenRegex.exec(raw)) !== null) {
-    functionTokens.push(fmatch[0]);
-  }
+  const { functionTokenRegex, functionTokens } = extractFunctionTokens(raw);
 
   // Remove variable and function tokens from the string we parse for quoted phrases / words
   const processedRaw = raw
@@ -1361,97 +1383,147 @@ function searchDialogues(
     .trim();
 
   // Parse query for quoted phrases and regular words from the processed raw string
-  const quotedPhrases = [];
-  const quotedPhrasesRegex = /"([^"]+)"/g;
-  let match;
-  while ((match = quotedPhrasesRegex.exec(processedRaw)) !== null) {
-    quotedPhrases.push(match[1]);
-  }
+  const quotedPhrases = extractQuotedPhrases(processedRaw);
 
   // Remove quoted phrases from processedRaw to get remaining words
   const remainingText = processedRaw.replace(/"[^"]+"/g, "").trim();
   const words = remainingText ? remainingText.split(/\s+/) : [];
 
-  // Build WHERE clause - only include text search if query is provided
-  let where = "";
+  const conds = [];
 
-  // Helper: escape single quotes
-  function esc(s) {
-    return s.replace(/'/g, "''");
-  }
+  // quoted phrases
+  quotedPhrases.forEach((phrase) => {
+    const safe = esc(phrase);
+    conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`);
+  });
 
-  // Helper: build conditions for a set of columns using parsed tokens
-  function buildConditionsForColumns(columns) {
-    const conds = [];
+  // variables
+  variableTokens.forEach((token) => {
+    const safe = esc(token);
+    conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`);
+  });
 
-    // quoted phrases
-    quotedPhrases.forEach((phrase) => {
-      const safe = esc(phrase);
-      conds.push(
-        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`,
-      );
-    });
+  // functions
+  functionTokens.forEach((token) => {
+    const safe = esc(token);
+    conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`);
+  });
 
-    // variables
-    variableTokens.forEach((token) => {
-      const safe = esc(token);
-      conds.push(
-        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`,
-      );
-    });
-
-    // functions
-    functionTokens.forEach((token) => {
-      const safe = esc(token);
-      conds.push(
-        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`,
-      );
-    });
-
-    // words (wholeWords filtered on front end)
-    words.forEach((word) => {
-      const safe = esc(word);
-      conds.push(
-        `(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`,
-      );
-    });
-
-    return conds;
-  }
-
-  // Build dentries WHERE clause using shared helper
+  // words (wholeWords filtered on front end)
+  words.forEach((word) => {
+    const safe = esc(word);
+    conds.push(`(${columns.map((c) => `${c} LIKE '%${safe}%'`).join(" OR ")})`);
+  });
   if (
     quotedPhrases.length > 0 ||
     words.length > 0 ||
     variableTokens.length > 0 ||
     functionTokens.length > 0
   ) {
-    const conditions = buildConditionsForColumns(["dialoguetext", "title"]);
-    if (conditions.length > 0) {
-      where = conditions.join(" AND ");
-    }
+    return conds;
+  }
+  return null;
+}
+
+function extractQuotedPhrases(processedRaw) {
+  const quotedPhrases = [];
+  const quotedPhrasesRegex = /"([^"]+)"/g;
+  let match;
+  while ((match = quotedPhrasesRegex.exec(processedRaw)) !== null) {
+    quotedPhrases.push(match[1]);
+  }
+  return quotedPhrases;
+}
+function extractFunctionTokens(raw) {
+  const functionTokens = [];
+  const functionTokenRegex = /\b[A-Za-z_][A-Za-z0-9_]*\([^)]*\)/g;
+  let fmatch;
+  while ((fmatch = functionTokenRegex.exec(raw)) !== null) {
+    functionTokens.push(fmatch[0]);
+  }
+  return { functionTokenRegex, functionTokens };
+}
+function extractVariableTokens(raw) {
+  const variableTokens = [];
+  const variableTokenRegex = /Variable\[\s*(['"])(.*?)\1\s*\]/g;
+  let vmatch;
+  while ((vmatch = variableTokenRegex.exec(raw)) !== null) {
+    variableTokens.push(vmatch[0]);
+  }
+  return { variableTokenRegex, variableTokens };
+}
+
+function buildAlternatesWhereClause(
+  q,
+  actorIds,
+  conversationIds,
+  filterStartInput,
+) {
+  let alternatesWhere = "";
+
+  const alternatesConditions = buildConditionsForColumns(q, ["alternateline"]);
+  if (alternatesConditions?.length > 0) {
+    alternatesWhere = alternatesConditions?.join(" AND ");
+  }
+
+  // Handle multiple actor IDs for alternates (join with dentries to get actor)
+  if (actorIds && Array.isArray(actorIds) && actorIds.length > 0) {
+    const actorList = actorIds.map((id) => `'${id}'`).join(",");
+    const actorFilter = `d.actor IN (${actorList})`;
+    alternatesWhere = alternatesWhere
+      ? `${alternatesWhere} AND ${actorFilter}`
+      : actorFilter;
+  }
+
+  // Handle conversation IDs for alternates
+  if (
+    conversationIds &&
+    Array.isArray(conversationIds) &&
+    conversationIds.length > 0
+  ) {
+    const convoList = conversationIds.map((id) => `'${id}'`).join(",");
+    const convoFilter = `a.conversationid IN (${convoList})`;
+    alternatesWhere = alternatesWhere
+      ? `${alternatesWhere} AND ${convoFilter}`
+      : convoFilter;
+  }
+
+  if (filterStartInput && alternatesWhere) {
+    alternatesWhere += ` AND a.dialogueid NOT IN (0, 1)`;
+  } else if (filterStartInput) {
+    alternatesWhere = `a.dialogueid NOT IN (0, 1)`;
+  }
+  return alternatesWhere;
+}
+function buildEntriesWhereAndLimitClause(
+  q,
+  where,
+  actorIds,
+  conversationIds,
+  filterStartInput,
+  showHidden,
+) {
+  const conditions = buildConditionsForColumns(q, ["dialoguetext", "title"]);
+  if (conditions?.length > 0) {
+    where = conditions.join(" AND ");
   }
 
   // Handle multiple actor IDs
-  if (actorIds) {
-    if (Array.isArray(actorIds) && actorIds.length > 0) {
-      const actorList = actorIds.map((id) => `'${id}'`).join(",");
-      const actorFilter = `actor IN (${actorList})`;
-      where = where ? `${where} AND ${actorFilter}` : actorFilter;
-    } else if (typeof actorIds === "string" || typeof actorIds === "number") {
-      // Legacy support for single actor ID
-      const actorFilter = `actor='${actorIds}'`;
-      where = where ? `${where} AND ${actorFilter}` : actorFilter;
-    }
+  if (actorIds && Array.isArray(actorIds) && actorIds.length > 0) {
+    const actorList = actorIds.map((id) => `'${id}'`).join(",");
+    const actorFilter = `actor IN (${actorList})`;
+    where = where ? `${where} AND ${actorFilter}` : actorFilter;
   }
 
   // Handle multiple conversation IDs
-  if (conversationIds) {
-    if (Array.isArray(conversationIds) && conversationIds.length > 0) {
-      const convoList = conversationIds.map((id) => `'${id}'`).join(",");
-      const convoFilter = `conversationid IN (${convoList})`;
-      where = where ? `${where} AND ${convoFilter}` : convoFilter;
-    }
+  if (
+    conversationIds &&
+    Array.isArray(conversationIds) &&
+    conversationIds.length > 0
+  ) {
+    const convoList = conversationIds.map((id) => `'${id}'`).join(",");
+    const convoFilter = `conversationid IN (${convoList})`;
+    where = where ? `${where} AND ${convoFilter}` : convoFilter;
   }
 
   // Build filter for start input if needed
@@ -1473,56 +1545,30 @@ function searchDialogues(
     where = "1=1";
   }
 
-  const limitClause = ` LIMIT ${limit} OFFSET ${offset}`;
-
-  // Get total counts first (without limit/offset)
-  const dentriesCountSQL = `SELECT COUNT(*) as count FROM dentries WHERE ${where};`;
-  const dentriesCount = execRowsFirstOrDefault(dentriesCountSQL)?.count || 0;
-
-  // Search dentries for flow conversations
-  const dentriesSQL = `
-    SELECT conversationid, id, dialoguetext, title, actor, isHidden 
-      FROM dentries 
-      WHERE ${where} 
-      ORDER BY conversationid, id 
-      ${limitClause};`;
-  const dentriesResults = execRows(dentriesSQL);
-
+  return where;
+}
+function buildDialoguesWhereClause(q, actorIds, conversationIds, showHidden) {
   // Also search dialogues table for orbs and tasks (they use description as dialogue text)
   let dialoguesWhere = "";
 
   // Build dialogues WHERE clause using shared helper
-  if (
-    quotedPhrases.length > 0 ||
-    words.length > 0 ||
-    variableTokens.length > 0 ||
-    functionTokens.length > 0
-  ) {
-    const dialoguesConditions = buildConditionsForColumns([
-      "description",
-      "title",
-    ]);
-    if (dialoguesConditions.length > 0) {
-      dialoguesWhere = `${dialoguesConditions.join(" AND ")}`;
-    }
+  const dialoguesConditions = buildConditionsForColumns(q, [
+    "description",
+    "title",
+  ]);
+  if (dialoguesConditions?.length > 0) {
+    dialoguesWhere = `${dialoguesConditions.join(" AND ")}`;
   }
 
   // Handle multiple actor IDs for dialogues
-  if (actorIds) {
-    if (Array.isArray(actorIds) && actorIds.length > 0) {
-      const actorList = actorIds.map((id) => `'${id}'`).join(",");
-      // For orbs and tasks, check both actor and conversant fields
-      // Always include actor/conversant = 0 (unassigned orbs/tasks)
-      const actorFilter = `(actor IN (${actorList}, '0') OR conversant IN (${actorList}, '0'))`;
-      dialoguesWhere = dialoguesWhere
-        ? `${dialoguesWhere} AND ${actorFilter}`
-        : actorFilter;
-    } else if (typeof actorIds === "string" || typeof actorIds === "number") {
-      const actorFilter = `(actor='${actorIds}' OR conversant='${actorIds}' OR actor='0' OR conversant='0')`;
-      dialoguesWhere = dialoguesWhere
-        ? `${dialoguesWhere} AND ${actorFilter}`
-        : actorFilter;
-    }
+  if (actorIds && Array.isArray(actorIds) && actorIds.length > 0) {
+    const actorList = actorIds.map((id) => `'${id}'`).join(",");
+    // For orbs and tasks, check both actor and conversant fields
+    // Always include actor/conversant = 0 (unassigned orbs/tasks)
+    const actorFilter = `(actor IN (${actorList}, '0') OR conversant IN (${actorList}, '0'))`;
+    dialoguesWhere = dialoguesWhere
+      ? `${dialoguesWhere} AND ${actorFilter}`
+      : actorFilter;
   }
 
   // Handle conversation IDs for dialogues (orbs/tasks use id as conversationid)
@@ -1549,8 +1595,24 @@ function searchDialogues(
   if (!dialoguesWhere) {
     dialoguesWhere = "1=1";
   }
+  return dialoguesWhere;
+}
 
-  // Get count for dialogues
+function getEntries(where, limitClause) {
+  const dentriesCountSQL = `SELECT COUNT(*) as count FROM dentries WHERE ${where};`;
+
+  // Search dentries for flow conversations
+  const dentriesSQL = `
+    SELECT conversationid, id, dialoguetext, title, actor, isHidden 
+      FROM dentries 
+      WHERE ${where} 
+      ORDER BY conversationid, id 
+      ${limitClause};`;
+  const dentriesResults = execRows(dentriesSQL);
+  const dentriesCount = execRowsFirstOrDefault(dentriesCountSQL)?.count || 0;
+  return { dentriesCount, dentriesResults };
+}
+function getDialogues(dialoguesWhere, limitClause) {
   const dialoguesCountSQL = `SELECT COUNT(*) as count FROM conversations WHERE ${dialoguesWhere};`;
   const dialoguesCount = execRowsFirstOrDefault(dialoguesCountSQL)?.count || 0;
 
@@ -1561,55 +1623,9 @@ function searchDialogues(
       ORDER BY id 
       ${limitClause};`;
   const dialoguesResults = execRows(dialoguesSQL);
-
-  // Also search alternates table for alternate dialogue lines
-  let alternatesWhere = "";
-
-  if (
-    quotedPhrases.length > 0 ||
-    words.length > 0 ||
-    variableTokens.length > 0 ||
-    functionTokens.length > 0
-  ) {
-    const alternatesConditions = buildConditionsForColumns(["alternateline"]);
-    alternatesWhere = alternatesConditions.join(" AND ");
-  }
-
-  // Handle multiple actor IDs for alternates (join with dentries to get actor)
-  if (actorIds) {
-    if (Array.isArray(actorIds) && actorIds.length > 0) {
-      const actorList = actorIds.map((id) => `'${id}'`).join(",");
-      const actorFilter = `d.actor IN (${actorList})`;
-      alternatesWhere = alternatesWhere
-        ? `${alternatesWhere} AND ${actorFilter}`
-        : actorFilter;
-    } else if (typeof actorIds === "string" || typeof actorIds === "number") {
-      const actorFilter = `d.actor='${actorIds}'`;
-      alternatesWhere = alternatesWhere
-        ? `${alternatesWhere} AND ${actorFilter}`
-        : actorFilter;
-    }
-  }
-
-  // Handle conversation IDs for alternates
-  if (
-    conversationIds &&
-    Array.isArray(conversationIds) &&
-    conversationIds.length > 0
-  ) {
-    const convoList = conversationIds.map((id) => `'${id}'`).join(",");
-    const convoFilter = `a.conversationid IN (${convoList})`;
-    alternatesWhere = alternatesWhere
-      ? `${alternatesWhere} AND ${convoFilter}`
-      : convoFilter;
-  }
-
-  if (filterStartInput && alternatesWhere) {
-    alternatesWhere += ` AND a.dialogueid NOT IN (0, 1)`;
-  } else if (filterStartInput) {
-    alternatesWhere = `a.dialogueid NOT IN (0, 1)`;
-  }
-
+  return { dialoguesCount, dialoguesResults };
+}
+function getAlternateLines(alternatesWhere, limitClause) {
   // Only query alternates if we have search criteria
   let alternatesResults = [];
   let alternatesCount = 0;
@@ -1633,16 +1649,9 @@ function searchDialogues(
       isAlternate: true,
     }));
   }
-
-  // Calculate total count
-  const totalCount = dentriesCount + dialoguesCount + alternatesCount;
-
-  // Combine results
-  return {
-    results: [...dentriesResults, ...dialoguesResults, ...alternatesResults],
-    total: totalCount,
-  };
+  return { alternatesCount, alternatesResults };
 }
+
 // #endregion
 
 // Helper: fetch conversations by type (used for type-only searches with no text)
@@ -2321,7 +2330,7 @@ function setUpFilterDropdowns() {
   );
 
   // Single document-level click handler to close the open dropdown when clicking outside
-  document.addEventListener("click", handleClickOutsideDropdown);
+  document.addEventListener("click", closeAllDropdowns);
 
   dropdownButtons.forEach((dropdownButton) => {
     dropdownButton.addEventListener("click", handleDropdownButtonClick);
@@ -2936,7 +2945,7 @@ async function navigateToEntry(
   if (moreDetailsEl && moreDetailsEl.open) {
     // Clear cache to force reload when switching between alternate views
     if (sameEntry) {
-      clearCacheForEntry(convoId, entryId);
+      entryCache.delete(`${convoId}:${entryId}`); // Clear Cache for Entry
     }
     if (convoId && entryId) {
       await showEntryDetails(
@@ -3007,13 +3016,12 @@ async function showEntryDetails(
   selectedAlternateLine = null,
 ) {
   if (!entryDetailsEl) return;
-
   // Fetch core row early so it can be referenced by cached fallback values
   const coreRow = getEntry(convoId, entryId);
 
   // Check cache only if viewing the original (no alternate selected)
   if (!selectedAlternateCondition && !selectedAlternateLine) {
-    const cached = getCachedEntry(convoId, entryId);
+    const cached = entryCache.get(`${convoId}:${entryId}`); // Get Cached Entry
     if (cached) {
       renderEntryDetails(entryDetailsEl, {
         ...cached,
@@ -3094,7 +3102,7 @@ async function showEntryDetails(
     const basePayload = { ...payload };
     delete basePayload.selectedAlternateCondition;
     delete basePayload.selectedAlternateLine;
-    cacheEntry(convoId, entryId, basePayload);
+    entryCache.set(`${convoId}:${entryId}`, basePayload); // Cache Entry
   }
 
   renderEntryDetails(entryDetailsEl, payload);
@@ -3338,7 +3346,7 @@ function setUpSearch() {
   searchInput.addEventListener("keydown", handleSearchInputKeyDown);
   searchInput.addEventListener("click", handleSearchInputClick);
   searchInput.addEventListener("input", handleSearchInputEvent);
-  searchBtn.addEventListener("click", handleSearchButtonClick);
+  searchBtn.addEventListener("click", search);
 }
 
 function triggerSearch(e) {
@@ -4023,7 +4031,7 @@ function performMobileSearch(resetSearch = true) {
     if (resetSearch) {
       const initialFiltered = filterAndMatchResults(
         currentSearchRawResults,
-        searchInput.value
+        searchInput.value,
       );
       if (initialFiltered.length === 0) {
         mobileSearchResults.innerHTML =
@@ -4561,7 +4569,7 @@ function createCardItem(
 
 /* #region Visibility helpers */
 function toggleElementVisibility(el, showElement) {
-  if(!el) {
+  if (!el) {
     return;
   }
   if (el instanceof NodeList) {
@@ -5364,7 +5372,10 @@ async function boot() {
   convoListEl?.addEventListener("convoLeafClick", handleNavigateToConvoLeaf);
 
   // Handle navigateToConversation events from history dividers
-  chatLogEl?.addEventListener("navigateToConversation", handleNavigateToConvoLeaf);
+  chatLogEl?.addEventListener(
+    "navigateToConversation",
+    handleNavigateToConvoLeaf,
+  );
 
   // Set up filter dropdowns to open and close
   setUpFilterDropdowns();
@@ -5389,7 +5400,7 @@ async function boot() {
 
   // Desktop History Buttons
   backBtn?.addEventListener("click", handleHistoryBackButtonClick);
-  convoRootBtn?.addEventListener("click", handleConvoRootButtonClick);
+  convoRootBtn?.addEventListener("click", jumpToConversationRoot);
 
   updateBackButtonState();
 
