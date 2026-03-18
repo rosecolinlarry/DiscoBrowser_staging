@@ -15,7 +15,7 @@ import {
 import {
   setActiveTypeFilter,
   getActiveTypeFilter,
-} from "./setUpFilterDropdowns.js";
+} from "./filterDropdowns.js";
 import { getAllConversations, getConversationById } from "./sqlHelpers.js";
 import { highlightTerms } from "./uiHelpers.js";
 import { showHidden } from "./userSettings.js";
@@ -532,7 +532,6 @@ function setUpConversationListEvents() {
   convoListEl?.addEventListener("convoLeafClick", handleNavigateToConvoLeaf);
 }
 function initializeConversationsForTree() {
-  // TODO KA returns id, title, type FROM conversations 
   convos = getAllConversations(showHidden());
 }
 function setupConversationFilter() {

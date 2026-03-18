@@ -11,7 +11,7 @@ function closeModal() {
 }
 
 export async function setupConversationTypesModal() {
-  await injectTemplate('conversationTypesModal.html', "conversationTypesModalOverlay")
+  await injectTemplate('conversation-types-modal.html', "conversationTypesModalOverlay")
   const helpIcon = $("helpIcon");
   const conversationTypeModalOverlay = $("conversationTypesModalOverlay");
   const closeBtn = conversationTypeModalOverlay.querySelector(".modal-close");

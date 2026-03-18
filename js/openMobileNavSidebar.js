@@ -8,13 +8,9 @@ import {
 import { openConversationSection } from "./openConversationSection.js";
 import { searchInput, typeFilterDropdown } from "./scripts.js";
 import {
-  mobileConvoFilter,
-  mobileActorFilter,
-  mobileTypeFilter,
   mobileConvoFilterWrapper,
   mobileActorFilterWrapper,
-  mobileTypeFilterSheet,
-} from "./setUpFilterDropdowns.js";
+} from "./filterDropdowns.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
 import {
   getCurrentConvoId,
@@ -264,7 +260,7 @@ function setupMobileTypeFilter() {
     search(true);
   }
   // Apply button
-  applyBtn?.addEventListener("click", () => handleMobileConvoTypeButtonClick);
+  applyBtn?.addEventListener("click", handleMobileConvoTypeButtonClick);
 }
 
 // History navigation
@@ -291,4 +287,9 @@ export const mobileNavPanel = $("mobileNavPanel");
 export const mobileNavBtn = $("mobileNavBtn");
 export const mobileNavHome = $("mobileNavHome");
 export const mobileNavSettings = $("mobileNavSettings");
-export const mobileNavSearch = $("mobileNavSearch");
+export const mobileNavSearch = $("mobileNavSearch");export const mobileActorFilter = $("mobileActorFilter"); // Button
+export const mobileTypeFilter = $("mobileTypeFilter"); // Button
+export const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
+// Filter dropdowns
+export const mobileConvoFilter = $("mobileConvoFilter"); // Button
+

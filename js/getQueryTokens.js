@@ -26,7 +26,7 @@ import {
   selectedConvoIds,
   selectedActorIds,
   allActors,
-} from "./setUpFilterDropdowns.js";
+} from "./filterDropdowns.js";
 import {
   getCurrentSearchTotal,
   getCurrentSearchFilteredCount,

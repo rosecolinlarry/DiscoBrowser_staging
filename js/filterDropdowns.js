@@ -1,5 +1,4 @@
 import { $, toggleElementVisibility } from "./uiHelpers.js";
-import { goBackHomeWithBrowserHistory } from "./navigation.js";
 import {
   actorAddToSelectionBtn,
   actorCheckboxList,
@@ -52,19 +51,21 @@ export function setUpFilterDropdowns() {
       setOpenDropdown(shouldOpen ? filterDropdown : null);
     }
     dropdownButton.addEventListener("click", handleDropdownButtonClick);
+
+    
+    // conversation filter dropdown
+    setUpConvoFilterDropdown();
+  
+    // actor filter dropdown
+    setUpActorFilterDropdown();
+  
+    // type filter dropdown
+    setUpTypeFilterDropdown();
   });
 }
 function handleOutsideDropdownClick() {
   const dropdowns = document.querySelectorAll(".filter-dropdown");
   dropdowns.forEach((dropdown) => toggleElementVisibility(dropdown, false));
-}
-
-export function setUpMainHeader() {
-  const headerTitle = document.querySelector("h1");
-  if (headerTitle) {
-    headerTitle.style.cursor = "pointer";
-    headerTitle.addEventListener("click", goBackHomeWithBrowserHistory);
-  }
 }
 
 let activeTypeFilter = "all";
@@ -80,22 +81,13 @@ export let selectedActorIds = new Set();
 export let selectedTypeIds = new Set(["flow", "orb", "task"]); // All types selected by default
 export let filteredActors = [];
 export let filteredConvos = [];
-// Filter dropdowns
-
-export const mobileConvoFilter = $("mobileConvoFilter"); // Button
-export const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
+const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
+const convoFilterLabel = $("convoFilterLabel"); // Text
+const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
+const actorFilterLabel = $("actorFilterLabel"); // Text
+export const mobileActorFilterWrapper = $("mobileActorFilterWrapper"); // Checklist
 export const mobileConvoFilterWrapper = $("mobileConvoFilterWrapper"); // Checklist
 
-export const convoFilterLabel = $("convoFilterLabel"); // Text
-
-export const mobileActorFilter = $("mobileActorFilter"); // Button
-export const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
-export const mobileActorFilterWrapper = $("mobileActorFilterWrapper"); // Checklist
-
-export const actorFilterLabel = $("actorFilterLabel"); // Text
-
-export const mobileTypeFilter = $("mobileTypeFilter"); // Button
-export const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
 
 function filterActors(actorSearchInput) {
   const searchText = actorSearchInput
@@ -116,8 +108,7 @@ function filterActors(actorSearchInput) {
   renderActorCheckboxes(filteredActors);
   updateActorSelectAllState();
 }
-
-export function populateActorDropdown() {
+function setUpActorFilterDropdown() {
   allActors = getDistinctActors();
   filteredActors = [...allActors];
 
@@ -296,7 +287,7 @@ function renderConvoList(conversations) {
     convoCheckboxList.appendChild(label);
   });
 }
-export function setupConvoFilter() {
+function setUpConvoFilterDropdown() {
   const convoFilterSearchInput = $("convoSearch");
   const selectAllCheckbox = $("selectAllConvos");
   const addToSelectionBtn = $("convoAddToSelection");
@@ -392,7 +383,7 @@ export function updateConvoFilterLabel() {
   }
 }
 
-export function setupTypeFilter() {
+function setUpTypeFilterDropdown() {
   // Select All checkbox
   function handleSelectAllConvoTypeChange(e) {
     const isChecked = e.target.checked;

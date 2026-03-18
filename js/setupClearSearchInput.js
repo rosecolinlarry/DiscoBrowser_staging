@@ -16,7 +16,7 @@ import {
   selectedConvoIds,
   selectedActorIds,
   selectedTypeIds,
-} from "./setUpFilterDropdowns.js";
+} from "./filterDropdowns.js";
 import {
   getCurrentAppState,
   getIsHandlingPopState,
@@ -25,9 +25,9 @@ import {
 import { toggleElementVisibility, $ } from "./uiHelpers.js";
 import { search } from "./getQueryTokens.js";
 import { openMobileSearchScreen } from "./openMobileNavSidebar.js";
-import { updateActorFilterLabel } from "./setUpFilterDropdowns.js";
-import { updateConvoFilterLabel } from "./setUpFilterDropdowns.js";
-import { updateTypeFilterLabel } from "./setUpFilterDropdowns.js";
+import { updateActorFilterLabel } from "./filterDropdowns.js";
+import { updateConvoFilterLabel } from "./filterDropdowns.js";
+import { updateTypeFilterLabel } from "./filterDropdowns.js";
 import {
   setCurrentSearchFilteredCount,
   setCurrentSearchOffset,

@@ -13,7 +13,7 @@ import {
 import {
   mobileActorFilterWrapper,
   mobileConvoFilterWrapper,
-} from "./setUpFilterDropdowns.js";
+} from "./filterDropdowns.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
 import { highlightConversationInTree } from "./conversationTree.js";
 import {
