@@ -1,8 +1,4 @@
 import { createSearchResultDiv } from "./createSearchResultDiv.js";
-import {
-  filterResultsByType,
-  getConversationsByType,
-} from "./loadEntriesForConversation.js";
 import { getConvos } from "./conversationTree.js";
 import {
   handleSearchResultClick,
@@ -22,9 +18,6 @@ import {
 import {
   mobileSearchResults,
   mobileSearchCount,
-  entryListEl,
-  entryListHeaderEl,
-  currentEntryContainerEl,
   mobileSearchTrigger,
 } from "./openMobileNavSidebar.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
@@ -54,6 +47,9 @@ import { toggleElementVisibility } from "./uiHelpers.js";
 import { searchDialogues } from "./searchDialogues.js";
 import { showHidden } from "./userSettings.js";
 import { $ } from "./uiHelpers.js";
+import { execRows, getConversationById } from "./sqlHelpers.js";
+import { entryListEl, entryListHeaderEl } from "./entryListEl.js";
+import { currentEntryContainerEl } from "./currentEntryContainerEl.js";
 
 export const wholeWordsCheckbox = $("wholeWordsCheckbox");
 
@@ -554,4 +550,23 @@ function performMobileSearch(resetSearch = true) {
     setIsLoadingMore(false);
     toggleElementVisibility(searchLoader, false);
   }
+}// Helper: filter a list of results by a set of types (treat 'all' as no-op)
+export function filterResultsByType(results, typeSet) {
+  if (!typeSet || typeSet.has("all") || typeSet.size === 0) return results;
+  return results.filter((r) => {
+    const convo = getConversationById(r.conversationid);
+    const type = convo ? convo.type || "flow" : "flow";
+    return typeSet.has(type);
+  });
 }
+// Helper: fetch conversations by type (used for type-only searches with no text)
+export function getConversationsByType(type, showHidden) {
+  if (!type) return [];
+  let where = `type='${type}'`;
+  if (!showHidden) {
+    where += ` AND isHidden != 1`;
+  }
+  const sql = `SELECT id as conversationid, null as id, description as dialoguetext, title, actor, isHidden FROM conversations WHERE ${where} ORDER BY title;`;
+  return execRows(sql);
+}
+

@@ -1,5 +1,4 @@
 import { entryCache } from "./scripts.js";
-import { currentEntryContainerEl, entryDetailsEl, entryListEl, moreDetailsEl } from "./openMobileNavSidebar.js";
 import { renderConvoDetails, renderEntryDetails } from "./uiHelpers.js";
 import {
   getConversationById,
@@ -10,7 +9,14 @@ import {
   getParentsChildren,
 } from "./sqlHelpers.js";
 import { showHidden } from "./userSettings.js";
-import { getCurrentAlternateCondition, getCurrentAlternateLine, getCurrentConvoId, getCurrentEntryId } from "./navigation.js";
+import {
+  getCurrentAlternateCondition,
+  getCurrentAlternateLine,
+  getCurrentConvoId,
+  getCurrentEntryId,
+} from "./navigation.js";
+import { entryListEl } from "./entryListEl.js";
+import { currentEntryContainerEl, entryDetailsEl, moreDetailsEl } from "./currentEntryContainerEl.js";
 
 export async function showConvoDetails(convoId) {
   if (!entryDetailsEl) return;

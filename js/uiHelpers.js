@@ -608,3 +608,21 @@ export function highlightTerms(text, query, hasQuotedPhrases = false) {
     })
     .join("");
 }
+
+export async function injectTemplate(templateFileName, containerId) {
+  try {
+    const response = await fetch(templateFileName);
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    const html = await response.text();
+    const containerEl = document.getElementById(containerId);
+
+    if (containerEl) {
+      containerEl.innerHTML = html;
+    }
+  } catch (error) {
+    console.error("Error fetching modal content:", error);
+  }
+}
+

@@ -10,7 +10,7 @@ import {
   typeCheckboxList,
   selectAllTypes,
 } from "./scripts.js";
-import { mobileSearchTrigger, entryListEl } from "./openMobileNavSidebar.js";
+import { mobileSearchTrigger } from "./openMobileNavSidebar.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
 import {
   selectedConvoIds,
@@ -32,6 +32,7 @@ import {
   setCurrentSearchFilteredCount,
   setCurrentSearchOffset,
 } from "./handleInfiniteScroll.js";
+import { entryListEl } from "./entryListEl.js";
 
 export function setupClearSearchInput() {
   function handleSearchClearButtonClick(e) {

@@ -2,7 +2,7 @@ import { DEFAULT_APP_SETTINGS, SETTINGS_STORAGE_KEY } from "./scripts.js";
 import { rebuildConversationTree } from "./conversationTree.js";
 import { updateHandlePositions, updateResizeHandles } from "./resizableColumns.js";
 import { updateDesktopLayout } from "./handleMediaQueryChange.js";
-import { $, toggleElementVisibility } from "./uiHelpers.js";
+import { $, injectTemplate, toggleElementVisibility } from "./uiHelpers.js";
 
 export function setupSettingsModal() {
   // Open settings modal
@@ -142,22 +142,6 @@ export async function injectUserSettingsTemplate() {
   initializeUserSettings();
 }
 
-export async function injectTemplate(templateFileName, containerId) {
-  try {
-    const response = await fetch(templateFileName);
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    const html = await response.text();
-    const containerEl = document.getElementById(containerId);
-
-    if (containerEl) {
-      containerEl.innerHTML = html;
-    }
-  } catch (error) {
-    console.error("Error fetching modal content:", error);
-  }
-}
 function setUpRestoreDefaultSettingsButton() {
   // Restore default settings and updates checkbox values.
   const restoreDefaultSettingsBtn = $(restoreDefaultSettingsBtnId);

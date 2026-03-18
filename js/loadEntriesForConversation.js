@@ -14,12 +14,7 @@ import {
 } from "./scripts.js";
 import {
   chatLogEl,
-  currentEntryContainerEl,
-  entryListEl,
   convoRootBtn,
-  entryOverviewEl,
-  moreDetailsEl,
-  entryListHeaderEl,
 } from "./openMobileNavSidebar.js";
 import { getCurrentConvoId } from "./navigation.js";
 import {
@@ -36,9 +31,6 @@ import { showConvoDetails } from "./showConvoDetails.js";
 import {
   getConversationById,
   getEntriesForConversation,
-  getParentsChildren,
-  getEntriesBulk,
-  execRows,
 } from "./sqlHelpers.js";
 import {
   alwaysShowMoreDetails,
@@ -49,6 +41,8 @@ import {
   setCurrentSearchOffset,
   setCurrentSearchTotal,
 } from "./handleInfiniteScroll.js";
+import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./currentEntryContainerEl.js";
+import { entryListEl, entryListHeaderEl } from "./entryListEl.js";
 
 /* Load entries listing for conversation */
 
@@ -178,73 +172,5 @@ export async function loadEntriesForConversation(
     el.addEventListener("click", handleEntryClick);
     entryListEl.appendChild(el);
   });
-}
-// Helper: filter a list of results by a set of types (treat 'all' as no-op)
-export function filterResultsByType(results, typeSet) {
-  if (!typeSet || typeSet.has("all") || typeSet.size === 0) return results;
-  return results.filter((r) => {
-    const convo = getConversationById(r.conversationid);
-    const type = convo ? convo.type || "flow" : "flow";
-    return typeSet.has(type);
-  });
-}
-export function loadChildOptions(convoId, entryId) {
-  try {
-    entryListHeaderEl.textContent = "Next Dialogue Options";
-    entryListEl.innerHTML = "";
-
-    const { children } = getParentsChildren(convoId, entryId);
-
-    const pairs = [];
-    for (const c of children)
-      pairs.push({ convoId: c.d_convo, entryId: c.d_id });
-
-    const destRows = getEntriesBulk(pairs, showHidden());
-    const destMap = new Map(destRows.map((r) => [`${r.convo}:${r.id}`, r]));
-
-    for (const c of children) {
-      const dest = destMap.get(`${c.d_convo}:${c.d_id}`);
-      if (!dest) continue;
-      if ((dest.title || "").toLowerCase() === "start") continue;
-
-      const el = createCardItem(
-        dest.title,
-        c.d_convo,
-        c.d_id,
-        dest.dialoguetext,
-      );
-      el.addEventListener("click", handleEntryClick);
-      entryListEl.appendChild(el);
-    }
-
-    if (entryListEl.children.length === 0) {
-      // No further options - make compact like orbs/tasks
-      entryListEl.classList.add("compact");
-      const entryList = entryListEl.closest(".entry-list");
-      if (entryList) entryList.classList.add("compact");
-      if (currentEntryContainerEl) {
-        currentEntryContainerEl.classList.add("expanded");
-      }
-      const message = document.createElement("div");
-      message.className = "hint-text";
-      message.style.fontStyle = "italic";
-      message.style.padding = "12px";
-      message.textContent = "(no further options)";
-      entryListEl.appendChild(message);
-    }
-  } catch (e) {
-    console.error("Error loading child links", e);
-    entryListEl.textContent = "(error loading next options)";
-  }
-}
-// Helper: fetch conversations by type (used for type-only searches with no text)
-export function getConversationsByType(type, showHidden) {
-  if (!type) return [];
-  let where = `type='${type}'`;
-  if (!showHidden) {
-    where += ` AND isHidden != 1`;
-  }
-  const sql = `SELECT id as conversationid, null as id, description as dialoguetext, title, actor, isHidden FROM conversations WHERE ${where} ORDER BY title;`;
-  return execRows(sql);
 }
 

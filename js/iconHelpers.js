@@ -1,4 +1,4 @@
-import { injectTemplate } from "./userSettings.js";
+import { injectTemplate } from "./uiHelpers.js";
 import { $ } from "./uiHelpers.js";
 
 // Creates and injects icon templates into the DOM. Templates are stored in <template> elements for efficient cloning

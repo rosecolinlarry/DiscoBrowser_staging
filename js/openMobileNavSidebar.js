@@ -265,36 +265,28 @@ function setupMobileTypeFilter() {
   }
   // Apply button
   applyBtn?.addEventListener("click", () => handleMobileConvoTypeButtonClick);
-} // Mobile search state
+}
 
-export const entryListEl = $("entryList");
-export const entryListHeaderEl = $("entryListHeader");
-export const entryDetailsEl = $("entryDetails");
-export const entryOverviewEl = $("entryOverview");
-export const currentEntryContainerEl = $("currentEntryContainer");
-export const moreDetailsEl = $("moreDetails");
 // History navigation
-
 export const chatLogEl = $("chatLog");
 export const backBtn = $("backBtn");
 export const convoRootBtn = $("convoRootBtn");
+
 // Sidebar elements
-
 export const sidebarOverlay = $("sidebarOverlay");
-
 export const historySidebar = $("historySidebar");
 export const convoSidebar = $("convoSidebar");
+
 // Mobile elements
 // Use the single search input for both desktop and mobile to keep state unified
-
 export const mobileSearchInputWrapper = $("mobileSearchInputWrapper");
 // The actual mobile header trigger element (readonly input)
 export const mobileSearchTrigger = $("mobileSearchTrigger");
 export const mobileSearchScreen = $("mobileSearchScreen");
 export const mobileSearchResults = $("mobileSearchResults");
 export const mobileSearchCount = $("mobileSearchCount");
-// Mobile nav menu buttons
 
+// Mobile nav menu buttons
 export const mobileNavPanel = $("mobileNavPanel");
 export const mobileNavBtn = $("mobileNavBtn");
 export const mobileNavHome = $("mobileNavHome");

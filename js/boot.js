@@ -1,11 +1,11 @@
 import { buildConvoTreeAndRender } from "./conversationTree.js";
-import { setupConversationTypesModal } from "./closeAllSidebars.js";
+import { setupConversationTypesModal } from "./conversationTypesModal.js";
 import { injectIconTemplates } from "./iconHelpers.js";
 import { loadSqlJs } from "./loadSqlJs.js";
 import {
   setupBrowserHistory,
   handleInitialUrlNavigation,
-  setUpChatNavigation,
+  setUpNavigation,
 } from "./navigation.js";
 import {
   setupMobileSidebar,
@@ -46,7 +46,7 @@ export async function boot() {
 
   // Build tree and render (includes all types: flow, orb, task)
   buildConvoTreeAndRender();
-  setUpChatNavigation();
+  setUpNavigation();
 
   // Set up filter dropdowns to open and close
   setUpFilterDropdowns();
@@ -72,10 +72,10 @@ export async function boot() {
   setUpMoreDetails();
   // Setup infinite scroll for search
   setupSearchInfiniteScroll();
+  setUpSidebarToggles();
 
   // Setup mobile sidebar
   setupMobileSidebar();
-  setUpSidebarToggles();
 
   // Setup mobile search
   setupMobileSearch();
@@ -94,7 +94,7 @@ export async function boot() {
   await handleInitialUrlNavigation();
 
   // Set up conversation type modal
-  setupConversationTypesModal();
+  await setupConversationTypesModal();
 
   toggleHomepageLoader(false);
 }

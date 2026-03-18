@@ -9,11 +9,6 @@ import {
   backBtn,
   chatLogEl,
   convoRootBtn,
-  currentEntryContainerEl,
-  entryListEl,
-  entryListHeaderEl,
-  entryOverviewEl,
-  moreDetailsEl,
 } from "./openMobileNavSidebar.js";
 import {
   mobileActorFilterWrapper,
@@ -27,6 +22,7 @@ import {
   appendHistoryItem,
   parseSpeakerFromTitle,
   renderCurrentEntry,
+  createCardItem,
 } from "./uiHelpers.js";
 import { search, hideSearchCount } from "./getQueryTokens.js";
 import {
@@ -36,16 +32,17 @@ import {
 } from "./openMobileNavSidebar.js";
 import {
   loadEntriesForConversation,
-  loadChildOptions,
 } from "./loadEntriesForConversation.js";
 import { showConvoDetails, showEntryDetails } from "./showConvoDetails.js";
-import { getConversationById, getEntry } from "./sqlHelpers.js";
-import { alwaysShowMoreDetails } from "./userSettings.js";
+import { getConversationById, getEntriesBulk, getEntry, getParentsChildren } from "./sqlHelpers.js";
+import { alwaysShowMoreDetails, showHidden } from "./userSettings.js";
 import {
   setCurrentSearchOffset,
   setCurrentSearchTotal,
   setCurrentSearchFilteredCount,
 } from "./handleInfiniteScroll.js";
+import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./currentEntryContainerEl.js";
+import { entryListEl, entryListHeaderEl } from "./entryListEl.js";
 
 export let isInitialNavigation = true; // Flag to skip history push on initial URL-based navigation
 
@@ -226,7 +223,7 @@ export async function handleNavigateToConvoLeaf(e) {
   highlightConversationInTree(convoId);
 }
 
-export function setUpChatNavigation() {
+export function setUpNavigation() {
   // Handle navigateToConversation events from history dividers
   chatLogEl?.addEventListener(
     "navigateToConversation",
@@ -779,4 +776,53 @@ export function setCurrentAlternateLine(value) {
 }
 export function getCurrentAlternateLine() {
   return currentAlternateLine;
+}export function loadChildOptions(convoId, entryId) {
+  try {
+    entryListHeaderEl.textContent = "Next Dialogue Options";
+    entryListEl.innerHTML = "";
+
+    const { children } = getParentsChildren(convoId, entryId);
+
+    const pairs = [];
+    for (const c of children)
+      pairs.push({ convoId: c.d_convo, entryId: c.d_id });
+
+    const destRows = getEntriesBulk(pairs, showHidden());
+    const destMap = new Map(destRows.map((r) => [`${r.convo}:${r.id}`, r]));
+
+    for (const c of children) {
+      const dest = destMap.get(`${c.d_convo}:${c.d_id}`);
+      if (!dest) continue;
+      if ((dest.title || "").toLowerCase() === "start") continue;
+
+      const el = createCardItem(
+        dest.title,
+        c.d_convo,
+        c.d_id,
+        dest.dialoguetext
+      );
+      el.addEventListener("click", handleEntryClick);
+      entryListEl.appendChild(el);
+    }
+
+    if (entryListEl.children.length === 0) {
+      // No further options - make compact like orbs/tasks
+      entryListEl.classList.add("compact");
+      const entryList = entryListEl.closest(".entry-list");
+      if (entryList) entryList.classList.add("compact");
+      if (currentEntryContainerEl) {
+        currentEntryContainerEl.classList.add("expanded");
+      }
+      const message = document.createElement("div");
+      message.className = "hint-text";
+      message.style.fontStyle = "italic";
+      message.style.padding = "12px";
+      message.textContent = "(no further options)";
+      entryListEl.appendChild(message);
+    }
+  } catch (e) {
+    console.error("Error loading child links", e);
+    entryListEl.textContent = "(error loading next options)";
+  }
 }
+
