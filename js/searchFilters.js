@@ -1,22 +1,43 @@
 import { $, toggleElementVisibility } from "./uiHelpers.js";
 import {
-  actorAddToSelectionBtn,
   actorCheckboxList,
-  actorSearchInput,
   convoCheckboxList,
-  getOpenDropdown,
   selectAllActors,
   selectAllTypes,
-  setOpenDropdown,
-  typeCheckboxList,
-  typeFilterLabel,
-} from "./scripts.js";
-import { search } from "./getQueryTokens.js";
+  typeCheckboxList
+} from "./sharedElements.js";
+import { applyFiltersToCurrentResults, search, switchToSearchResultsView } from "./getQueryTokens.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
 import { triggerSearch } from "./setupClearSearchInput.js";
 import { getDistinctActors } from "./sqlHelpers.js";
 import { getConvos } from "./conversationTree.js";
 
+export let allActors = [];
+export let selectedConvoIds = new Set();
+export let selectedActorIds = new Set();
+export let selectedTypeIds = new Set(["flow", "orb", "task"]); // All types selected by default
+export let filteredActors = [];
+export let filteredConvos = [];
+export const actorAddToSelectionBtn = $("actorAddToSelection");
+export const typeFilterLabel = $("typeFilterLabel");
+export const actorSearchInput = $("actorSearch");
+export const wholeWordsCheckbox = $("wholeWordsCheckbox");
+
+const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
+const convoFilterLabel = $("convoFilterLabel"); // Text
+const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
+const actorFilterLabel = $("actorFilterLabel"); // Text
+// Track currently open dropdown so we only allow one at a time
+let openDropdown = null;
+let activeTypeFilter = "all";
+
+
+export function setOpenDropdown(value) {
+  openDropdown = value;
+}
+export function getOpenDropdown() {
+  return openDropdown;
+}
 export function setUpFilterDropdowns() {
   const dropdownButtons = document.querySelectorAll(".filter-dropdown-button");
   const allDropdowns = document.querySelectorAll(".filter-dropdown");
@@ -52,42 +73,65 @@ export function setUpFilterDropdowns() {
     }
     dropdownButton.addEventListener("click", handleDropdownButtonClick);
 
-    
     // conversation filter dropdown
     setUpConvoFilterDropdown();
-  
+
     // actor filter dropdown
     setUpActorFilterDropdown();
-  
+
     // type filter dropdown
     setUpTypeFilterDropdown();
+
+    // whole words toggle
+    setUpWholeWordsToggle();
   });
 }
-function handleOutsideDropdownClick() {
-  const dropdowns = document.querySelectorAll(".filter-dropdown");
-  dropdowns.forEach((dropdown) => toggleElementVisibility(dropdown, false));
-}
-
-let activeTypeFilter = "all";
 export function setActiveTypeFilter(value) {
   activeTypeFilter = value;
 }
 export function getActiveTypeFilter() {
   return activeTypeFilter;
 }
-export let allActors = [];
-export let selectedConvoIds = new Set();
-export let selectedActorIds = new Set();
-export let selectedTypeIds = new Set(["flow", "orb", "task"]); // All types selected by default
-export let filteredActors = [];
-export let filteredConvos = [];
-const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
-const convoFilterLabel = $("convoFilterLabel"); // Text
-const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
-const actorFilterLabel = $("actorFilterLabel"); // Text
-export const mobileActorFilterWrapper = $("mobileActorFilterWrapper"); // Checklist
-export const mobileConvoFilterWrapper = $("mobileConvoFilterWrapper"); // Checklist
+export function updateActorFilterLabel() {
+  if (!actorFilterLabel) return;
 
+  if (
+    selectedActorIds.size === 0 ||
+    selectedActorIds.size === allActors.length
+  ) {
+    actorFilterLabel.textContent = "All Actors";
+  } else if (selectedActorIds.size === 1) {
+    const actorId = Array.from(selectedActorIds)[0];
+    const actor = allActors.find((a) => a.id === actorId);
+    actorFilterLabel.textContent = actor ? actor.name : "1 Actor";
+  } else {
+    actorFilterLabel.textContent = `${selectedActorIds.size} Actors`;
+  }
+}
+export function updateConvoFilterLabel() {
+  if (
+    selectedConvoIds.size === 0 ||
+    selectedConvoIds.size === getConvos().length
+  ) {
+    convoFilterLabel.textContent = "All Conversations";
+  } else if (selectedConvoIds.size === 1) {
+    const convoId = Array.from(selectedConvoIds)[0];
+    const convo = getConvos().find((c) => c.id === convoId);
+    convoFilterLabel.textContent = convo ? convo.title : "1 Conversation";
+  } else {
+    convoFilterLabel.textContent = `${selectedConvoIds.size} Conversations`;
+  }
+}
+export function updateTypeFilterLabel() {
+  if (selectedTypeIds.size === 0 || selectedTypeIds.size === 3) {
+    typeFilterLabel.textContent = "All Types";
+  } else if (selectedTypeIds.size === 1) {
+    const type = Array.from(selectedTypeIds)[0];
+    typeFilterLabel.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+  } else {
+    typeFilterLabel.textContent = `${selectedTypeIds.size} Types`;
+  }
+}
 
 function filterActors(actorSearchInput) {
   const searchText = actorSearchInput
@@ -107,6 +151,10 @@ function filterActors(actorSearchInput) {
 
   renderActorCheckboxes(filteredActors);
   updateActorSelectAllState();
+}
+function handleOutsideDropdownClick() {
+  const dropdowns = document.querySelectorAll(".filter-dropdown");
+  dropdowns.forEach((dropdown) => toggleElementVisibility(dropdown, false));
 }
 function setUpActorFilterDropdown() {
   allActors = getDistinctActors();
@@ -230,23 +278,6 @@ function updateActorSelectAllState() {
   selectAllActors.checked = allSelected;
   selectAllActors.indeterminate = !allSelected && someSelected;
 }
-export function updateActorFilterLabel() {
-  if (!actorFilterLabel) return;
-
-  if (
-    selectedActorIds.size === 0 ||
-    selectedActorIds.size === allActors.length
-  ) {
-    actorFilterLabel.textContent = "All Actors";
-  } else if (selectedActorIds.size === 1) {
-    const actorId = Array.from(selectedActorIds)[0];
-    const actor = allActors.find((a) => a.id === actorId);
-    actorFilterLabel.textContent = actor ? actor.name : "1 Actor";
-  } else {
-    actorFilterLabel.textContent = `${selectedActorIds.size} Actors`;
-  }
-}
-
 function renderConvoList(conversations) {
   const listContainer = $("convoCheckboxList");
   listContainer.innerHTML = "";
@@ -371,18 +402,6 @@ function updateConvoSelectAllState(conversations) {
     selectAllCheckbox.indeterminate = someSelected && !allSelected;
   }
 }
-export function updateConvoFilterLabel() {
-  if (selectedConvoIds.size === 0 || selectedConvoIds.size === getConvos().length) {
-    convoFilterLabel.textContent = "All Conversations";
-  } else if (selectedConvoIds.size === 1) {
-    const convoId = Array.from(selectedConvoIds)[0];
-    const convo = getConvos().find((c) => c.id === convoId);
-    convoFilterLabel.textContent = convo ? convo.title : "1 Conversation";
-  } else {
-    convoFilterLabel.textContent = `${selectedConvoIds.size} Conversations`;
-  }
-}
-
 function setUpTypeFilterDropdown() {
   // Select All checkbox
   function handleSelectAllConvoTypeChange(e) {
@@ -443,13 +462,14 @@ function updateTypeSelectAllState() {
   selectAllTypes.checked = allSelected;
   selectAllTypes.indeterminate = !allSelected && someSelected;
 }
-export function updateTypeFilterLabel() {
-  if (selectedTypeIds.size === 0 || selectedTypeIds.size === 3) {
-    typeFilterLabel.textContent = "All Types";
-  } else if (selectedTypeIds.size === 1) {
-    const type = Array.from(selectedTypeIds)[0];
-    typeFilterLabel.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-  } else {
-    typeFilterLabel.textContent = `${selectedTypeIds.size} Types`;
-  }
+async function handleWholeWordsCheckboxChange() {
+  // Preserve the total count computed by the last DB search — whole-words
+  // filtering should only affect the filtered count, not the underlying total
+  // number of results available from the database.
+  switchToSearchResultsView();
+  applyFiltersToCurrentResults(mobileMediaQuery.matches);
+}
+function setUpWholeWordsToggle() {
+  // Listen for whole-words toggle and re-filter existing results (do not re-run DB search)
+  wholeWordsCheckbox.addEventListener("change", handleWholeWordsCheckboxChange);
 }

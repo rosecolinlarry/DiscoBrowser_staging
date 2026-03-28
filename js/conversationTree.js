@@ -6,22 +6,79 @@ import {
   handleConvoLabelClick,
 } from "./navigation.js";
 import {
-  convoListEl,
-  convoSearchInput,
-  convoTypeFilterBtns,
-  expandAllBtn,
-  collapseAllBtn,
-} from "./scripts.js";
-import {
   setActiveTypeFilter,
   getActiveTypeFilter,
-} from "./filterDropdowns.js";
+} from "./searchFilters.js";
 import { getAllConversations, getConversationById } from "./sqlHelpers.js";
-import { highlightTerms } from "./uiHelpers.js";
+import { $, highlightTerms } from "./uiHelpers.js";
 import { showHidden } from "./userSettings.js";
 
 export let convos = [];
+export const convoListEl = $("convoList");export const convoTypeFilterBtns = document.querySelectorAll(
+  ".radio-button-group .radio-button"
+);
+// Tree control elements
+export const expandAllBtn = $("expandAllBtn");
+export const collapseAllBtn = $("collapseAllBtn");
+// Search Bar
+export const searchBtn = $("searchBtn");
+export const searchClearBtn = $("searchClearBtn");
+export const convoSearchInput = $("convoSearchInput");
+
 let conversationTree = null;
+
+export function rebuildConversationTree() {
+  // Rebuild tree to reflect hidden/title settings. Used in userSettings.js only
+  initializeConversationsForTree();
+  conversationTree = buildTitleTree(convos);
+  renderTree(convoListEl, conversationTree);
+  if (getCurrentConvoId() !== null) {
+    highlightConversationInTree(getCurrentConvoId());
+  }
+}
+export function highlightConversationInTree(convoId) {
+  // Remove highlight from all labels (both leaf and node labels). Also used in navigation.js
+  const allLabels = convoListEl.querySelectorAll(".label.selected");
+  allLabels.forEach((label) => {
+    label.classList.remove("selected");
+  });
+
+  // Find the leaf with data-convo-id
+  let leafLabel = convoListEl.querySelector(`[data-convo-id="${convoId}"]`);
+
+  if (leafLabel) {
+    // Highlight the leaf label itself and walk up the tree and expand all ancestor nodes
+    let node = leafLabel.closest(".node").querySelector(".label");
+    node.classList.add("selected");
+    node.scrollIntoView();
+
+    // Move up one level
+    node = node.parentElement.parentElement.closest(".node");
+    while (node) {
+      node.classList.add("expanded");
+      // Update toggle text
+      const toggle = node.querySelector(":scope > .label > .toggle");
+      if (toggle) {
+        setToggleIcon(toggle, true);
+      }
+
+      // Move up one level
+      node = node.parentElement?.closest(".node");
+    }
+  }
+}
+export function getConvos() {
+  return convos;
+}
+export function buildConvoTreeAndRender() {
+  // Used in boot
+  initializeConversationsForTree();
+  conversationTree = buildTitleTree(convos);
+  renderTree(convoListEl, conversationTree);
+  setUpConversationListEvents();
+  setupConversationFilter();
+}
+
 function updateTreeControlButtons(enableButtons) {
   if (expandAllBtn) {
     expandAllBtn.disabled = !enableButtons;
@@ -566,54 +623,4 @@ function setupConversationFilter() {
     collapseAllBtn.addEventListener("click", collapseAllTreeNodes);
   }
 }
-export function rebuildConversationTree() {
-  // Rebuild tree to reflect hidden/title settings. Used in userSettings.js only
-  initializeConversationsForTree();
-  conversationTree = buildTitleTree(convos);
-  renderTree(convoListEl, conversationTree);
-  if (getCurrentConvoId() !== null) {
-    highlightConversationInTree(getCurrentConvoId());
-  }
-}
-export function highlightConversationInTree(convoId) {
-  // Remove highlight from all labels (both leaf and node labels). Also used in navigation.js
-  const allLabels = convoListEl.querySelectorAll(".label.selected");
-  allLabels.forEach((label) => {
-    label.classList.remove("selected");
-  });
 
-  // Find the leaf with data-convo-id
-  let leafLabel = convoListEl.querySelector(`[data-convo-id="${convoId}"]`);
-
-  if (leafLabel) {
-    // Highlight the leaf label itself and walk up the tree and expand all ancestor nodes
-    let node = leafLabel.closest(".node").querySelector(".label");
-    node.classList.add("selected");
-    node.scrollIntoView();
-
-    // Move up one level
-    node = node.parentElement.parentElement.closest(".node");
-    while (node) {
-      node.classList.add("expanded");
-      // Update toggle text
-      const toggle = node.querySelector(":scope > .label > .toggle");
-      if (toggle) {
-        setToggleIcon(toggle, true);
-      }
-
-      // Move up one level
-      node = node.parentElement?.closest(".node");
-    }
-  }
-}
-export function getConvos() {
-  return convos;
-}
-export function buildConvoTreeAndRender() {
-  // Used in boot
-  initializeConversationsForTree();
-  conversationTree = buildTitleTree(convos);
-  renderTree(convoListEl, conversationTree);
-  setUpConversationListEvents();
-  setupConversationFilter();
-}

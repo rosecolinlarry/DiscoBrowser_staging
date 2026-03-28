@@ -10,8 +10,8 @@ import {
 } from "./navigation.js";
 import {
   homePageContainer,
-  dialogueContent,
-} from "./scripts.js";
+  dialogueContent
+} from "./sharedElements.js";
 import {
   chatLogEl,
   convoRootBtn,
@@ -25,9 +25,9 @@ import {
 } from "./uiHelpers.js";
 import {
   closeAllSidebars,
-} from "./closeAllSidebars.js";
+} from "./closeElementsHelpers.js";
 import { updateMobileNavButtons } from "./openMobileNavSidebar.js";
-import { showConvoDetails } from "./showConvoDetails.js";
+import { showConvoDetails } from "./showDetailsHelpers.js";
 import {
   getConversationById,
   getEntriesForConversation,
@@ -41,8 +41,9 @@ import {
   setCurrentSearchOffset,
   setCurrentSearchTotal,
 } from "./handleInfiniteScroll.js";
-import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./currentEntryContainerEl.js";
-import { entryListEl, entryListHeaderEl } from "./entryListEl.js";
+import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./sharedElements.js";
+import { entryListHeaderEl } from "./sharedElements.js";
+import { entryListEl } from "./sharedElements.js";
 
 /* Load entries listing for conversation */
 

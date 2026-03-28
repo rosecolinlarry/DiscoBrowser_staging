@@ -1,22 +1,22 @@
 import {
   searchInput,
-  searchBtn,
-  searchClearBtn,
-  clearFiltersBtn,
   convoCheckboxList,
-  selectAllConvos,
   actorCheckboxList,
   selectAllActors,
   typeCheckboxList,
-  selectAllTypes,
-} from "./scripts.js";
+  selectAllTypes
+} from "./sharedElements.js";
+import {
+  searchBtn,
+  searchClearBtn
+} from "./conversationTree.js";
 import { mobileSearchTrigger } from "./openMobileNavSidebar.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
 import {
   selectedConvoIds,
   selectedActorIds,
   selectedTypeIds,
-} from "./filterDropdowns.js";
+} from "./searchFilters.js";
 import {
   getCurrentAppState,
   getIsHandlingPopState,
@@ -25,14 +25,14 @@ import {
 import { toggleElementVisibility, $ } from "./uiHelpers.js";
 import { search } from "./getQueryTokens.js";
 import { openMobileSearchScreen } from "./openMobileNavSidebar.js";
-import { updateActorFilterLabel } from "./filterDropdowns.js";
-import { updateConvoFilterLabel } from "./filterDropdowns.js";
-import { updateTypeFilterLabel } from "./filterDropdowns.js";
+import { updateActorFilterLabel } from "./searchFilters.js";
+import { updateConvoFilterLabel } from "./searchFilters.js";
+import { updateTypeFilterLabel } from "./searchFilters.js";
 import {
   setCurrentSearchFilteredCount,
   setCurrentSearchOffset,
 } from "./handleInfiniteScroll.js";
-import { entryListEl } from "./entryListEl.js";
+import { entryListEl } from "./sharedElements.js";
 
 export function setupClearSearchInput() {
   function handleSearchClearButtonClick(e) {
@@ -160,4 +160,8 @@ export function triggerSearch(e) {
       search(true);
     }
   }
-}
+}export const selectAllConvos = $("selectAllConvos");
+// Clear filters button
+
+export const clearFiltersBtn = $("clearFiltersBtn");
+

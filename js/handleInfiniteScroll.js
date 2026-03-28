@@ -1,4 +1,4 @@
-import { searchLoader } from "./scripts.js";
+import { searchLoader } from "./sharedElements.js";
 import { toggleElementVisibility } from "./uiHelpers.js";
 import { search } from "./getQueryTokens.js";
 

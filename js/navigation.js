@@ -3,17 +3,14 @@ import {
   searchInput,
   dialogueContent,
   entryCache,
-  homePageContainer,
-} from "./scripts.js";
+  homePageContainer
+} from "./sharedElements.js";
 import {
-  backBtn,
   chatLogEl,
   convoRootBtn,
 } from "./openMobileNavSidebar.js";
-import {
-  mobileActorFilterWrapper,
-  mobileConvoFilterWrapper,
-} from "./filterDropdowns.js";
+import { mobileActorFilterWrapper } from "./sharedElements.js";
+import { mobileConvoFilterWrapper } from "./sharedElements.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
 import { highlightConversationInTree } from "./conversationTree.js";
 import {
@@ -33,7 +30,7 @@ import {
 import {
   loadEntriesForConversation,
 } from "./loadEntriesForConversation.js";
-import { showConvoDetails, showEntryDetails } from "./showConvoDetails.js";
+import { showConvoDetails, showEntryDetails } from "./showDetailsHelpers.js";
 import { getConversationById, getEntriesBulk, getEntry, getParentsChildren } from "./sqlHelpers.js";
 import { alwaysShowMoreDetails, showHidden } from "./userSettings.js";
 import {
@@ -41,8 +38,9 @@ import {
   setCurrentSearchTotal,
   setCurrentSearchFilteredCount,
 } from "./handleInfiniteScroll.js";
-import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./currentEntryContainerEl.js";
-import { entryListEl, entryListHeaderEl } from "./entryListEl.js";
+import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./sharedElements.js";
+import { entryListHeaderEl } from "./sharedElements.js";
+import { entryListEl } from "./sharedElements.js";
 
 export let isInitialNavigation = true; // Flag to skip history push on initial URL-based navigation
 
@@ -825,4 +823,5 @@ export function getCurrentAlternateLine() {
     entryListEl.textContent = "(error loading next options)";
   }
 }
+export const backBtn = $("backBtn");
 

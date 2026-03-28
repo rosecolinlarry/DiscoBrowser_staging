@@ -4,7 +4,7 @@ import {
   defaultColumns,
   defaultMobileColumns,
   STORAGE_KEY,
-} from "./scripts.js";
+} from "./homepageLoader.js";
 import {
   mobileMediaQuery,
   tabletMediaQuery,

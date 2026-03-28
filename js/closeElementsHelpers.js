@@ -1,4 +1,4 @@
-import { sidebarOverlay } from "./openMobileNavSidebar.js";
+import { sidebarOverlay } from "./sharedElements.js";
 import { toggleElementVisibility } from "./uiHelpers.js";
 
 export function closeAllSidebars() {

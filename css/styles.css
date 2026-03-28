@@ -2068,6 +2068,7 @@ a {
     left: 0;
     right: 0;
     animation: slideUp 0.3s ease-out;
+    z-index: 2001;
   }
 
   .bottom-sheet-content h4 {

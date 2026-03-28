@@ -609,15 +609,20 @@ export function highlightTerms(text, query, hasQuotedPhrases = false) {
     .join("");
 }
 
-export async function injectTemplate(templateFileName, containerId) {
+export async function injectTemplate(templateFileName, container) {
   try {
     const response = await fetch(templateFileName);
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
     const html = await response.text();
-    const containerEl = document.getElementById(containerId);
-
+    let containerEl;
+    if (typeof container === "string") {
+      containerEl = document.getElementById(container);
+    }
+    else {
+      containerEl = container
+    }
     if (containerEl) {
       containerEl.innerHTML = html;
     }

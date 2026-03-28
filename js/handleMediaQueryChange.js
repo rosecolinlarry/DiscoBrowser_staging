@@ -1,10 +1,11 @@
-import { browserGrid, defaultColumns, defaultMobileColumns, searchClearBtn, searchBtn, STORAGE_KEY } from "./scripts.js";
-import { historySidebar, convoSidebar } from "./openMobileNavSidebar.js";
+import { browserGrid, defaultColumns, defaultMobileColumns, STORAGE_KEY } from "./homepageLoader.js";
+import { searchClearBtn, searchBtn } from "./conversationTree.js";
+import { convoSidebar, historySidebar } from "./setUpSidebarToggles.js";
 import { resetDesktopLayoutCheckboxId } from "./userSettings.js";
 import { setUpResizableColumns } from "./resizableColumns.js";
 import { applySettings } from "./userSettings.js";
 import { $, toggleElementVisibilityBySelector } from "./uiHelpers.js";
-import { closeAllSidebars, closeAllModals } from "./closeAllSidebars.js";
+import { closeAllSidebars, closeAllModals } from "./closeElementsHelpers.js";
 import { closeMobileSearchScreen } from "./openMobileNavSidebar.js";
 import { appSettings } from "./userSettings.js";
 

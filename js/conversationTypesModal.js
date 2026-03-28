@@ -1,41 +1,44 @@
 import { $, injectTemplate, toggleElementVisibility } from "./uiHelpers.js";
 
-function openModal() {
-  const conversationTypesModalOverlay = $("conversationTypesModalOverlay");
-  toggleElementVisibility(conversationTypesModalOverlay, true);
-}
-function closeModal() {
-  const conversationTypesModalOverlay = $("conversationTypesModalOverlay");
-  conversationTypesModalOverlay.classList.remove("open");
-  toggleElementVisibility(conversationTypesModalOverlay, false);
-}
+const modalId = "conversationTypesModalOverlay";
+const conversationTypesModalOverlay = $(modalId);
 
 export async function setupConversationTypesModal() {
-  await injectTemplate('conversation-types-modal.html', "conversationTypesModalOverlay")
+  await injectTemplate(
+    "conversation-types-modal.html",
+    "conversationTypesModalOverlay",
+  );
   const helpIcon = $("helpIcon");
-  const conversationTypeModalOverlay = $("conversationTypesModalOverlay");
-  const closeBtn = conversationTypeModalOverlay.querySelector(".modal-close");
+  const closeBtn = conversationTypesModalOverlay.querySelector(".modal-close");
 
   helpIcon.addEventListener("click", openModal);
   closeBtn.addEventListener("click", closeModal);
-  function handleConvoTypeModalOverlayClick(e) {
-    const modal = $("conversationTypesModalOverlay");
-    if (e.target == modal) {
-      closeModal();
-    }
-  }
-  conversationTypeModalOverlay.addEventListener(
+
+  conversationTypesModalOverlay.addEventListener(
     "click",
-    handleConvoTypeModalOverlayClick
+    handleConvoTypeModalOverlayClick,
   );
 
-  // ESC key to close
-  function handleDocumentKeyDownEvent(e) {
-    const conversationTypesModalOverlay = $("conversationTypesModalOverlay");
-    if (e.key === "Escape" &&
-      conversationTypesModalOverlay.style.display !== "none") {
-      closeModal();
-    }
+  document.addEventListener("keydown", handleEscPressed);
+}
+
+function openModal() {
+  toggleElementVisibility(conversationTypesModalOverlay, true);
+}
+function closeModal() {
+  conversationTypesModalOverlay.classList.remove("open");
+  toggleElementVisibility(conversationTypesModalOverlay, false);
+}
+function handleEscPressed(e) {
+  if (
+    e.key === "Escape" &&
+    conversationTypesModalOverlay.style.display !== "none"
+  ) {
+    closeModal();
   }
-  document.addEventListener("keydown", handleDocumentKeyDownEvent);
+}
+function handleConvoTypeModalOverlayClick(e) {
+  if (e.target == conversationTypesModalOverlay) {
+    closeModal();
+  }
 }

@@ -1,14 +1,34 @@
-import { DEFAULT_APP_SETTINGS, SETTINGS_STORAGE_KEY } from "./scripts.js";
 import { rebuildConversationTree } from "./conversationTree.js";
-import { updateHandlePositions, updateResizeHandles } from "./resizableColumns.js";
+import {
+  updateHandlePositions,
+  updateResizeHandles,
+} from "./resizableColumns.js";
 import { updateDesktopLayout } from "./handleMediaQueryChange.js";
 import { $, injectTemplate, toggleElementVisibility } from "./uiHelpers.js";
 
+export const resetDesktopLayoutCheckboxId = "resetDesktopLayoutCheckbox";
+
+const settingsModalOverlayId = "settingsModalOverlay";
+const settingsModalOverlay = $(settingsModalOverlayId);
+const settingsModalCloseId = "settingsModalClose";
+const restoreDefaultSettingsBtnId = "restoreDefaultSettingsBtn";
+const saveSettingsBtnId = "saveSettingsBtn";
+const settingsBtnId = "settingsBtn";
+const disableColumnResizingCheckboxId = "disableColumnResizingCheckbox";
+const alwaysShowMoreDetailsCheckboxId = "alwaysShowMoreDetailsCheckbox";
+const showHiddenCheckboxId = "showHiddenCheckbox";
+const turnOffAnimationsCheckboxId = "turnOffAnimationsCheckbox";
+const SETTINGS_STORAGE_KEY = "discobrowser_settings";
+const DEFAULT_APP_SETTINGS = {
+  resetDesktopLayout: false,
+  disableColumnResizing: false,
+  showHidden: false,
+  turnOffAnimations: false,
+  alwaysShowMoreDetails: false,
+};
 export function setupSettingsModal() {
-  // Open settings modal
   const settingsBtn = $(settingsBtnId);
   const settingsModalClose = $(settingsModalCloseId);
-  const settingsModalOverlay = $(settingsModalOverlayId);
 
   // Open settings modal
   if (settingsBtn) {
@@ -22,7 +42,6 @@ export function setupSettingsModal() {
   }
 
   function handleSettingsModalOverlayClick(e) {
-    const settingsModalOverlay = $(settingsModalOverlayId);
     if (e.target === settingsModalOverlay) {
       toggleElementVisibility(settingsModalOverlay, false);
     }
@@ -30,7 +49,7 @@ export function setupSettingsModal() {
   // Close modal when clicking overlay
   settingsModalOverlay?.addEventListener(
     "click",
-    handleSettingsModalOverlayClick
+    handleSettingsModalOverlayClick,
   );
 }
 export function disableColumnResizing() {
@@ -116,9 +135,8 @@ export function saveSettingsToStorage() {
 }
 export function openSettings() {
   setCurrentUserSettings();
-  const settingsModalOverlay = $(settingsModalOverlayId);
   toggleElementVisibility(settingsModalOverlay, true);
-}// Default app settings
+} // Default app settings
 
 export let appSettings = {
   resetDesktopLayout: false,
@@ -129,16 +147,8 @@ export let appSettings = {
 };
 
 export async function injectUserSettingsTemplate() {
-  // Create container if it does not exist
-  let container = $(settingsModalOverlayId);
-  if (!container) {
-    container = document.createElement("div");
-    container.className = "modal-overlay hidden";
-    container.id = settingsModalOverlayId;
-    document.body.appendChild(container);
-  }
   const settingsModalTemplateFileName = "settings-modal-content.html";
-  await injectTemplate(settingsModalTemplateFileName, settingsModalOverlayId);
+  await injectTemplate(settingsModalTemplateFileName, settingsModalOverlay);
   initializeUserSettings();
 }
 
@@ -148,7 +158,7 @@ function setUpRestoreDefaultSettingsButton() {
   if (restoreDefaultSettingsBtn) {
     restoreDefaultSettingsBtn.addEventListener(
       "click",
-      resetCurrentUserSettings
+      resetCurrentUserSettings,
     );
   }
 }
@@ -181,7 +191,7 @@ function setUpCheckboxHandlers() {
     }
     resetDesktopLayoutCheckbox.addEventListener(
       "change",
-      handleResetDesktopLayoutChange
+      handleResetDesktopLayoutChange,
     );
   }
   const disableColumnResizingCheckbox = $(disableColumnResizingCheckboxId);
@@ -196,7 +206,7 @@ function setUpCheckboxHandlers() {
     }
     disableColumnResizingCheckbox.addEventListener(
       "change",
-      handleDisableColumnResizingChange
+      handleDisableColumnResizingChange,
     );
   }
   const alwaysShowMoreDetailsCheckbox = $(alwaysShowMoreDetailsCheckboxId);
@@ -211,7 +221,7 @@ function setUpCheckboxHandlers() {
     }
     alwaysShowMoreDetailsCheckbox.addEventListener(
       "change",
-      handleAlwaysShowMoreDetailsChange
+      handleAlwaysShowMoreDetailsChange,
     );
   }
   const showHiddenCheckbox = $(showHiddenCheckboxId);
@@ -238,7 +248,7 @@ function setUpCheckboxHandlers() {
     }
     turnOffAnimationsCheckbox.addEventListener(
       "change",
-      handleTurnOffAnimationsChange
+      handleTurnOffAnimationsChange,
     );
   }
 }
@@ -256,7 +266,6 @@ function setUpSaveButton() {
       rebuildConversationTree();
 
       // Save and close modal
-      const settingsModalOverlay = $(settingsModalOverlayId);
       if (settingsModalOverlay) {
         toggleElementVisibility(settingsModalOverlay, false);
       }
@@ -271,14 +280,3 @@ function updateAnimationsToggle() {
     document.body.classList.remove("animations-disabled");
   }
 }
-export const settingsModalOverlayId = "settingsModalOverlay";
-export const settingsModalCloseId = "settingsModalClose";
-export const restoreDefaultSettingsBtnId = "restoreDefaultSettingsBtn";
-export const saveSettingsBtnId = "saveSettingsBtn";
-export const settingsBtnId = "settingsBtn";
-export const resetDesktopLayoutCheckboxId = "resetDesktopLayoutCheckbox";
-export const disableColumnResizingCheckboxId = "disableColumnResizingCheckbox";
-export const alwaysShowMoreDetailsCheckboxId = "alwaysShowMoreDetailsCheckbox";
-export const showHiddenCheckboxId = "showHiddenCheckbox";
-export const turnOffAnimationsCheckboxId = "turnOffAnimationsCheckbox";
-

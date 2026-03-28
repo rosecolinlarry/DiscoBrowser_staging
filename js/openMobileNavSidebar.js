@@ -4,13 +4,12 @@ import {
   pushHistoryState,
   setIsHandlingPopState,
   getIsHandlingPopState,
+  backBtn,
 } from "./navigation.js";
-import { openConversationSection } from "./openConversationSection.js";
-import { searchInput, typeFilterDropdown } from "./scripts.js";
-import {
-  mobileConvoFilterWrapper,
-  mobileActorFilterWrapper,
-} from "./filterDropdowns.js";
+import { openConversationSidebar } from "./setUpSidebarToggles.js";
+import { searchInput } from "./sharedElements.js";
+import { mobileActorFilterWrapper } from "./sharedElements.js";
+import { mobileConvoFilterWrapper } from "./sharedElements.js";
 import { mobileMediaQuery } from "./handleMediaQueryChange.js";
 import {
   getCurrentConvoId,
@@ -18,9 +17,30 @@ import {
   getCurrentAppState,
 } from "./navigation.js";
 import { toggleElementVisibility, $ } from "./uiHelpers.js";
-import { showSearchCount, search } from "./getQueryTokens.js";
-import { closeAllSidebars } from "./closeAllSidebars.js";
+import {
+  showSearchCount,
+  search,
+  mobileSearchResults,
+  mobileSearchCount,
+} from "./getQueryTokens.js";
+import { closeAllSidebars } from "./closeElementsHelpers.js";
 import { openSettings } from "./userSettings.js";
+import { mobileSearchScreen } from "./setupSearchInfiniteScroll.js";
+
+// History navigation
+export const chatLogEl = $("chatLog");
+export const convoRootBtn = $("convoRootBtn");
+export const mobileActorFilter = $("mobileActorFilter");
+export const mobileConvoFilter = $("mobileConvoFilter");
+export const typeFilterDropdown = $("typeFilterDropdown");
+export const mobileSearchTrigger = $("mobileSearchTrigger");
+
+const mobileSearchInputWrapper = $("mobileSearchInputWrapper");
+const mobileNavHome = $("mobileNavHome");
+const mobileNavSettings = $("mobileNavSettings");
+const mobileNavSearch = $("mobileNavSearch");
+const mobileTypeFilter = $("mobileTypeFilter"); // Button
+const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
 
 export function setupMobileNavMenu() {
   mobileNavHome.addEventListener("click", goBackHomeWithBrowserHistory);
@@ -101,7 +121,7 @@ export function setupMobileSidebar() {
   // Open sidebar
   const mobileSidebarToggle = $("mobileSidebarToggle");
   if (mobileSidebarToggle) {
-    mobileSidebarToggle.addEventListener("click", openConversationSection);
+    mobileSidebarToggle.addEventListener("click", openConversationSidebar);
   }
 
   // Mobile back button
@@ -116,24 +136,14 @@ export function setupMobileSidebar() {
   if (convoRootBtn) {
     async function handleMobileConvoRootButtonClick() {
       if (getCurrentConvoId() !== null) {
-        await loadEntriesForConversation(getCurrentConvoId() , false);
+        await loadEntriesForConversation(getCurrentConvoId(), false);
         updateMobileNavButtons();
       }
     }
     convoRootBtn.addEventListener("click", handleMobileConvoRootButtonClick);
   }
 }
-export function openMobileNavSidebar() {
-  closeAllSidebars();
-  toggleElementVisibility(mobileNavPanel, true);
-  toggleElementVisibility(sidebarOverlay, true);
-  const mobileNavSidebarClose = $("navSidebarClose");
-  mobileNavSidebarClose?.addEventListener("click", closeMobileNavSidebar);
-}
-function closeMobileNavSidebar() {
-  toggleElementVisibility(mobileNavPanel, false);
-  toggleElementVisibility(sidebarOverlay, false);
-}
+
 export function updateMobileNavButtons() {
   if (!backBtn || !convoRootBtn) return;
 
@@ -235,16 +245,28 @@ function setupMobileActorFilter() {
 function setupMobileTypeFilter() {
   // Skip setup if required elements are missing (indicates refactored HTML)
   const applyBtn = $("mobileTypeApply");
+    const bottomSheet = $("bottomSheet");
 
   function handleMobileTypeFilterSheetClick(e) {
-    const wrapper = $("mobileTypeFilterSheet");
     // Close sheet when clicking outside content
-    if (e.target === wrapper) {
+    if (e.target === mobileTypeFilterSheet) {
       toggleElementVisibility(e.target, false);
       // Apply changes and re-run search with reset
       search(true);
     }
   }
+
+  function handleBottomSheetClick(e) {
+    // Keep sheet open if clicking bottom sheet
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  bottomSheet?.addEventListener(
+    "click",
+    handleBottomSheetClick
+
+  )
   mobileTypeFilterSheet?.addEventListener(
     "click",
     handleMobileTypeFilterSheetClick,
@@ -254,42 +276,10 @@ function setupMobileTypeFilter() {
     const mobileTypeFilterSheet = $("mobileTypeFilterSheet");
     // Close sheet
     toggleElementVisibility(mobileTypeFilterSheet, false);
-    mobileTypeFilterSheet.classList.remove("active");
-    typeFilterDropdown.classList.remove("show");
+    toggleElementVisibility(typeFilterDropdown, false);
     // Explicitly run a reset search so mobile results reflect the new selection
     search(true);
   }
   // Apply button
   applyBtn?.addEventListener("click", handleMobileConvoTypeButtonClick);
 }
-
-// History navigation
-export const chatLogEl = $("chatLog");
-export const backBtn = $("backBtn");
-export const convoRootBtn = $("convoRootBtn");
-
-// Sidebar elements
-export const sidebarOverlay = $("sidebarOverlay");
-export const historySidebar = $("historySidebar");
-export const convoSidebar = $("convoSidebar");
-
-// Mobile elements
-// Use the single search input for both desktop and mobile to keep state unified
-export const mobileSearchInputWrapper = $("mobileSearchInputWrapper");
-// The actual mobile header trigger element (readonly input)
-export const mobileSearchTrigger = $("mobileSearchTrigger");
-export const mobileSearchScreen = $("mobileSearchScreen");
-export const mobileSearchResults = $("mobileSearchResults");
-export const mobileSearchCount = $("mobileSearchCount");
-
-// Mobile nav menu buttons
-export const mobileNavPanel = $("mobileNavPanel");
-export const mobileNavBtn = $("mobileNavBtn");
-export const mobileNavHome = $("mobileNavHome");
-export const mobileNavSettings = $("mobileNavSettings");
-export const mobileNavSearch = $("mobileNavSearch");export const mobileActorFilter = $("mobileActorFilter"); // Button
-export const mobileTypeFilter = $("mobileTypeFilter"); // Button
-export const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
-// Filter dropdowns
-export const mobileConvoFilter = $("mobileConvoFilter"); // Button
-

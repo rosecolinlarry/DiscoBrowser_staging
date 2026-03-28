@@ -1,4 +1,4 @@
-import { entryCache } from "./scripts.js";
+import { entryCache } from "./sharedElements.js";
 import { renderConvoDetails, renderEntryDetails } from "./uiHelpers.js";
 import {
   getConversationById,
@@ -15,8 +15,14 @@ import {
   getCurrentConvoId,
   getCurrentEntryId,
 } from "./navigation.js";
-import { entryListEl } from "./entryListEl.js";
-import { currentEntryContainerEl, entryDetailsEl, moreDetailsEl } from "./currentEntryContainerEl.js";
+import { entryListEl } from "./sharedElements.js";
+import {
+  currentEntryContainerEl,
+  moreDetailsEl,
+} from "./sharedElements.js";
+import { $ } from "./uiHelpers.js"
+
+export const entryDetailsEl = $("entryDetails");
 
 export async function showConvoDetails(convoId) {
   if (!entryDetailsEl) return;
@@ -162,6 +168,10 @@ export async function showEntryDetails(
   renderEntryDetails(entryDetailsEl, payload);
 }
 
+export function setUpMoreDetails() {
+  moreDetailsEl?.addEventListener("toggle", handleMoreDetailsClicked);
+}
+
 async function handleMoreDetailsClicked() {
   if (moreDetailsEl.open) {
     if (getCurrentConvoId() && getCurrentEntryId()) {
@@ -208,8 +218,4 @@ async function handleMoreDetailsClicked() {
       delete currentEntryContainerEl.dataset.wasExpanded;
     }
   }
-}
-
-export function setUpMoreDetails() {
-  moreDetailsEl?.addEventListener("toggle", handleMoreDetailsClicked);
 }

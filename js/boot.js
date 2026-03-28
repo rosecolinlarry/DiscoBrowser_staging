@@ -13,18 +13,18 @@ import {
   setupMobileNavMenu,
 } from "./openMobileNavSidebar.js";
 import { setUpMediaQueries } from "./handleMediaQueryChange.js";
-import { toggleHomepageLoader } from "./scripts.js";
+import { toggleHomepageLoader } from "./homepageLoader.js";
 import {
   setupClearFiltersBtn,
   setUpSearch,
   setupClearSearchInput,
 } from "./setupClearSearchInput.js";
 import {
-  setUpFilterDropdowns} from "./filterDropdowns.js";
+  setUpFilterDropdowns} from "./searchFilters.js";
 import { setUpMainHeader } from "./header.js";
 import { setupSearchInfiniteScroll } from "./setupSearchInfiniteScroll.js";
 import { setUpSidebarToggles } from "./setUpSidebarToggles.js";
-import { setUpMoreDetails } from "./showConvoDetails.js";
+import { setUpMoreDetails } from "./showDetailsHelpers.js";
 import { initDatabase } from "./sqlHelpers.js";
 import { injectUserSettingsTemplate } from "./userSettings.js";
 import { injectTemplate } from "./uiHelpers.js";
@@ -42,6 +42,7 @@ export async function boot() {
 
   // Build tree and render (includes all types: flow, orb, task)
   buildConvoTreeAndRender();
+
   setUpNavigation();
 
   // Set up filter dropdowns to open and close
@@ -52,13 +53,16 @@ export async function boot() {
 
   // Make header clickable to go home
   setUpMainHeader();
+
   // wire search
   setUpSearch();
   setupClearSearchInput();
 
   setUpMoreDetails();
+
   // Setup infinite scroll for search
   setupSearchInfiniteScroll();
+
   setUpSidebarToggles();
 
   // Mobile Set Up
@@ -79,4 +83,6 @@ export async function boot() {
   await injectTemplate("homepage.html", "homePageContainer")
 
   toggleHomepageLoader(false);
-}
+}/* Initialize boot sequence */
+boot().catch((err) => console.error("boot error", err));
+
