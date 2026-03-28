@@ -1,4 +1,4 @@
-import { entryCache } from "./sharedElements.js";
+import { entryCache } from "./constants.js";
 import { renderConvoDetails, renderEntryDetails } from "./uiHelpers.js";
 import {
   getConversationById,
@@ -15,14 +15,11 @@ import {
   getCurrentConvoId,
   getCurrentEntryId,
 } from "./navigation.js";
-import { entryListEl } from "./sharedElements.js";
-import {
-  currentEntryContainerEl,
-  moreDetailsEl,
-} from "./sharedElements.js";
-import { $ } from "./uiHelpers.js"
+import { entryListEl } from "./constants.js";
+import { currentEntryContainerEl, moreDetailsEl } from "./constants.js";
+import { $ } from "./uiHelpers.js";
 
-export const entryDetailsEl = $("entryDetails");
+const entryDetailsEl = $("entryDetails");
 
 export async function showConvoDetails(convoId) {
   if (!entryDetailsEl) return;
@@ -68,7 +65,6 @@ export async function showConvoDetails(convoId) {
     taskDetails: taskDetails,
   });
 }
-
 export async function showEntryDetails(
   convoId,
   entryId,
@@ -167,55 +163,54 @@ export async function showEntryDetails(
 
   renderEntryDetails(entryDetailsEl, payload);
 }
-
 export function setUpMoreDetails() {
-  moreDetailsEl?.addEventListener("toggle", handleMoreDetailsClicked);
-}
-
-async function handleMoreDetailsClicked() {
-  if (moreDetailsEl.open) {
-    if (getCurrentConvoId() && getCurrentEntryId()) {
-      await showEntryDetails(
-        getCurrentConvoId(),
-        getCurrentEntryId(),
-        getCurrentAlternateCondition(),
-        getCurrentAlternateLine(),
-      );
-    } else if (getCurrentConvoId()) {
-      await showConvoDetails(getCurrentConvoId());
-    }
-    // Make dialogue options compact when More Details is expanded
-    const entryListContainer = entryListEl?.closest(".entry-list");
-    if (
-      entryListContainer &&
-      !entryListContainer.classList.contains("compact")
-    ) {
-      entryListContainer.setAttribute("data-was-expanded", "true");
-      entryListContainer.classList.add("compact");
-    }
-    if (
-      currentEntryContainerEl &&
-      !currentEntryContainerEl.classList.contains("expanded")
-    ) {
-      currentEntryContainerEl.setAttribute("data-was-expanded", "true");
-      currentEntryContainerEl.classList.add("expanded");
-    }
-  } else {
-    // Restore original state when More Details is collapsed
-    const entryListContainer = entryListEl?.closest(".entry-list");
-    if (
-      entryListContainer &&
-      entryListContainer.dataset.wasExpanded === "true"
-    ) {
-      entryListContainer.classList.remove("compact");
-      delete entryListContainer.dataset.wasExpanded;
-    }
-    if (
-      currentEntryContainerEl &&
-      currentEntryContainerEl.dataset.wasExpanded === "true"
-    ) {
-      currentEntryContainerEl.classList.remove("expanded");
-      delete currentEntryContainerEl.dataset.wasExpanded;
+  async function handleMoreDetailsClicked() {
+    if (moreDetailsEl.open) {
+      if (getCurrentConvoId() && getCurrentEntryId()) {
+        await showEntryDetails(
+          getCurrentConvoId(),
+          getCurrentEntryId(),
+          getCurrentAlternateCondition(),
+          getCurrentAlternateLine(),
+        );
+      } else if (getCurrentConvoId()) {
+        await showConvoDetails(getCurrentConvoId());
+      }
+      // Make dialogue options compact when More Details is expanded
+      const entryListContainer = entryListEl?.closest(".entry-list");
+      if (
+        entryListContainer &&
+        !entryListContainer.classList.contains("compact")
+      ) {
+        entryListContainer.setAttribute("data-was-expanded", "true");
+        entryListContainer.classList.add("compact");
+      }
+      if (
+        currentEntryContainerEl &&
+        !currentEntryContainerEl.classList.contains("expanded")
+      ) {
+        currentEntryContainerEl.setAttribute("data-was-expanded", "true");
+        currentEntryContainerEl.classList.add("expanded");
+      }
+    } else {
+      // Restore original state when More Details is collapsed
+      const entryListContainer = entryListEl?.closest(".entry-list");
+      if (
+        entryListContainer &&
+        entryListContainer.dataset.wasExpanded === "true"
+      ) {
+        entryListContainer.classList.remove("compact");
+        delete entryListContainer.dataset.wasExpanded;
+      }
+      if (
+        currentEntryContainerEl &&
+        currentEntryContainerEl.dataset.wasExpanded === "true"
+      ) {
+        currentEntryContainerEl.classList.remove("expanded");
+        delete currentEntryContainerEl.dataset.wasExpanded;
+      }
     }
   }
+
+  moreDetailsEl?.addEventListener("toggle", handleMoreDetailsClicked);
 }

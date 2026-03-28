@@ -1,25 +1,8 @@
 import { handleLineLinkClick, handleEntryClick } from "./navigation.js";
 
-// DOM helpers and UI wiring (history, chat log, entry render helpers)
-
 export function $(sel) {
   return document.getElementById(sel);
 }
-// Make external links open in new tabs
-function processExternalLinks(element) {
-  const links = element.querySelectorAll("a[href]");
-  links.forEach((link) => {
-    const href = link.href;
-    // Check if it's an external link (starts with http/https and not #)
-    if (href &&
-      (href.startsWith("http://") || href.startsWith("https://")) &&
-      !href.startsWith("#")) {
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
-    }
-  });
-}
-
 export function createCardItem(
   titleText,
   convoId,
@@ -92,7 +75,6 @@ export function createCardItem(
   el.dataset.id = entryId;
   return el;
 }
-
 export function toggleElementVisibility(el, showElement) {
   if (!el) {
     return;
@@ -117,14 +99,10 @@ export function toggleElementVisibility(el, showElement) {
     }
   }
 }
-
 export function toggleElementVisibilityBySelector(selector, showElement) {
-  const el = document.querySelector(selector);
+  const el = document.querySelectorAll(selector);
   toggleElementVisibility(el, showElement);
 }
-/* #endregion */
-/* Chat log/history helpers */
-
 export function appendHistoryItem(chatLogEl, title, text, historyIndex, onClick) {
   const item = document.createElement("div");
   item.className = "card-item history-item";
@@ -156,7 +134,6 @@ export function appendHistoryItem(chatLogEl, title, text, historyIndex, onClick)
 
   return item;
 }
-
 export function renderCurrentEntry(
   entryOverviewEl,
   convoId,
@@ -185,7 +162,6 @@ export function renderCurrentEntry(
     <div class="card-body dialogue-text">${dialoguetext}</div>`;
   processExternalLinks(entryOverviewEl);
 }
-
 export function renderConversationOverview(entryOverviewEl, conversation) {
   entryOverviewEl.innerHTML = "";
   entryOverviewEl.className = "entry-item current-item";
@@ -213,7 +189,6 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
     </div>`;
   processExternalLinks(entryOverviewEl);
 }
-
 export function parseSpeakerFromTitle(title) {
   if (!title) return "";
   const splitTitle = title.split(":");
@@ -223,7 +198,6 @@ export function parseSpeakerFromTitle(title) {
     return splitTitle[0].trim();
   return title;
 }
-
 export function renderConvoDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
@@ -233,7 +207,6 @@ export function renderConvoDetails(containerEl, data) {
   }
   containerEl.appendChild(wrapper);
 }
-
 export function renderEntryDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
@@ -258,6 +231,133 @@ export function renderEntryDetails(containerEl, data) {
   wrapper.appendChild(createMetaTable(data));
 
   containerEl.appendChild(wrapper);
+}
+export function getStringOrDefault(str, defaultValue = "") {
+  if (str === null || str === undefined || str === 0) {
+    return defaultValue;
+  }
+  if (String(str)?.trim() === "") {
+    return defaultValue;
+  }
+  return str;
+}
+export function highlightTerms(text, query, hasQuotedPhrases = false) {
+  if (!text || !query) return escapeHtml(text || "");
+
+  const trimmedQuery = query.trim();
+
+  // If query has quoted phrases, extract them and remaining words
+  if (hasQuotedPhrases) {
+    // Extract all quoted phrases
+    const quotedPhrases = [];
+    const quotedPhrasesRegex = /"([^"]+)"/g;
+    let match;
+    while ((match = quotedPhrasesRegex.exec(trimmedQuery)) !== null) {
+      quotedPhrases.push(match[1]);
+    }
+
+    // Remove quoted phrases from query to get remaining words
+    const remainingText = trimmedQuery.replace(/"[^"]+"/g, "").trim();
+    const words = remainingText
+      ? remainingText.split(/\s+/).filter((w) => w.length >= 3)
+      : [];
+
+    // Combine phrases and words for highlighting
+    const allTerms = [...quotedPhrases, ...words];
+
+    if (allTerms.length === 0) return escapeHtml(text);
+
+    // Escape terms for regex - sort by length (longest first) to match longer phrases first
+    const escaped = allTerms
+      .sort((a, b) => b.length - a.length)
+      .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+    // Create regex to match any term
+    const re = new RegExp("(" + escaped.join("|") + ")", "gi");
+
+    // Split text by matches
+    const parts = text.split(re);
+
+    // Escape HTML and wrap matches in <mark> tags
+    return parts
+      .map((part) => {
+        // Check if this part matches any of the terms (case-insensitive)
+        const isMatch = allTerms.some(
+          (term) => part.toLowerCase() === term.toLowerCase()
+        );
+        if (isMatch) {
+          return (
+            "<mark class='highlighted-term'>" + escapeHtml(part) + "</mark>"
+          );
+        }
+        return escapeHtml(part);
+      })
+      .join("");
+  }
+
+  // For multi-word searches without quotes, split and highlight each word individually
+  const terms = trimmedQuery.split(/\s+/);
+
+  if (!terms.length) return escapeHtml(text);
+
+  // Escape terms for regex
+  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+  // Regex: match any term (case-insensitive)
+  const re = new RegExp("(" + escaped.join("|") + ")", "gi");
+
+  // Split text by matches to preserve both matched and unmatched parts
+  const parts = text.split(re);
+
+  // Escape HTML and wrap matches in <mark> tags
+  return parts
+    .map((part) => {
+      // Check if this part matches any of the search terms (case-insensitive)
+      const isMatch = terms.some(
+        (term) => part.toLowerCase() === term.toLowerCase()
+      );
+      if (isMatch) {
+        return "<mark class='highlighted-term'>" + escapeHtml(part) + "</mark>";
+      }
+      return escapeHtml(part);
+    })
+    .join("");
+}
+export async function injectTemplate(templateFileName, container) {
+  try {
+    const response = await fetch(templateFileName);
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    const html = await response.text();
+    let containerEl;
+    if (typeof container === "string") {
+      containerEl = document.getElementById(container);
+    }
+    else {
+      containerEl = container
+    }
+    if (containerEl) {
+      containerEl.innerHTML = html;
+    }
+  } catch (error) {
+    console.error("Error fetching modal content:", error);
+  }
+}
+
+function processExternalLinks(element) {
+  // Make external links open in new tabs
+  const links = element.querySelectorAll("a[href]");
+  links.forEach((link) => {
+    const href = link.href;
+    // Check if it's an external link (starts with http/https and not #)
+    if (href &&
+      (href.startsWith("http://") || href.startsWith("https://")) &&
+      !href.startsWith("#")) {
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener noreferrer");
+    }
+  });
 }
 function createAlternatesList(alternates) {
   const section = createDetailsSectionHeader("Alternates");
@@ -509,125 +609,10 @@ function buildTable(rows, hideNone = true) {
   });
   return t;
 }
-
-export function getStringOrDefault(str, defaultValue = "") {
-  if (str === null || str === undefined || str === 0) {
-    return defaultValue;
-  }
-  if (String(str)?.trim() === "") {
-    return defaultValue;
-  }
-  return str;
-}
 function escapeHtml(s) {
   return s.replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
-}
-
-export function highlightTerms(text, query, hasQuotedPhrases = false) {
-  if (!text || !query) return escapeHtml(text || "");
-
-  const trimmedQuery = query.trim();
-
-  // If query has quoted phrases, extract them and remaining words
-  if (hasQuotedPhrases) {
-    // Extract all quoted phrases
-    const quotedPhrases = [];
-    const quotedPhrasesRegex = /"([^"]+)"/g;
-    let match;
-    while ((match = quotedPhrasesRegex.exec(trimmedQuery)) !== null) {
-      quotedPhrases.push(match[1]);
-    }
-
-    // Remove quoted phrases from query to get remaining words
-    const remainingText = trimmedQuery.replace(/"[^"]+"/g, "").trim();
-    const words = remainingText
-      ? remainingText.split(/\s+/).filter((w) => w.length >= 3)
-      : [];
-
-    // Combine phrases and words for highlighting
-    const allTerms = [...quotedPhrases, ...words];
-
-    if (allTerms.length === 0) return escapeHtml(text);
-
-    // Escape terms for regex - sort by length (longest first) to match longer phrases first
-    const escaped = allTerms
-      .sort((a, b) => b.length - a.length)
-      .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-
-    // Create regex to match any term
-    const re = new RegExp("(" + escaped.join("|") + ")", "gi");
-
-    // Split text by matches
-    const parts = text.split(re);
-
-    // Escape HTML and wrap matches in <mark> tags
-    return parts
-      .map((part) => {
-        // Check if this part matches any of the terms (case-insensitive)
-        const isMatch = allTerms.some(
-          (term) => part.toLowerCase() === term.toLowerCase()
-        );
-        if (isMatch) {
-          return (
-            "<mark class='highlighted-term'>" + escapeHtml(part) + "</mark>"
-          );
-        }
-        return escapeHtml(part);
-      })
-      .join("");
-  }
-
-  // For multi-word searches without quotes, split and highlight each word individually
-  const terms = trimmedQuery.split(/\s+/);
-
-  if (!terms.length) return escapeHtml(text);
-
-  // Escape terms for regex
-  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-
-  // Regex: match any term (case-insensitive)
-  const re = new RegExp("(" + escaped.join("|") + ")", "gi");
-
-  // Split text by matches to preserve both matched and unmatched parts
-  const parts = text.split(re);
-
-  // Escape HTML and wrap matches in <mark> tags
-  return parts
-    .map((part) => {
-      // Check if this part matches any of the search terms (case-insensitive)
-      const isMatch = terms.some(
-        (term) => part.toLowerCase() === term.toLowerCase()
-      );
-      if (isMatch) {
-        return "<mark class='highlighted-term'>" + escapeHtml(part) + "</mark>";
-      }
-      return escapeHtml(part);
-    })
-    .join("");
-}
-
-export async function injectTemplate(templateFileName, container) {
-  try {
-    const response = await fetch(templateFileName);
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    const html = await response.text();
-    let containerEl;
-    if (typeof container === "string") {
-      containerEl = document.getElementById(container);
-    }
-    else {
-      containerEl = container
-    }
-    if (containerEl) {
-      containerEl.innerHTML = html;
-    }
-  } catch (error) {
-    console.error("Error fetching modal content:", error);
-  }
 }
 

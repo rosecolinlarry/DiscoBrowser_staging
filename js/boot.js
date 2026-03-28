@@ -1,5 +1,5 @@
 import { buildConvoTreeAndRender } from "./conversationTree.js";
-import { setupConversationTypesModal } from "./conversationTypesModal.js";
+import { setupConversationTypesModal } from "./setUpConversationTypesModal.js";
 import { injectIconTemplates } from "./iconHelpers.js";
 import { loadSqlJs } from "./loadSqlJs.js";
 import {
@@ -8,21 +8,17 @@ import {
   setUpNavigation,
 } from "./navigation.js";
 import {
-  setupMobileSidebar,
-  setupMobileSearch,
-  setupMobileNavMenu,
-} from "./openMobileNavSidebar.js";
-import { setUpMediaQueries } from "./handleMediaQueryChange.js";
+  setUpMobile
+} from "./setUpMobile.js";
+import { setUpMediaQueries } from "./setUpMediaQueries.js";
 import { toggleHomepageLoader } from "./homepageLoader.js";
-import {
-  setupClearFiltersBtn,
-  setUpSearch,
-  setupClearSearchInput,
-} from "./setupClearSearchInput.js";
+import { setUpSearch } from "./searchFilters.js";
+import { setupClearFiltersBtn } from "./searchFilters.js";
+import { setupClearSearchInput } from "./searchFilters.js";
 import {
   setUpFilterDropdowns} from "./searchFilters.js";
 import { setUpMainHeader } from "./header.js";
-import { setupSearchInfiniteScroll } from "./setupSearchInfiniteScroll.js";
+import { setupSearchInfiniteScroll } from "./infiniteScroll.js";
 import { setUpSidebarToggles } from "./setUpSidebarToggles.js";
 import { setUpMoreDetails } from "./showDetailsHelpers.js";
 import { initDatabase } from "./sqlHelpers.js";
@@ -65,10 +61,7 @@ export async function boot() {
 
   setUpSidebarToggles();
 
-  // Mobile Set Up
-  setupMobileSidebar();
-  setupMobileSearch();
-  setupMobileNavMenu();
+  setUpMobile();
 
   // Setup browser history handling
   await setupBrowserHistory();

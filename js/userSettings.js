@@ -3,11 +3,11 @@ import {
   updateHandlePositions,
   updateResizeHandles,
 } from "./resizableColumns.js";
-import { updateDesktopLayout } from "./handleMediaQueryChange.js";
 import { $, injectTemplate, toggleElementVisibility } from "./uiHelpers.js";
+import { STORAGE_KEY } from "./constants.js";
+import { defaultColumns } from "./constants.js";
 
-export const resetDesktopLayoutCheckboxId = "resetDesktopLayoutCheckbox";
-
+const resetDesktopLayoutCheckboxId = "resetDesktopLayoutCheckbox";
 const settingsModalOverlayId = "settingsModalOverlay";
 const settingsModalOverlay = $(settingsModalOverlayId);
 const settingsModalCloseId = "settingsModalClose";
@@ -26,6 +26,14 @@ const DEFAULT_APP_SETTINGS = {
   turnOffAnimations: false,
   alwaysShowMoreDetails: false,
 };
+let appSettings = {
+  resetDesktopLayout: false,
+  disableColumnResizing: false,
+  showHidden: false,
+  turnOffAnimations: false,
+  alwaysShowMoreDetails: false,
+};
+
 export function setupSettingsModal() {
   const settingsBtn = $(settingsBtnId);
   const settingsModalClose = $(settingsModalCloseId);
@@ -67,7 +75,22 @@ export function alwaysShowMoreDetails() {
 export function showHidden() {
   return appSettings?.showHidden ?? DEFAULT_APP_SETTINGS.showHidden;
 }
-export function updateCurrentUserSettings() {
+export function openSettings() {
+  setCurrentUserSettings();
+  toggleElementVisibility(settingsModalOverlay, true);
+} 
+export async function injectUserSettingsTemplate() {
+  const settingsModalTemplateFileName = "settings-modal-content.html";
+  await injectTemplate(settingsModalTemplateFileName, settingsModalOverlay);
+  initializeUserSettings();
+}
+export function applySettings() {
+  updateAnimationsToggle();
+  updateHandlePositions();
+  updateResizeHandles();
+}
+
+function updateCurrentUserSettings() {
   // Update settings from checkbox values
   const currentCheckboxValues = {
     resetDesktopLayout: $(resetDesktopLayoutCheckboxId)?.checked ?? false,
@@ -77,6 +100,47 @@ export function updateCurrentUserSettings() {
     turnOffAnimations: $(turnOffAnimationsCheckboxId)?.checked ?? false,
   };
   appSettings = currentCheckboxValues;
+}
+function resetCurrentUserSettings() {
+  // Update app setting values to default settings
+  appSettings = DEFAULT_APP_SETTINGS;
+  setCurrentUserSettings();
+}
+function loadSettingsFromStorage() {
+  try {
+    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      appSettings = { ...appSettings, ...parsed };
+      return appSettings;
+    }
+  } catch (e) {
+    appSettings = DEFAULT_APP_SETTINGS;
+    console.error("Failed to load settings from storage", e);
+  }
+}
+function saveSettingsToStorage() {
+  try {
+    updateDesktopLayout();
+
+    applySettings();
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
+  } catch (e) {
+    console.error("Failed to save settings to storage", e);
+  }
+}
+function updateDesktopLayout() {
+  const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);
+  // Layout resets on save
+  if (resetDesktopLayoutCheckbox) {
+    if (appSettings?.resetDesktopLayout) {
+      const browserGrid = $("browser");
+      browserGrid.style.gridTemplateColumns = defaultColumns;
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    resetDesktopLayoutCheckbox.checked = false;
+    appSettings.resetDesktopLayout = false;
+  }
 }
 function setCurrentUserSettings() {
   // Update checkbox values from settings
@@ -105,53 +169,6 @@ function setCurrentUserSettings() {
     turnOffAnimationsCheckbox.checked = appSettings?.turnOffAnimations;
   }
 }
-export function resetCurrentUserSettings() {
-  // Update app setting values to default settings
-  appSettings = DEFAULT_APP_SETTINGS;
-  setCurrentUserSettings();
-}
-export function loadSettingsFromStorage() {
-  try {
-    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      appSettings = { ...appSettings, ...parsed };
-      return appSettings;
-    }
-  } catch (e) {
-    appSettings = DEFAULT_APP_SETTINGS;
-    console.error("Failed to load settings from storage", e);
-  }
-}
-export function saveSettingsToStorage() {
-  try {
-    updateDesktopLayout();
-
-    applySettings();
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(appSettings));
-  } catch (e) {
-    console.error("Failed to save settings to storage", e);
-  }
-}
-export function openSettings() {
-  setCurrentUserSettings();
-  toggleElementVisibility(settingsModalOverlay, true);
-} // Default app settings
-
-export let appSettings = {
-  resetDesktopLayout: false,
-  disableColumnResizing: false,
-  showHidden: false,
-  turnOffAnimations: false,
-  alwaysShowMoreDetails: false,
-};
-
-export async function injectUserSettingsTemplate() {
-  const settingsModalTemplateFileName = "settings-modal-content.html";
-  await injectTemplate(settingsModalTemplateFileName, settingsModalOverlay);
-  initializeUserSettings();
-}
-
 function setUpRestoreDefaultSettingsButton() {
   // Restore default settings and updates checkbox values.
   const restoreDefaultSettingsBtn = $(restoreDefaultSettingsBtnId);
@@ -169,13 +186,6 @@ function initializeUserSettings() {
   setupSettingsModal();
   setUpSaveButton();
   setUpRestoreDefaultSettingsButton();
-}
-
-export function applySettings() {
-  // Apply animations toggle
-  updateAnimationsToggle();
-  updateHandlePositions();
-  updateResizeHandles();
 }
 function setUpCheckboxHandlers() {
   const resetDesktopLayoutCheckbox = $(resetDesktopLayoutCheckboxId);

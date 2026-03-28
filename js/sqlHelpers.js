@@ -1,7 +1,8 @@
-export let _db = null;
-export let SQL = null;
-// Wraps sql.js Database and provides helper methods, search, and simple caching.
+let _db = null;
+let SQL = null;
+
 export async function initDatabase(sqlFactory, path = "db/discobase.sqlite3") {
+  // Wraps sql.js Database and provides helper methods, search, and simple caching.
   SQL = sqlFactory;
   try {
     const res = await fetch(path);
@@ -13,11 +14,6 @@ export async function initDatabase(sqlFactory, path = "db/discobase.sqlite3") {
     throw err;
   }
 }
-function run(sql) {
-  if (!_db) throw new Error("DB not initialized");
-  return _db.exec(sql);
-}
-/* Minimal safe helper for retrieving rows */
 export function execRows(sql) {
   const res = run(sql);
   if (!res || !res.length) return [];
@@ -40,7 +36,6 @@ export function execRowsFirstOrDefault(sql) {
   }
   return null;
 }
-
 export function getConversationById(convoId, showHidden) {
   // Get the conversation's task related fields
   convoId = parseInt(convoId);
@@ -62,7 +57,6 @@ export function getConversationById(convoId, showHidden) {
     return execRowsFirstOrDefault(convoSQL);
   }
 }
-/* Conversations list */
 export function getAllConversations(showHidden) {
   let q = `SELECT id, title, type FROM conversations `;
   if (!showHidden) {
@@ -71,8 +65,6 @@ export function getAllConversations(showHidden) {
   q += `ORDER BY title;`;
   return execRows(q);
 }
-// #endregion
-/* Load dentries for a conversation (summary listing) */
 export function getEntriesForConversation(convoId, showHidden) {
   convoId = parseInt(convoId);
   if (!Number.isInteger(convoId)) {
@@ -94,7 +86,6 @@ export function getEntriesForConversation(convoId, showHidden) {
   `);
   }
 }
-
 export function getDistinctActors() {
   return execRows(
     `SELECT DISTINCT id, name FROM actors WHERE name IS NOT NULL AND name != '' ORDER BY name;`
@@ -115,8 +106,6 @@ export function getActorNameById(actorId) {
   );
   return actor;
 }
-// #endregion
-/* Fetch a single entry row (core fields) */
 export function getEntry(convoId, entryId) {
   entryId = parseInt(entryId);
   convoId = parseInt(convoId);
@@ -134,7 +123,6 @@ export function getEntry(convoId, entryId) {
           AND de.id=${entryId}`
   );
 }
-/* Fetch alternates for an entry */
 export function getAlternates(convoId, entryId) {
   entryId = parseInt(entryId);
   convoId = parseInt(convoId);
@@ -148,7 +136,6 @@ export function getAlternates(convoId, entryId) {
       AND dialogueid=${entryId};`
   );
 }
-/* Fetch check(s) for an entry */
 export function getChecks(convoId, entryId) {
   entryId = parseInt(entryId);
   convoId = parseInt(convoId);
@@ -164,7 +151,6 @@ export function getChecks(convoId, entryId) {
       AND dialogueid=${entryId};`
   );
 }
-/* Fetch parents and children dlinks for an entry */
 export function getParentsChildren(convoId, entryId) {
   entryId = parseInt(entryId);
   convoId = parseInt(convoId);
@@ -185,7 +171,6 @@ export function getParentsChildren(convoId, entryId) {
   `);
   return { parents, children };
 }
-/* Fetch destination entries batched (for link lists) */
 export function getEntriesBulk(pairs = [], showHidden) {
   // pairs = [{convo, id}, ...] -> batch by convo to use IN
   if (!pairs.length) return [];
@@ -220,4 +205,9 @@ export function getEntriesBulk(pairs = [], showHidden) {
     });
   }
   return results;
+}
+
+function run(sql) {
+  if (!_db) throw new Error("DB not initialized");
+  return _db.exec(sql);
 }

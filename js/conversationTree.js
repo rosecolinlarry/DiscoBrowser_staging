@@ -5,26 +5,21 @@ import {
   handleNavigateToConvoLeaf,
   handleConvoLabelClick,
 } from "./navigation.js";
-import {
-  setActiveTypeFilter,
-  getActiveTypeFilter,
-} from "./searchFilters.js";
 import { getAllConversations, getConversationById } from "./sqlHelpers.js";
 import { $, highlightTerms } from "./uiHelpers.js";
 import { showHidden } from "./userSettings.js";
 
-export let convos = [];
-export const convoListEl = $("convoList");export const convoTypeFilterBtns = document.querySelectorAll(
+const convoSearchInput = $("convoSearchInput");
+const convoListEl = $("convoList");
+const convoTypeFilterBtns = document.querySelectorAll(
   ".radio-button-group .radio-button"
 );
 // Tree control elements
-export const expandAllBtn = $("expandAllBtn");
-export const collapseAllBtn = $("collapseAllBtn");
-// Search Bar
-export const searchBtn = $("searchBtn");
-export const searchClearBtn = $("searchClearBtn");
-export const convoSearchInput = $("convoSearchInput");
+const expandAllBtn = $("expandAllBtn");
+const collapseAllBtn = $("collapseAllBtn");
 
+let convos = [];
+let activeTypeFilter = "all";
 let conversationTree = null;
 
 export function rebuildConversationTree() {
@@ -120,7 +115,7 @@ function filterConversationTree() {
   // If no text search is active
   if (!searchText) {
     // Show full tree when all types selected
-    if (getActiveTypeFilter() === "all") {
+    if (activeTypeFilter === "all") {
       renderTree(convoListEl, conversationTree);
       updateTreeControlButtons(true);
       if (getCurrentConvoId() !== null) {
@@ -140,7 +135,7 @@ function filterConversationTree() {
           type: convoTypeById[id] || "flow",
         };
       })
-      .filter((row) => row.type === getActiveTypeFilter());
+      .filter((row) => row.type === activeTypeFilter);
 
     if (filteredRows.length === 0) {
       convoListEl.innerHTML = "(no conversations for selected type)";
@@ -162,7 +157,7 @@ function filterConversationTree() {
   collectMatchingLeaves(
     conversationTree.root,
     searchText,
-    getActiveTypeFilter(),
+    activeTypeFilter,
     matches,
     conversationTree,
   );
@@ -606,7 +601,7 @@ function setupConversationFilter() {
       btn.classList.add("active");
 
       // Update active filter
-      setActiveTypeFilter(btn.dataset.type);
+      activeTypeFilter = btn.dataset.type;
 
       // Apply filter
       filterConversationTree();
@@ -623,4 +618,3 @@ function setupConversationFilter() {
     collapseAllBtn.addEventListener("click", collapseAllTreeNodes);
   }
 }
-

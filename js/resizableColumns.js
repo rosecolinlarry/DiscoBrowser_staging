@@ -1,37 +1,18 @@
 import { toggleElementVisibility } from "./uiHelpers.js";
-import {
-  browserGrid,
-  defaultColumns,
-  defaultMobileColumns,
-  STORAGE_KEY,
-} from "./homepageLoader.js";
-import {
-  mobileMediaQuery,
-  tabletMediaQuery,
-  desktopMediaQuery,
-} from "./handleMediaQueryChange.js";
+import { STORAGE_KEY } from "./constants.js";
+import { defaultMobileColumns } from "./constants.js";
+import { defaultColumns } from "./constants.js";
+import { browserGrid } from "./constants.js";
+import { desktopMediaQuery } from "./constants.js";
+import { tabletMediaQuery } from "./constants.js";
+import { mobileMediaQuery } from "./constants.js";
 import { disableColumnResizing } from "./userSettings.js";
 
-function getStartColumns() {
-  return (browserGrid.style.gridTemplateColumns || defaultColumns)
-    .split(" ")
-    .map((s) => s.trim());
-}
-
-function applySavedColumns(savedColumns) {
-  if (!desktopMediaQuery.matches) {
-    browserGrid.style.gridTemplateColumns = defaultMobileColumns;
-  }
-  if (savedColumns) {
-    try {
-      const columns = JSON.parse(savedColumns);
-      browserGrid.style.gridTemplateColumns = columns.join(" ");
-    } catch (e) {
-      console.error("Failed to restore grid columns", e);
-      browserGrid.style.gridTemplateColumns = defaultColumns;
-    }
-  }
-}
+// State for column resizing handlers
+let currentPointerMoveHandler = null;
+let currentStartX = null;
+let currentInitialCol1 = null;
+let currentInitialCol3 = null;
 
 export function updateResizeHandles() {
   const leftHandle = document.querySelector(".resize-handle-left");
@@ -49,12 +30,81 @@ export function updateResizeHandles() {
     if (rightHandle) rightHandle.classList.remove("disabled");
   }
 }
+export function updateHandlePositions() {
+  const columns = getStartColumns();
+  const col1 = columns[0];
+  const col3 = columns[2];
+  browserGrid.style.setProperty("--handle-left-pos", `calc(${col1} - 4px)`);
+  browserGrid.style.setProperty("--handle-right-pos", `calc(${col3} - 4px)`);
+}
+export function setUpResizableColumns() {
+  if (!browserGrid || !desktopMediaQuery.matches) return;
 
-// #region Handlers for Resizing Columns// State for column resizing handlers
-let currentPointerMoveHandler = null;
-let currentStartX = null;
-let currentInitialCol1 = null;
-let currentInitialCol3 = null;
+  const convoSection = browserGrid.querySelector(".convo-section");
+  const entriesSection = browserGrid.querySelector(".entries-section");
+  const historySection = browserGrid.children[2];
+
+  if (!convoSection || !entriesSection || !historySection) return;
+
+  // Store grid column widths in local storage
+  const savedColumns = localStorage.getItem(STORAGE_KEY);
+
+  applySavedColumns(savedColumns);
+
+  // Create resize handles
+  let leftHandle = document.querySelector(".resize-handle.resize-handle-left");
+  if (!leftHandle) {
+    leftHandle = document.createElement("div");
+    leftHandle.className = "resize-handle resize-handle-left";
+    leftHandle.title = "Drag to resize sections";
+    browserGrid.appendChild(leftHandle);
+  } else {
+    toggleElementVisibility(leftHandle, true);
+  }
+  let rightHandle = document.querySelector(
+    ".resize-handle.resize-handle-right",
+  );
+  if (!rightHandle) {
+    rightHandle = document.createElement("div");
+    rightHandle.className = "resize-handle resize-handle-right";
+    rightHandle.title = "Drag to resize sections";
+    browserGrid.appendChild(rightHandle);
+  } else {
+    toggleElementVisibility(rightHandle, true);
+  }
+
+  // Initialize handle positions
+  updateHandlePositions();
+
+  // Apply disabled state if column resizing is disabled
+  if (disableColumnResizing()) {
+    leftHandle.classList.add("disabled");
+    rightHandle.classList.add("disabled");
+  }
+
+  leftHandle.addEventListener("pointerdown", handleLeftHandlePointerDown);
+  rightHandle.addEventListener("pointerdown", handleRightHandlePointerDown);
+}
+
+function getStartColumns() {
+  return (browserGrid.style.gridTemplateColumns || defaultColumns)
+    .split(" ")
+    .map((s) => s.trim());
+}
+function applySavedColumns(savedColumns) {
+  if (!desktopMediaQuery.matches) {
+    browserGrid.style.gridTemplateColumns = defaultMobileColumns;
+  }
+  if (savedColumns) {
+    try {
+      const columns = JSON.parse(savedColumns);
+      browserGrid.style.gridTemplateColumns = columns.join(" ");
+    } catch (e) {
+      console.error("Failed to restore grid columns", e);
+      browserGrid.style.gridTemplateColumns = defaultColumns;
+    }
+  }
+}
 function handlePointerMoveLeft(moveEvent) {
   const deltaX = moveEvent.clientX - currentStartX;
   const initialCol1 = currentInitialCol1 ?? parseFloat(getStartColumns()[0]);
@@ -109,62 +159,4 @@ function handleRightHandlePointerDown(e) {
   currentPointerMoveHandler = (ev) => handlePointerMoveRight(ev);
   document.addEventListener("pointermove", currentPointerMoveHandler);
   document.addEventListener("pointerup", handlePointerUp);
-}
-// #endregion
-
-export function updateHandlePositions() {
-  const columns = getStartColumns();
-  const col1 = columns[0];
-  const col3 = columns[2];
-  browserGrid.style.setProperty("--handle-left-pos", `calc(${col1} - 4px)`);
-  browserGrid.style.setProperty("--handle-right-pos", `calc(${col3} - 4px)`);
-}
-
-export function setUpResizableColumns() {
-  if (!browserGrid || !desktopMediaQuery.matches) return;
-
-  const convoSection = browserGrid.querySelector(".convo-section");
-  const entriesSection = browserGrid.querySelector(".entries-section");
-  const historySection = browserGrid.children[2];
-
-  if (!convoSection || !entriesSection || !historySection) return;
-
-  // Store grid column widths in local storage
-  const savedColumns = localStorage.getItem(STORAGE_KEY);
-
-  applySavedColumns(savedColumns);
-
-  // Create resize handles
-  let leftHandle = document.querySelector(".resize-handle.resize-handle-left");
-  if (!leftHandle) {
-    leftHandle = document.createElement("div");
-    leftHandle.className = "resize-handle resize-handle-left";
-    leftHandle.title = "Drag to resize sections";
-    browserGrid.appendChild(leftHandle);
-  } else {
-    toggleElementVisibility(leftHandle, true);
-  }
-  let rightHandle = document.querySelector(
-    ".resize-handle.resize-handle-right",
-  );
-  if (!rightHandle) {
-    rightHandle = document.createElement("div");
-    rightHandle.className = "resize-handle resize-handle-right";
-    rightHandle.title = "Drag to resize sections";
-    browserGrid.appendChild(rightHandle);
-  } else {
-    toggleElementVisibility(rightHandle, true);
-  }
-
-  // Initialize handle positions
-  updateHandlePositions();
-
-  // Apply disabled state if column resizing is disabled
-  if (disableColumnResizing()) {
-    leftHandle.classList.add("disabled");
-    rightHandle.classList.add("disabled");
-  }
-
-  leftHandle.addEventListener("pointerdown", handleLeftHandlePointerDown);
-  rightHandle.addEventListener("pointerdown", handleRightHandlePointerDown);
 }

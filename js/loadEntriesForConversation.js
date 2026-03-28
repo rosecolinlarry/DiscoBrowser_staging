@@ -11,11 +11,11 @@ import {
 import {
   homePageContainer,
   dialogueContent
-} from "./sharedElements.js";
+} from "./constants.js";
 import {
   chatLogEl,
-  convoRootBtn,
-} from "./openMobileNavSidebar.js";
+  convoRootBtn
+} from "./constants.js";
 import { getCurrentConvoId } from "./navigation.js";
 import {
   toggleElementVisibility,
@@ -26,7 +26,7 @@ import {
 import {
   closeAllSidebars,
 } from "./closeElementsHelpers.js";
-import { updateMobileNavButtons } from "./openMobileNavSidebar.js";
+import { updateMobileNavButtons } from "./setUpMobile.js";
 import { showConvoDetails } from "./showDetailsHelpers.js";
 import {
   getConversationById,
@@ -40,12 +40,10 @@ import {
   setCurrentSearchFilteredCount,
   setCurrentSearchOffset,
   setCurrentSearchTotal,
-} from "./handleInfiniteScroll.js";
-import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./sharedElements.js";
-import { entryListHeaderEl } from "./sharedElements.js";
-import { entryListEl } from "./sharedElements.js";
-
-/* Load entries listing for conversation */
+} from "./infiniteScroll.js";
+import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./constants.js";
+import { entryListHeaderEl } from "./constants.js";
+import { entryListEl } from "./constants.js";
 
 export async function loadEntriesForConversation(
   convoId,
@@ -174,4 +172,3 @@ export async function loadEntriesForConversation(
     entryListEl.appendChild(el);
   });
 }
-

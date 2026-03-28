@@ -3,15 +3,13 @@ import {
   searchInput,
   dialogueContent,
   entryCache,
-  homePageContainer
-} from "./sharedElements.js";
-import {
-  chatLogEl,
-  convoRootBtn,
-} from "./openMobileNavSidebar.js";
-import { mobileActorFilterWrapper } from "./sharedElements.js";
-import { mobileConvoFilterWrapper } from "./sharedElements.js";
-import { mobileMediaQuery } from "./handleMediaQueryChange.js";
+  homePageContainer,
+  backBtn,
+} from "./constants.js";
+import { chatLogEl, convoRootBtn } from "./constants.js";
+import { mobileActorFilterWrapper } from "./constants.js";
+import { mobileConvoFilterWrapper } from "./constants.js";
+import { mobileMediaQuery } from "./constants.js";
 import { highlightConversationInTree } from "./conversationTree.js";
 import {
   $,
@@ -21,28 +19,43 @@ import {
   renderCurrentEntry,
   createCardItem,
 } from "./uiHelpers.js";
-import { search, hideSearchCount } from "./getQueryTokens.js";
+import { search, hideSearchCount } from "./search.js";
 import {
   closeMobileSearchScreen,
   openMobileSearchScreen,
   updateMobileNavButtons,
-} from "./openMobileNavSidebar.js";
-import {
-  loadEntriesForConversation,
-} from "./loadEntriesForConversation.js";
+} from "./setUpMobile.js";
+import { loadEntriesForConversation } from "./loadEntriesForConversation.js";
 import { showConvoDetails, showEntryDetails } from "./showDetailsHelpers.js";
-import { getConversationById, getEntriesBulk, getEntry, getParentsChildren } from "./sqlHelpers.js";
+import {
+  getConversationById,
+  getEntriesBulk,
+  getEntry,
+  getParentsChildren,
+} from "./sqlHelpers.js";
 import { alwaysShowMoreDetails, showHidden } from "./userSettings.js";
 import {
   setCurrentSearchOffset,
   setCurrentSearchTotal,
   setCurrentSearchFilteredCount,
-} from "./handleInfiniteScroll.js";
-import { currentEntryContainerEl, entryOverviewEl, moreDetailsEl } from "./sharedElements.js";
-import { entryListHeaderEl } from "./sharedElements.js";
-import { entryListEl } from "./sharedElements.js";
+} from "./infiniteScroll.js";
+import {
+  currentEntryContainerEl,
+  entryOverviewEl,
+  moreDetailsEl,
+} from "./constants.js";
+import { entryListHeaderEl } from "./constants.js";
+import { entryListEl } from "./constants.js";
 
 export let isInitialNavigation = true; // Flag to skip history push on initial URL-based navigation
+
+let currentAppState = "home"; // 'home', 'conversation', 'search'
+let isHandlingPopState = false;
+let navigationHistory = [];
+let currentConvoId = null;
+let currentEntryId = null;
+let currentAlternateCondition = null;
+let currentAlternateLine = null;
 
 export async function handleEntryClick(e) {
   // Clicking a result in "Next Dialogue Options" or a parent/child link in an entry container
@@ -141,7 +154,6 @@ export async function handleInitialUrlNavigation() {
   // Mark initial navigation as complete
   isInitialNavigation = false;
 }
-
 export function updateUrlWithRoute(convoId, entryId = null) {
   // Update the URL with route parameters for convo and entry IDs
   // Don't update URL during popstate handling to avoid double updates
@@ -163,9 +175,6 @@ export function updateUrlWithRoute(convoId, entryId = null) {
     url,
   );
 }
-/**
- * Update the URL with search query parameters
- */
 export function updateUrlWithSearchParams(searchQuery, typeIds) {
   // Don't update URL during popstate handling to avoid double updates
   if (isHandlingPopState) return;
@@ -184,43 +193,12 @@ export function updateUrlWithSearchParams(searchQuery, typeIds) {
   const url = queryString ? `?${queryString}` : window.location.pathname;
   window.history.replaceState({ view: "search", query: searchQuery }, "", url);
 }
-/**
- * Parse route parameters from URL
- * Returns {convoId, entryId}
- */
-
-export function getRouteParamsFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const convoId = params.get("convo")
-    ? parseInt(params.get("convo"), 10)
-    : null;
-  const entryId = params.get("entry")
-    ? parseInt(params.get("entry"), 10)
-    : null;
-  return { convoId, entryId };
-}
-/**
- * Parse search parameters from URL
- * Returns {searchQuery, convoIds, actorIds, typeIds}
- */
-
-export function getSearchParamsFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const searchQuery = params.get("q") || "";
-  const typeIds = params.get("types")
-    ? new Set(params.get("types").split(","))
-    : new Set();
-
-  return { searchQuery, typeIds };
-}
-
 export async function handleNavigateToConvoLeaf(e) {
   // Handle going directly to a leaf if we know the element
   const convoId = e.detail.convoId;
   await loadEntriesForConversation(convoId, true);
   highlightConversationInTree(convoId);
 }
-
 export function setUpNavigation() {
   // Handle navigateToConversation events from history dividers
   chatLogEl?.addEventListener(
@@ -232,7 +210,6 @@ export function setUpNavigation() {
   convoRootBtn?.addEventListener("click", jumpToConversationRoot);
   updateBackButtonState();
 }
-
 export function handleConvoLabelClick(e) {
   // Handle clicking directly on a convo label
   e.stopPropagation();
@@ -269,24 +246,11 @@ export function handleConvoLabelClick(e) {
   const toggle = target.querySelector(".toggle");
   setToggleIcon(toggle, isExpanded);
 }
-
 export function goBackHomeWithBrowserHistory() {
   // Use browser history to go back to home
   if (currentConvoId !== null || currentAppState !== "home") {
     window.history.pushState({ view: "home" }, "", window.location.pathname);
     goToHomeView();
-  }
-}
-export function updateBackButtonState() {
-  if (!backBtn) return;
-  backBtn.disabled = navigationHistory.length <= 1;
-  const backStatus = $("backStatus");
-  if (backStatus) {
-    if (navigationHistory.length > 1) {
-      backStatus.textContent = `(${navigationHistory.length - 1} step${navigationHistory.length - 1 !== 1 ? "s" : ""})`;
-    } else {
-      backStatus.textContent = "(none)";
-    }
   }
 }
 export async function setupBrowserHistory() {
@@ -414,12 +378,123 @@ export function pushHistoryState(view, data = {}) {
   currentAppState = view;
   window.history.pushState(state, "", window.location.pathname);
 }
+export function getCurrentAppState() {
+  return currentAppState;
+}
+export function setIsHandlingPopState(value) {
+  isHandlingPopState = value;
+}
+export function getIsHandlingPopState() {
+  return isHandlingPopState;
+}
+export function setNavigationHistory(value) {
+  navigationHistory = value;
+}
+export function getNavigationHistory() {
+  return navigationHistory;
+}
+export function setCurrentConvoId(value) {
+  currentConvoId = value;
+}
+export function getCurrentConvoId() {
+  return currentConvoId;
+}
+export function setCurrentEntryId(value) {
+  currentEntryId = value;
+}
+export function getCurrentEntryId() {
+  return currentEntryId;
+}
+export function getCurrentAlternateCondition() {
+  return currentAlternateCondition;
+}
+export function getCurrentAlternateLine() {
+  return currentAlternateLine;
+}
 
+function getRouteParamsFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const convoId = params.get("convo")
+    ? parseInt(params.get("convo"), 10)
+    : null;
+  const entryId = params.get("entry")
+    ? parseInt(params.get("entry"), 10)
+    : null;
+  return { convoId, entryId };
+}
+function getSearchParamsFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const searchQuery = params.get("q") || "";
+  const typeIds = params.get("types")
+    ? new Set(params.get("types").split(","))
+    : new Set();
+
+  return { searchQuery, typeIds };
+}
+function updateBackButtonState() {
+  if (!backBtn) return;
+  backBtn.disabled = navigationHistory.length <= 1;
+  const backStatus = $("backStatus");
+  if (backStatus) {
+    if (navigationHistory.length > 1) {
+      backStatus.textContent = `(${navigationHistory.length - 1} step${navigationHistory.length - 1 !== 1 ? "s" : ""})`;
+    } else {
+      backStatus.textContent = "(none)";
+    }
+  }
+}
+function loadChildOptions(convoId, entryId) {
+  try {
+    entryListHeaderEl.textContent = "Next Dialogue Options";
+    entryListEl.innerHTML = "";
+
+    const { children } = getParentsChildren(convoId, entryId);
+
+    const pairs = [];
+    for (const c of children)
+      pairs.push({ convoId: c.d_convo, entryId: c.d_id });
+
+    const destRows = getEntriesBulk(pairs, showHidden());
+    const destMap = new Map(destRows.map((r) => [`${r.convo}:${r.id}`, r]));
+
+    for (const c of children) {
+      const dest = destMap.get(`${c.d_convo}:${c.d_id}`);
+      if (!dest) continue;
+      if ((dest.title || "").toLowerCase() === "start") continue;
+
+      const el = createCardItem(
+        dest.title,
+        c.d_convo,
+        c.d_id,
+        dest.dialoguetext,
+      );
+      el.addEventListener("click", handleEntryClick);
+      entryListEl.appendChild(el);
+    }
+
+    if (entryListEl.children.length === 0) {
+      // No further options - make compact like orbs/tasks
+      entryListEl.classList.add("compact");
+      const entryList = entryListEl.closest(".entry-list");
+      if (entryList) entryList.classList.add("compact");
+      if (currentEntryContainerEl) {
+        currentEntryContainerEl.classList.add("expanded");
+      }
+      const message = document.createElement("div");
+      message.className = "hint-text";
+      message.style.fontStyle = "italic";
+      message.style.padding = "12px";
+      message.textContent = "(no further options)";
+      entryListEl.appendChild(message);
+    }
+  } catch (e) {
+    console.error("Error loading child links", e);
+    entryListEl.textContent = "(error loading next options)";
+  }
+}
 function setNavigationHistoryAndNavigate(value) {
   navigationHistory = value;
 }
-/* Jump back to a specific point in history by removing all entries after it */
-
 function handleHistoryBackButtonClick() {
   // Use browser back button instead of manual history management
   window.history.back();
@@ -502,7 +577,6 @@ async function jumpToHistoryPoint(targetIndex) {
 
   updateBackButtonState();
 }
-// #endregion
 function goToHomeView() {
   // Clear current conversation
   currentConvoId = null;
@@ -543,7 +617,6 @@ function goToHomeView() {
 
   updateBackButtonState();
 }
-
 async function jumpToConversationRoot(newConvoId = null) {
   currentConvoId = currentConvoId ?? newConvoId;
   if (currentConvoId === null) return;
@@ -564,7 +637,6 @@ async function jumpToConversationRoot(newConvoId = null) {
   highlightConversationInTree(currentConvoId);
   updateBackButtonState();
 }
-
 async function navigateToEntry(
   convoId,
   entryId,
@@ -723,105 +795,3 @@ async function navigateToEntry(
     }
   }
 }
-//#endregion
-// Browser history state tracking
-
-let currentAppState = "home"; // 'home', 'conversation', 'search'
-export function setCurrentAppState(value) {
-  currentAppState = value;
-}
-export function getCurrentAppState() {
-  return currentAppState;
-}
-let isHandlingPopState = false;
-export function setIsHandlingPopState(value) {
-  isHandlingPopState = value;
-}
-export function getIsHandlingPopState() {
-  return isHandlingPopState;
-}
-let navigationHistory = [];
-export function setNavigationHistory(value) {
-  navigationHistory = value;
-}
-export function getNavigationHistory() {
-  return navigationHistory;
-}
-let currentConvoId = null;
-export function setCurrentConvoId(value) {
-  currentConvoId = value;
-}
-export function getCurrentConvoId() {
-  return currentConvoId;
-}
-let currentEntryId = null;
-export function setCurrentEntryId(value) {
-  currentEntryId = value;
-}
-export function getCurrentEntryId() {
-  return currentEntryId;
-}
-let currentAlternateCondition = null;
-export function setCurrentAlternateCondition(value) {
-  currentAlternateCondition = value;
-}
-export function getCurrentAlternateCondition() {
-  return currentAlternateCondition;
-}
-let currentAlternateLine = null;
-export function setCurrentAlternateLine(value) {
-  currentAlternateLine = value;
-}
-export function getCurrentAlternateLine() {
-  return currentAlternateLine;
-}export function loadChildOptions(convoId, entryId) {
-  try {
-    entryListHeaderEl.textContent = "Next Dialogue Options";
-    entryListEl.innerHTML = "";
-
-    const { children } = getParentsChildren(convoId, entryId);
-
-    const pairs = [];
-    for (const c of children)
-      pairs.push({ convoId: c.d_convo, entryId: c.d_id });
-
-    const destRows = getEntriesBulk(pairs, showHidden());
-    const destMap = new Map(destRows.map((r) => [`${r.convo}:${r.id}`, r]));
-
-    for (const c of children) {
-      const dest = destMap.get(`${c.d_convo}:${c.d_id}`);
-      if (!dest) continue;
-      if ((dest.title || "").toLowerCase() === "start") continue;
-
-      const el = createCardItem(
-        dest.title,
-        c.d_convo,
-        c.d_id,
-        dest.dialoguetext
-      );
-      el.addEventListener("click", handleEntryClick);
-      entryListEl.appendChild(el);
-    }
-
-    if (entryListEl.children.length === 0) {
-      // No further options - make compact like orbs/tasks
-      entryListEl.classList.add("compact");
-      const entryList = entryListEl.closest(".entry-list");
-      if (entryList) entryList.classList.add("compact");
-      if (currentEntryContainerEl) {
-        currentEntryContainerEl.classList.add("expanded");
-      }
-      const message = document.createElement("div");
-      message.className = "hint-text";
-      message.style.fontStyle = "italic";
-      message.style.padding = "12px";
-      message.textContent = "(no further options)";
-      entryListEl.appendChild(message);
-    }
-  } catch (e) {
-    console.error("Error loading child links", e);
-    entryListEl.textContent = "(error loading next options)";
-  }
-}
-export const backBtn = $("backBtn");
-

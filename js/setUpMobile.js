@@ -4,13 +4,13 @@ import {
   pushHistoryState,
   setIsHandlingPopState,
   getIsHandlingPopState,
-  backBtn,
 } from "./navigation.js";
+import { backBtn } from "./constants.js";
 import { openConversationSidebar } from "./setUpSidebarToggles.js";
-import { searchInput } from "./sharedElements.js";
-import { mobileActorFilterWrapper } from "./sharedElements.js";
-import { mobileConvoFilterWrapper } from "./sharedElements.js";
-import { mobileMediaQuery } from "./handleMediaQueryChange.js";
+import { convoRootBtn, mobileSearchTrigger, searchInput } from "./constants.js";
+import { mobileActorFilterWrapper } from "./constants.js";
+import { mobileConvoFilterWrapper } from "./constants.js";
+import { mobileMediaQuery } from "./constants.js";
 import {
   getCurrentConvoId,
   getNavigationHistory,
@@ -20,21 +20,16 @@ import { toggleElementVisibility, $ } from "./uiHelpers.js";
 import {
   showSearchCount,
   search,
-  mobileSearchResults,
-  mobileSearchCount,
-} from "./getQueryTokens.js";
+} from "./search.js";
+import { mobileSearchResults } from "./constants.js";
+import { mobileSearchCount } from "./constants.js";
 import { closeAllSidebars } from "./closeElementsHelpers.js";
 import { openSettings } from "./userSettings.js";
-import { mobileSearchScreen } from "./setupSearchInfiniteScroll.js";
+import { mobileSearchScreen } from "./constants.js";
 
-// History navigation
-export const chatLogEl = $("chatLog");
-export const convoRootBtn = $("convoRootBtn");
-export const mobileActorFilter = $("mobileActorFilter");
-export const mobileConvoFilter = $("mobileConvoFilter");
-export const typeFilterDropdown = $("typeFilterDropdown");
-export const mobileSearchTrigger = $("mobileSearchTrigger");
-
+const mobileActorFilter = $("mobileActorFilter");
+const mobileConvoFilter = $("mobileConvoFilter");
+const typeFilterDropdown = $("typeFilterDropdown");
 const mobileSearchInputWrapper = $("mobileSearchInputWrapper");
 const mobileNavHome = $("mobileNavHome");
 const mobileNavSettings = $("mobileNavSettings");
@@ -42,12 +37,12 @@ const mobileNavSearch = $("mobileNavSearch");
 const mobileTypeFilter = $("mobileTypeFilter"); // Button
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
 
-export function setupMobileNavMenu() {
-  mobileNavHome.addEventListener("click", goBackHomeWithBrowserHistory);
-  mobileNavSettings.addEventListener("click", openSettings);
-  mobileNavSearch.addEventListener("click", openMobileSearchScreen);
+export function setUpMobile() {
+  // Mobile Set Up
+  setupMobileSidebar();
+  setupMobileSearch();
+  setupMobileNavMenu();
 }
-
 export function openMobileSearchScreen() {
   // Push browser history state for mobile search
   if (!getIsHandlingPopState()) {
@@ -75,7 +70,6 @@ export function openMobileSearchScreen() {
     if (mobileSearchCount) toggleElementVisibility(mobileSearchCount, false);
   }
 }
-
 export function closeMobileSearchScreen() {
   toggleElementVisibility(mobileSearchScreen, false);
   mobileSearchInputWrapper.classList.remove("expanded");
@@ -88,8 +82,28 @@ export function closeMobileSearchScreen() {
     toggleElementVisibility(mobileSearchCount, false);
   }
 }
+export function updateMobileNavButtons() {
+  if (!backBtn || !convoRootBtn) return;
 
-export function setupMobileSearch() {
+  // Show back button if we have navigation history OR if we're not on home view
+  if (
+    getNavigationHistory().length > 1 ||
+    getCurrentConvoId() !== null ||
+    getCurrentAppState() !== "home"
+  ) {
+    backBtn.disabled = false;
+    convoRootBtn.disabled = false;
+  } else {
+    backBtn.disabled = true;
+    convoRootBtn.disabled = true;
+  }
+}
+function setupMobileNavMenu() {
+  mobileNavHome.addEventListener("click", goBackHomeWithBrowserHistory);
+  mobileNavSettings.addEventListener("click", openSettings);
+  mobileNavSearch.addEventListener("click", openMobileSearchScreen);
+}
+function setupMobileSearch() {
   mobileConvoFilter.addEventListener("click", showMobileConvoFilter);
   mobileActorFilter.addEventListener("click", showMobileActorFilter);
   mobileTypeFilter.addEventListener("click", showMobileTypeFilter);
@@ -116,8 +130,7 @@ export function setupMobileSearch() {
   // Setup type filter sheet
   setupMobileTypeFilter();
 }
-
-export function setupMobileSidebar() {
+function setupMobileSidebar() {
   // Open sidebar
   const mobileSidebarToggle = $("mobileSidebarToggle");
   if (mobileSidebarToggle) {
@@ -141,23 +154,6 @@ export function setupMobileSidebar() {
       }
     }
     convoRootBtn.addEventListener("click", handleMobileConvoRootButtonClick);
-  }
-}
-
-export function updateMobileNavButtons() {
-  if (!backBtn || !convoRootBtn) return;
-
-  // Show back button if we have navigation history OR if we're not on home view
-  if (
-    getNavigationHistory().length > 1 ||
-    getCurrentConvoId() !== null ||
-    getCurrentAppState() !== "home"
-  ) {
-    backBtn.disabled = false;
-    convoRootBtn.disabled = false;
-  } else {
-    backBtn.disabled = true;
-    convoRootBtn.disabled = true;
   }
 }
 function showMobileConvoFilter() {
@@ -245,7 +241,7 @@ function setupMobileActorFilter() {
 function setupMobileTypeFilter() {
   // Skip setup if required elements are missing (indicates refactored HTML)
   const applyBtn = $("mobileTypeApply");
-    const bottomSheet = $("bottomSheet");
+  const bottomSheet = $("bottomSheet");
 
   function handleMobileTypeFilterSheetClick(e) {
     // Close sheet when clicking outside content
@@ -262,11 +258,7 @@ function setupMobileTypeFilter() {
     e.preventDefault();
   }
 
-  bottomSheet?.addEventListener(
-    "click",
-    handleBottomSheetClick
-
-  )
+  bottomSheet?.addEventListener("click", handleBottomSheetClick);
   mobileTypeFilterSheet?.addEventListener(
     "click",
     handleMobileTypeFilterSheetClick,

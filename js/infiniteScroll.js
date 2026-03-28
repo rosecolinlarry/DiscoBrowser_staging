@@ -1,7 +1,23 @@
-import { searchLoader } from "./sharedElements.js";
+import { entryListEl, mobileSearchScreen, searchLoader } from "./constants.js";
 import { toggleElementVisibility } from "./uiHelpers.js";
-import { search } from "./getQueryTokens.js";
+import { search } from "./search.js";
 
+// Search pagination state
+let currentSearchOffset = 0;
+let currentSearchTotal = 0;
+let currentSearchFilteredCount = 0; // Count after type filtering
+let isLoadingMore = false;
+let currentSearchActorIds = null;
+
+export function setCurrentSearchOffset(value) {
+  currentSearchOffset = value;
+}
+export function setCurrentSearchTotal(value) {
+  currentSearchTotal = value;
+}
+export function setCurrentSearchFilteredCount(value) {
+  currentSearchFilteredCount = value;
+}
 export function handleInfiniteScroll(e) {
   // Setup infinite scroll for search results
   // Check if we're near the bottom and have more results to load
@@ -20,31 +36,16 @@ export function handleInfiniteScroll(e) {
     // Load more results
     search(false);
   }
-}// Search pagination state
-
-let currentSearchOffset = 0;
-let currentSearchTotal = 0;
-let currentSearchFilteredCount = 0; // Count after type filtering
-
-export function setCurrentSearchOffset(value) {
-  currentSearchOffset = value;
 }
-
+// Used by search.js
 export function getCurrentSearchOffset() {
   return currentSearchOffset;
 }
-
 export function incrementCurrentSearchOffset(value) {
   currentSearchOffset += value;
 }
-export function setCurrentSearchTotal(value) {
-  currentSearchTotal = value;
-}
 export function getCurrentSearchTotal() {
   return currentSearchTotal;
-}
-export function setCurrentSearchFilteredCount(value) {
-  currentSearchFilteredCount = value;
 }
 export function incrementCurrentSearchFilteredCount(value) {
   currentSearchFilteredCount += value;
@@ -52,26 +53,19 @@ export function incrementCurrentSearchFilteredCount(value) {
 export function getCurrentSearchFilteredCount() {
   return currentSearchFilteredCount;
 }
-
-
-let currentSearchConvoIds = null;
-export function setCurrentSearchConvoIds(value) {
-  currentSearchConvoIds = value;
-}
-export function getCurrentSearchConvoIds() {
-  return currentSearchConvoIds;
-}
-let currentSearchActorIds = null;
 export function setCurrentSearchActorIds(value) {
   currentSearchActorIds = value;
 }
 export function getCurrentSearchActorIds() {
   return currentSearchActorIds;
 }
-let isLoadingMore = false;
 export function setIsLoadingMore(value) {
   isLoadingMore = value;
 }
 export function getIsLoadingMore() {
   return isLoadingMore;
+}
+export function setupSearchInfiniteScroll() {
+  mobileSearchScreen.addEventListener("scroll", handleInfiniteScroll);
+  entryListEl.addEventListener("scroll", handleInfiniteScroll);
 }

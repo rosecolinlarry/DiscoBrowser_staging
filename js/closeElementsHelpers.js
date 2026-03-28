@@ -1,12 +1,10 @@
-import { sidebarOverlay } from "./sharedElements.js";
-import { toggleElementVisibility } from "./uiHelpers.js";
+import { sidebarOverlay } from "./constants.js";
+import { toggleElementVisibility, toggleElementVisibilityBySelector } from "./uiHelpers.js";
 
 export function closeAllSidebars() {
-  const modals = document.querySelectorAll(".sidebar");
-  modals.forEach((modal) => toggleElementVisibility(modal, false));
+  toggleElementVisibilityBySelector(".sidebar", false)
   toggleElementVisibility(sidebarOverlay, false);
 }
 export function closeAllModals() {
-  const modals = document.querySelectorAll(".modal-overlay");
-  modals.forEach((modal) => toggleElementVisibility(modal, false));
+  toggleElementVisibilityBySelector(".modal-overlay", false);
 }

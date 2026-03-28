@@ -1,7 +1,6 @@
 import { injectTemplate } from "./uiHelpers.js";
 import { $ } from "./uiHelpers.js";
 
-// Creates and injects icon templates into the DOM. Templates are stored in <template> elements for efficient cloning
 export async function injectIconTemplates() {
   // Create a container element and add templates to it
   const iconTemplateContainerId = "icon-template-container";
@@ -16,6 +15,29 @@ export async function injectIconTemplates() {
   await injectTemplate(iconTemplateFileName, iconTemplateContainerId);
   initializeIcons();
 }
+export function setToggleIcon(toggleEl, expanded) {
+  if (!toggleEl) return;
+
+  // Only update toggles that are meant to expand/collapse
+  if (toggleEl.dataset && toggleEl.dataset.canToggle === "false") return;
+
+  const templateId = "icon-chevron-right-template";
+  const template = $(templateId);
+
+  const clone = template.content.cloneNode(true);
+  const svg = clone.querySelector("svg");
+  if (svg) {
+    svg.setAttribute("width", "18px");
+    svg.setAttribute("height", "18px");
+  }
+
+  toggleEl.innerHTML = "";
+  toggleEl.appendChild(clone);
+
+  // Update rotation class for animation
+  toggleEl.classList.toggle("toggle-expanded", expanded);
+}
+
 function initializeIcons() {
   // Helper function to clone and size an icon template
   function getIcon(templateId, width = "30px", height = "30px") {
@@ -42,26 +64,4 @@ function initializeIcons() {
     const iconClone = getIcon(templateId, iconWidth, iconHeight);
     placeholder.replaceWith(...iconClone.childNodes);
   });
-}export function setToggleIcon(toggleEl, expanded) {
-  if (!toggleEl) return;
-
-  // Only update toggles that are meant to expand/collapse
-  if (toggleEl.dataset && toggleEl.dataset.canToggle === "false") return;
-
-  const templateId = "icon-chevron-right-template";
-  const template = $(templateId);
-
-  const clone = template.content.cloneNode(true);
-  const svg = clone.querySelector("svg");
-  if (svg) {
-    svg.setAttribute("width", "18px");
-    svg.setAttribute("height", "18px");
-  }
-
-  toggleEl.innerHTML = "";
-  toggleEl.appendChild(clone);
-
-  // Update rotation class for animation
-  toggleEl.classList.toggle("toggle-expanded", expanded);
 }
-

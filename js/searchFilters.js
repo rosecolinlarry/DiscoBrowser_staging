@@ -2,42 +2,48 @@ import { $, toggleElementVisibility } from "./uiHelpers.js";
 import {
   actorCheckboxList,
   convoCheckboxList,
-  selectAllActors,
+  currentEntryContainerEl,
+  dialogueContent,
+  entryListEl,
+  homePageContainer,
+  searchInput,
   selectAllTypes,
-  typeCheckboxList
-} from "./sharedElements.js";
-import { applyFiltersToCurrentResults, search, switchToSearchResultsView } from "./getQueryTokens.js";
-import { mobileMediaQuery } from "./handleMediaQueryChange.js";
-import { triggerSearch } from "./setupClearSearchInput.js";
+  typeCheckboxList,
+  wholeWordsCheckbox
+} from "./constants.js";
+import { applyFiltersToCurrentResults, search } from "./search.js";
+import { mobileMediaQuery } from "./constants.js";
 import { getDistinctActors } from "./sqlHelpers.js";
 import { getConvos } from "./conversationTree.js";
+import { searchBtn } from "./constants.js";
+import { searchClearBtn } from "./constants.js";
+import { openMobileSearchScreen } from "./setUpMobile.js";
+import { mobileSearchTrigger } from "./constants.js";
+import { setCurrentSearchOffset, setCurrentSearchFilteredCount } from "./infiniteScroll.js";
+import { getCurrentAppState, getIsHandlingPopState, setIsHandlingPopState } from "./navigation.js";
 
 export let allActors = [];
 export let selectedConvoIds = new Set();
 export let selectedActorIds = new Set();
 export let selectedTypeIds = new Set(["flow", "orb", "task"]); // All types selected by default
-export let filteredActors = [];
-export let filteredConvos = [];
-export const actorAddToSelectionBtn = $("actorAddToSelection");
-export const typeFilterLabel = $("typeFilterLabel");
-export const actorSearchInput = $("actorSearch");
-export const wholeWordsCheckbox = $("wholeWordsCheckbox");
 
-const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
-const convoFilterLabel = $("convoFilterLabel"); // Text
-const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
+const selectAllActors = $("selectAllActors");
 const actorFilterLabel = $("actorFilterLabel"); // Text
-// Track currently open dropdown so we only allow one at a time
+const actorSearchInput = $("actorSearch");
+const actorFilterDropdown = $("actorFilterDropdown"); // Checklist
+const actorAddToSelectionBtn = $("actorAddToSelection");
+
+const selectAllConvos = $("selectAllConvos");
+const convoFilterLabel = $("convoFilterLabel"); // Text
+const convoFilterDropdown = $("convoFilterDropdown"); // Checklist
+const clearFiltersBtn = $("clearFiltersBtn");
+
+const typeFilterLabel = $("typeFilterLabel");
+
+let filteredActors = [];
+let filteredConvos = [];
 let openDropdown = null;
-let activeTypeFilter = "all";
 
-
-export function setOpenDropdown(value) {
-  openDropdown = value;
-}
-export function getOpenDropdown() {
-  return openDropdown;
-}
 export function setUpFilterDropdowns() {
   const dropdownButtons = document.querySelectorAll(".filter-dropdown-button");
   const allDropdowns = document.querySelectorAll(".filter-dropdown");
@@ -86,12 +92,6 @@ export function setUpFilterDropdowns() {
     setUpWholeWordsToggle();
   });
 }
-export function setActiveTypeFilter(value) {
-  activeTypeFilter = value;
-}
-export function getActiveTypeFilter() {
-  return activeTypeFilter;
-}
 export function updateActorFilterLabel() {
   if (!actorFilterLabel) return;
 
@@ -132,7 +132,153 @@ export function updateTypeFilterLabel() {
     typeFilterLabel.textContent = `${selectedTypeIds.size} Types`;
   }
 }
+export function setupClearSearchInput() {
+  function handleSearchClearButtonClick(e) {
+    // Clear the unified search input and focus it
+    if (searchInput) {
+      const searchClearBtn = e.target;
+      searchInput.value = "";
+      searchInput.focus();
+      // Change icon back to search icon
+      toggleElementVisibility(searchClearBtn, false);
+      toggleElementVisibility(searchBtn, true);
+    }
+  }
+  searchClearBtn.addEventListener("click", handleSearchClearButtonClick);
+}
+export function setupClearFiltersBtn() {
+  if (!clearFiltersBtn) return;
+  function handleClearFiltersButtonClick(e) {
+    // Reset convo filters
+    selectedConvoIds.clear();
+    const convoCheckboxes = convoCheckboxList?.querySelectorAll(
+      'input[type="checkbox"]'
+    );
+    convoCheckboxes.forEach((cb) => {
+      cb.checked = false;
+    });
+    selectAllConvos.checked = true;
+    selectAllConvos.indeterminate = false;
+    updateConvoFilterLabel();
 
+    // Reset actor filters
+    selectedActorIds.clear();
+    const actorCheckboxes = actorCheckboxList?.querySelectorAll(
+      'input[type="checkbox"]'
+    );
+    actorCheckboxes.forEach((cb) => {
+      cb.checked = false;
+    });
+    selectAllActors.checked = true;
+    selectAllActors.indeterminate = false;
+    updateActorFilterLabel();
+
+    // Reset type filters - select all
+    selectedTypeIds.clear();
+    selectedTypeIds.add("flow");
+    selectedTypeIds.add("orb");
+    selectedTypeIds.add("task");
+
+    const typeCheckboxes = typeCheckboxList?.querySelectorAll(
+      'input[type="checkbox"][data-type]'
+    );
+    typeCheckboxes.forEach((cb) => {
+      cb.checked = true;
+    });
+    selectAllTypes.checked = true;
+    selectAllTypes.indeterminate = false;
+    updateTypeFilterLabel();
+
+    // Reset whole words checkbox
+    const wholeWordsCheckbox = $("wholeWordsCheckbox");
+    wholeWordsCheckbox.checked = false;
+
+    // Trigger search with cleared filters
+    triggerSearch(e);
+  }
+  clearFiltersBtn.addEventListener("click", handleClearFiltersButtonClick);
+}
+export function setUpSearch() {
+  function handleSearchInputKeyDown(e) {
+    if (e.key === "Enter") {
+      search();
+    }
+  }
+  function handleSearchInputClick() {
+    // On mobile, clicking the (visible) search input should open the mobile search screen
+    if (mobileMediaQuery.matches) {
+      openMobileSearchScreen();
+    }
+  }
+  function handleSearchInputEvent(e) {
+    // Keep mobile and desktop input unified (single element used)
+    // If the mobile header trigger exists, mirror the value for display
+    if (mobileSearchTrigger) mobileSearchTrigger.value = e?.target?.value ?? "";
+    if (e?.target?.value.length > 0) {
+      // Show clear icon
+      toggleElementVisibility(searchClearBtn, true);
+      toggleElementVisibility(searchBtn, false);
+    } else {
+      // Show search icon
+      toggleElementVisibility(searchClearBtn, false);
+      toggleElementVisibility(searchBtn, true);
+    }
+  }
+  searchInput.addEventListener("keydown", handleSearchInputKeyDown);
+  searchInput.addEventListener("click", handleSearchInputClick);
+  searchInput.addEventListener("input", handleSearchInputEvent);
+  searchBtn.addEventListener("click", search);
+}
+export function triggerSearch(e) {
+  e.preventDefault();
+
+  if (searchInput.value) {
+    // Always reset search when filters change to clear old results
+    // But only push history state if not already in search view
+    const isAlreadySearching = getCurrentAppState() === "search";
+    if (isAlreadySearching) {
+      // Already in search view, manually reset and search without pushing history
+      setCurrentSearchOffset(0);
+      setCurrentSearchFilteredCount(0);
+      entryListEl.innerHTML = "";
+      // Prevent pushHistoryState by temporarily marking as handling popstate
+      const prevPop = getIsHandlingPopState();
+      setIsHandlingPopState(true);
+      try {
+        search(true);
+      } finally {
+        setIsHandlingPopState(prevPop);
+      }
+    } else {
+      // First time searching, push history state
+      search(true);
+    }
+  }
+}
+export function switchToSearchResultsView() {
+  toggleElementVisibility(homePageContainer, false);
+  toggleElementVisibility(dialogueContent, true);
+
+  // Hide current entry and make search take full space
+  toggleElementVisibility(currentEntryContainerEl, false);
+  const entryListContainer = entryListEl?.closest(".entry-list");
+  if (entryListContainer) {
+    entryListContainer.classList.add("full-height");
+    entryListContainer.classList.remove("compact");
+  }
+  if (entryListEl) {
+    entryListEl.classList.remove("compact");
+  }
+
+  entryListEl.innerHTML = "";
+}
+
+function setOpenDropdown(value) {
+  openDropdown = value;
+}
+function getOpenDropdown() {
+  return openDropdown;
+}
 function filterActors(actorSearchInput) {
   const searchText = actorSearchInput
     ? actorSearchInput.value.toLowerCase().trim()
@@ -320,7 +466,6 @@ function renderConvoList(conversations) {
 }
 function setUpConvoFilterDropdown() {
   const convoFilterSearchInput = $("convoSearch");
-  const selectAllCheckbox = $("selectAllConvos");
   const addToSelectionBtn = $("convoAddToSelection");
 
   // Search filter
@@ -385,7 +530,7 @@ function setUpConvoFilterDropdown() {
     }
     renderConvoList(filteredConvos);
   }
-  selectAllCheckbox?.addEventListener("change", handleSelectAllCheckboxChange);
+  selectAllConvos?.addEventListener("change", handleSelectAllCheckboxChange);
 
   // Initial render
   const convos = getConvos();
