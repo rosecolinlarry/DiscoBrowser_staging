@@ -561,7 +561,7 @@ function createMetaTable(data) {
 
   // Combine entry condition and alternate condition if both exist
   let combinedCondition = data.conditionstring || "";
-  if (data.selectedAlternateCondition) {
+  if (data.selectedAlternateCondition && data.selectedAlternateCondition !== undefined && data.selectedAlternateCondition !== "undefined") {
     if (combinedCondition) {
       combinedCondition = `${combinedCondition} AND ${data.selectedAlternateCondition}`;
     } else {
@@ -576,7 +576,7 @@ function createMetaTable(data) {
     ["Difficulty", data.difficultypass],
   ];
 
-  section.appendChild(buildTable(rows));
+  section.appendChild(buildTable(rows, false));
 
   return section;
 }

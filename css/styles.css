@@ -755,6 +755,10 @@ button.button-icon.help-button-icon {
   margin: 0;
   padding: 8px 12px;
   font-size: 13px;
+  
+  &.id-search-input {
+    flex: 0.35;
+  }
 }
 
 .filter-controls-row {

@@ -599,7 +599,7 @@
           <div>
             <div class="sidebar-header">
               <h3>
-                Conversations
+                Conversation Tree
                 <button id="helpIcon" class="button-icon help-button-icon">
                   <div
                     class="icon-placeholder"
@@ -628,7 +628,15 @@
                 id="convoSearchInput"
                 class="search-input"
                 type="text"
-                placeholder="Title or Convo Id"
+                placeholder="Title"
+              />
+              <input
+                id="convoIdSearchInput"
+                class="search-input id-search-input"
+                type="text"
+                inputmode="numeric"
+                pattern="\d*"
+                placeholder="Id"
               />
             </div>
             <div class="filter-controls-row">
