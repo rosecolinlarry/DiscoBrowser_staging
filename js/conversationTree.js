@@ -10,6 +10,7 @@ import { $, highlightTerms } from "./uiHelpers.js";
 import { showHidden } from "./userSettings.js";
 
 const convoSearchInput = $("convoSearchInput");
+const convoIdSearchInput= $("convoIdSearchInput");
 const convoListEl = $("convoList");
 const convoTypeFilterBtns = document.querySelectorAll(
   ".radio-button-group .radio-button"
@@ -110,10 +111,12 @@ function collapseAllTreeNodes() {
 }
 function filterConversationTree() {
   let searchText;
+  let searchId;
   if (!conversationTree) return;
   searchText = convoSearchInput?.value?.toLowerCase().trim() ?? "";
+  searchId = parseInt(convoIdSearchInput?.value?.toLowerCase().trim() ?? "");
   // If no text search is active
-  if (!searchText) {
+  if (!searchText && !searchId) {
     // Show full tree when all types selected
     if (activeTypeFilter === "all") {
       renderTree(convoListEl, conversationTree);
@@ -157,6 +160,7 @@ function filterConversationTree() {
   collectMatchingLeaves(
     conversationTree.root,
     searchText,
+    searchId,
     activeTypeFilter,
     matches,
     conversationTree,
@@ -180,7 +184,7 @@ function filterConversationTree() {
     convoListEl.appendChild(item);
   });
 }
-function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
+function collectMatchingLeaves(node, searchText, searchId, typeFilter, matches, tree) {
   // Check if this node has conversation IDs
   if (node.convoIds && node.convoIds.length > 0) {
     node.convoIds.forEach((cid) => {
@@ -192,11 +196,21 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
         return;
       }
 
+      // Id filter
+      if(searchId && searchId !== null && !isNaN(searchId)) {
+        const idMatch = cid == searchId;
+        if(idMatch) {
+          matches.push({
+            convoId: cid,
+            title: convo.title,
+            type: convo.type || "flow",
+          });
+        }
+      }
       // Text filter
-      if (searchText) {
+      else if (searchText) {
         const titleMatch = convo.title.toLowerCase().includes(searchText);
-        const idMatch = cid.toString().includes(searchText);
-        if (titleMatch || idMatch) {
+        if (titleMatch) {
           matches.push({
             convoId: cid,
             title: convo.title,
@@ -216,7 +230,7 @@ function collectMatchingLeaves(node, searchText, typeFilter, matches, tree) {
   // Recursively search children
   if (node.children) {
     for (const child of node.children.values()) {
-      collectMatchingLeaves(child, searchText, typeFilter, matches, tree);
+      collectMatchingLeaves(child, searchText, searchId, typeFilter, matches, tree);
     }
   }
 }
@@ -590,6 +604,9 @@ function setupConversationFilter() {
   // Text search filter
   if (convoSearchInput) {
     convoSearchInput.addEventListener("input", filterConversationTree);
+  }
+  if (convoIdSearchInput) {
+    convoIdSearchInput.addEventListener("input", filterConversationTree);
   }
 
   // Type filter buttons

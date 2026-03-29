@@ -38,7 +38,6 @@ const mobileTypeFilter = $("mobileTypeFilter"); // Button
 const mobileTypeFilterSheet = $("mobileTypeFilterSheet"); // Checklist
 
 export function setUpMobile() {
-  // Mobile Set Up
   setupMobileSidebar();
   setupMobileSearch();
   setupMobileNavMenu();
