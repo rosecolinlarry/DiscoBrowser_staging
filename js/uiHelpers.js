@@ -1,27 +1,8 @@
-// ui.js
-// DOM helpers and UI wiring (history, chat log, entry render helpers)
+import { handleLineLinkClick, handleEntryClick } from "./navigation.js";
 
 export function $(sel) {
   return document.getElementById(sel);
 }
-
-// Make external links open in new tabs
-function processExternalLinks(element) {
-  const links = element.querySelectorAll("a[href]");
-  links.forEach((link) => {
-    const href = link.getAttribute("href");
-    // Check if it's an external link (starts with http/https and not #)
-    if (
-      href &&
-      (href.startsWith("http://") || href.startsWith("https://")) &&
-      !href.startsWith("#")
-    ) {
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
-    }
-  });
-}
-
 export function createCardItem(
   titleText,
   convoId,
@@ -90,11 +71,14 @@ export function createCardItem(
   el.appendChild(header);
   el.appendChild(body);
 
+  el.dataset.convoId = convoId;
+  el.dataset.id = entryId;
   return el;
 }
-
-/* #region Visibility helpers */
 export function toggleElementVisibility(el, showElement) {
+  if (!el) {
+    return;
+  }
   if (el instanceof NodeList) {
     el.forEach((element) => {
       toggleElementVisibility(element, showElement);
@@ -115,31 +99,11 @@ export function toggleElementVisibility(el, showElement) {
     }
   }
 }
-
 export function toggleElementVisibilityBySelector(selector, showElement) {
-  const el = document.querySelector(selector);
+  const el = document.querySelectorAll(selector);
   toggleElementVisibility(el, showElement);
 }
-
-/* #endregion */
-
-/* Chat log/history helpers */
-export function resetChatLog(chatLogEl) {
-  if (!chatLogEl) return;
-  chatLogEl.innerHTML = "";
-  const hint = document.createElement("div");
-  hint.className = "hint-text";
-  hint.textContent = "(navigation log - select a conversation to begin)";
-  chatLogEl.appendChild(hint);
-}
-
-export function appendHistoryItem(
-  chatLogEl,
-  title,
-  text,
-  historyIndex,
-  onClick
-) {
+export function appendHistoryItem(chatLogEl, title, text, historyIndex, onClick) {
   const item = document.createElement("div");
   item.className = "card-item history-item";
 
@@ -170,7 +134,6 @@ export function appendHistoryItem(
 
   return item;
 }
-
 export function renderCurrentEntry(
   entryOverviewEl,
   convoId,
@@ -181,10 +144,9 @@ export function renderCurrentEntry(
 ) {
   dialoguetext = getStringOrDefault(dialoguetext, "<i>No dialogue.</i>");
   title = getStringOrDefault(parseSpeakerFromTitle(title), "Untitled");
-  const typeBadge =
-    convoType !== "flow"
-      ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>`
-      : "";
+  const typeBadge = convoType !== "flow"
+    ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>`
+    : "";
 
   entryOverviewEl.innerHTML = "";
   entryOverviewEl.className = "entry-item current-item";
@@ -200,7 +162,6 @@ export function renderCurrentEntry(
     <div class="card-body dialogue-text">${dialoguetext}</div>`;
   processExternalLinks(entryOverviewEl);
 }
-
 export function renderConversationOverview(entryOverviewEl, conversation) {
   entryOverviewEl.innerHTML = "";
   entryOverviewEl.className = "entry-item current-item";
@@ -211,10 +172,9 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
     "<i>No conversation description.</i>"
   );
   const convoType = conversation.type || "flow";
-  const typeBadge =
-    convoType !== "flow"
-      ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>`
-      : "";
+  const typeBadge = convoType !== "flow"
+    ? `<span class="type-badge type-${convoType}">${convoType.toUpperCase()}</span>`
+    : "";
 
   entryOverviewEl.innerHTML = `
     <div class="card-meta">
@@ -229,19 +189,15 @@ export function renderConversationOverview(entryOverviewEl, conversation) {
     </div>`;
   processExternalLinks(entryOverviewEl);
 }
-
 export function parseSpeakerFromTitle(title) {
   if (!title) return "";
   const splitTitle = title.split(":");
-  if (
-    splitTitle.length > 1 &&
+  if (splitTitle.length > 1 &&
     !title.startsWith("Jump to") &&
-    !title.startsWith("NewspaperEndgame")
-  )
+    !title.startsWith("NewspaperEndgame"))
     return splitTitle[0].trim();
   return title;
 }
-
 export function renderConvoDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
@@ -251,7 +207,6 @@ export function renderConvoDetails(containerEl, data) {
   }
   containerEl.appendChild(wrapper);
 }
-
 export function renderEntryDetails(containerEl, data) {
   containerEl.innerHTML = "";
   const wrapper = document.createElement("div");
@@ -259,13 +214,15 @@ export function renderEntryDetails(containerEl, data) {
   wrapper.appendChild(createEntryTable(data));
   if (data?.checks?.length) wrapper.appendChild(createChecksList(data.checks));
   if (data?.parents?.length)
-    wrapper.appendChild(createParentsList(data.parents, data));
+    wrapper.appendChild(createParentsList(data.parents));
   if (data?.children.length)
-    wrapper.appendChild(createChildrenList(data.children, data));
+    wrapper.appendChild(createChildrenList(data.children));
   wrapper.appendChild(createConvoTable(data));
 
   // If viewing an alternate, show original line; otherwise show alternates list
-  if (data.selectedAlternateCondition && data.originalDialogueText) {
+  if (data.selectedAlternateCondition !== "undefined" &&
+    data.selectedAlternateCondition &&
+    data.originalDialogueText) {
     wrapper.appendChild(createOriginalLineSection(data));
   } else if (data?.alternates.length) {
     wrapper.appendChild(createAlternatesList(data.alternates, data));
@@ -275,269 +232,6 @@ export function renderEntryDetails(containerEl, data) {
 
   containerEl.appendChild(wrapper);
 }
-
-function createAlternatesList(alternates, data) {
-  const section = createDetailsSectionHeader("Alternates");
-  const list = document.createElement("div");
-  list.className = "details-list";
-  if (alternates && alternates.length) {
-    alternates.forEach((a) => {
-      const item = document.createElement("div");
-      item.className = "details-item";
-
-      // Create clickable link for the alternate
-      const link = document.createElement("a");
-      link.href = "#";
-      link.textContent = a.alternateline;
-      link.addEventListener("click", async (e) => {
-        e.preventDefault();
-        if (data.onNavigate) {
-          // Don't add to history when switching to alternate view
-          await data.onNavigate(
-            a.conversationid,
-            a.dialogueid,
-            false,
-            a.condition,
-            a.alternateline
-          );
-        }
-      });
-
-      item.appendChild(link);
-      const conditionSpan = document.createElement("span");
-      conditionSpan.textContent = ` (condition: ${a.condition})`;
-      item.appendChild(conditionSpan);
-      list.appendChild(item);
-    });
-    section.appendChild(list);
-  } else {
-    section.append(createPlaceholderItem());
-  }
-
-  return section;
-}
-
-function createOriginalLineSection(data) {
-  const section = createDetailsSectionHeader("Original Line");
-  const list = document.createElement("div");
-  list.className = "details-list";
-
-  const item = document.createElement("div");
-  item.className = "details-item";
-
-  // Create clickable link to view the original
-  const link = document.createElement("a");
-  link.href = "#";
-  link.textContent = data.originalDialogueText;
-  link.addEventListener("click", async (e) => {
-    e.preventDefault();
-    if (data.onNavigate) {
-      // Don't add to history when switching back to original view
-      await data.onNavigate(data.convoId, data.entryId, false, null, null);
-    }
-  });
-
-  item.appendChild(link);
-  list.appendChild(item);
-  section.appendChild(list);
-
-  return section;
-}
-
-function createChecksList(checks) {
-  const section = createDetailsSectionHeader("Checks");
-  const list = document.createElement("div");
-  list.className = "details-list";
-  if (checks && checks.length) {
-    checks.forEach((check) => {
-      const item = document.createElement("div");
-      item.className = "details-item";
-      const checkText = document.createElement("span");
-      checkText.textContent = getStringOrDefault(check);
-      item.appendChild(checkText);
-    });
-    list.appendChild(item);
-  } else {
-    section.append(createPlaceholderItem());
-  }
-  return section;
-}
-
-function createParentsList(parents, data) {
-  // Parents
-  const section = createDetailsSectionHeader("Parents");
-  const list = document.createElement("div");
-  list.className = "details-list";
-  if (parents && parents.length) {
-    parents.forEach((p) => {
-      const item = document.createElement("div");
-      item.className = "details-item";
-      const a = document.createElement("a");
-      a.textContent = `${p.o_convo}:${p.o_id}`;
-      a.href = "#";
-      a.dataset.convo = p.o_convo;
-      a.dataset.id = p.o_id;
-      a.addEventListener("click", async (e) => {
-        e.preventDefault();
-        if (data.onNavigate) await data.onNavigate(p.o_convo, p.o_id);
-      });
-      item.appendChild(a);
-      const meta = document.createElement("span");
-      meta.textContent = ` (priority: ${p.priority}, connector: ${p.isConnector})`;
-      item.appendChild(meta);
-      list.appendChild(item);
-    });
-    section.appendChild(list);
-  } else {
-    section.appendChild(createPlaceholderItem());
-  }
-  return section;
-}
-
-function createChildrenList(children, data) {
-  const section = createDetailsSectionHeader("Children");
-  const list = document.createElement("div");
-  list.className = "details-list";
-  if (children && children.length) {
-    children.forEach((c) => {
-      const item = document.createElement("div");
-      item.className = "details-item";
-      const a = document.createElement("a");
-      a.textContent = `${c.d_convo}:${c.d_id}`;
-      a.href = "#";
-      a.dataset.convo = c.d_convo;
-      a.dataset.id = c.d_id;
-      a.addEventListener("click", async (e) => {
-        e.preventDefault();
-        if (data.onNavigate) await data.onNavigate(c.d_convo, c.d_id);
-      });
-      item.appendChild(a);
-      const meta = document.createElement("span");
-      meta.textContent = ` (priority: ${c.priority}, connector: ${c.isConnector})`;
-      item.appendChild(meta);
-      list.appendChild(item);
-    });
-    section.appendChild(list);
-  } else {
-    section.appendChild(createPlaceholderItem());
-  }
-  return section;
-}
-
-function createEntryTable(data) {
-  const tableDiv = createDetailsSectionHeader("Entry");
-  const rows = [
-    ["Entry Id", data.entryId],
-    ["Entry Title", data.title],
-    ["Entry Actor Id", data.actorId],
-    ["Entry Actor Name", data.actorName],
-    ["Entry Is Hidden", data.isHidden ? "Hidden" : "Visible"],
-  ];
-
-  tableDiv.appendChild(buildTable(rows));
-  return tableDiv;
-}
-
-function createConvoTable(data) {
-  const section = createDetailsSectionHeader("Conversation");
-  const rows = [
-    ["Conversation Id", data.convoId],
-    ["Conversation Title", data.conversationTitle],
-    ["Description", data.conversationDescription],
-    ["Actor Id", data.conversationActorId],
-    ["Actor name", data.conversationActorName],
-    ["Conversant Id", data.conversationConversantId],
-    ["Conversant name", data.conversationConversantName],
-    ["Conversation Type", data.type],
-    ["Conversation Is Hidden", data.isHidden ? "Hidden" : "Visible"],
-    ["On Use", data.onUse],
-    ["Override Dialogue Condition", data.overrideDialogueCondition],
-    ["Alternate Orb Text", data.alternateOrbText],
-    ["Check Type", data.checkType],
-    ["Conversation Condition", data.condition],
-    ["Instruction", data.instruction],
-    ["Orb Placement", data.placement],
-    ["Difficulty", data.difficulty],
-    ["Total Entries", data.totalEntries],
-  ];
-
-  section.appendChild(buildTable(rows));
-  return section;
-}
-
-function createTaskTable(data) {
-  const section = createDetailsSectionHeader("Task Details");
-
-  const rows = [
-    ["Display Condition", data.displayConditionMain],
-    ["Done Condition", data.doneConditionMain],
-    ["Cancel Condition", data.cancelConditionMain],
-    ["Reward", data.taskReward],
-    ["Is Timed", data.taskTimed ? "Timed" : "Not Timed"],
-    ["Total Subtasks", data.totalSubtasks],
-  ];
-
-  section.appendChild(buildTable(rows));
-  return section;
-}
-
-function createMetaTable(data) {
-  const section = createDetailsSectionHeader("Meta");
-
-  // Combine entry condition and alternate condition if both exist
-  let combinedCondition = data.conditionstring || "";
-  if (data.selectedAlternateCondition) {
-    if (combinedCondition) {
-      combinedCondition = `${combinedCondition} AND ${data.selectedAlternateCondition}`;
-    } else {
-      combinedCondition = data.selectedAlternateCondition;
-    }
-  }
-
-  const rows = [
-    ["Sequence", data.sequence],
-    ["Condition", combinedCondition],
-    ["Userscript", data.userscript],
-    ["Difficulty", data.difficultypass],
-  ];
-
-  section.appendChild(buildTable(rows));
-
-  return section;
-}
-
-function createDetailsSectionHeader(sectionTitle) {
-  const sectionHeader = document.createElement("div");
-  sectionHeader.innerHTML = `<div class="details-section-header">${sectionTitle}</div>`;
-  return sectionHeader;
-}
-
-function createPlaceholderItem() {
-  const item = document.createElement("span");
-  item.classList = "details-item details-item-placeholder";
-  item.textContent = "(none)";
-  return item;
-}
-
-function buildTable(rows, hideNone = true) {
-  const t = document.createElement("table");
-  t.className = "details-table";
-  rows.forEach(([label, value]) => {
-    if (hideNone && !value) {
-      return;
-    }
-    const tr = document.createElement("tr");
-    const th = document.createElement("th");
-    const td = document.createElement("td");
-    th.textContent = getStringOrDefault(label, "(none)");
-    td.textContent = getStringOrDefault(value, "(none)");
-    tr.appendChild(th);
-    tr.appendChild(td);
-    t.appendChild(tr);
-  });
-  return t;
-}
-
 export function getStringOrDefault(str, defaultValue = "") {
   if (str === null || str === undefined || str === 0) {
     return defaultValue;
@@ -547,17 +241,6 @@ export function getStringOrDefault(str, defaultValue = "") {
   }
   return str;
 }
-
-function escapeHtml(s) {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
-        c
-      ])
-  );
-}
-
 export function highlightTerms(text, query, hasQuotedPhrases = false) {
   if (!text || !query) return escapeHtml(text || "");
 
@@ -628,7 +311,7 @@ export function highlightTerms(text, query, hasQuotedPhrases = false) {
 
   // Escape HTML and wrap matches in <mark> tags
   return parts
-    .map((part, i) => {
+    .map((part) => {
       // Check if this part matches any of the search terms (case-insensitive)
       const isMatch = terms.some(
         (term) => part.toLowerCase() === term.toLowerCase()
@@ -640,3 +323,296 @@ export function highlightTerms(text, query, hasQuotedPhrases = false) {
     })
     .join("");
 }
+export async function injectTemplate(templateFileName, container) {
+  try {
+    const response = await fetch(templateFileName);
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    const html = await response.text();
+    let containerEl;
+    if (typeof container === "string") {
+      containerEl = document.getElementById(container);
+    }
+    else {
+      containerEl = container
+    }
+    if (containerEl) {
+      containerEl.innerHTML = html;
+    }
+  } catch (error) {
+    console.error("Error fetching modal content:", error);
+  }
+}
+
+function processExternalLinks(element) {
+  // Make external links open in new tabs
+  const links = element.querySelectorAll("a[href]");
+  links.forEach((link) => {
+    const href = link.href;
+    // Check if it's an external link (starts with http/https and not #)
+    if (href &&
+      (href.startsWith("http://") || href.startsWith("https://")) &&
+      !href.startsWith("#")) {
+      link.setAttribute("target", "_blank");
+      link.setAttribute("rel", "noopener noreferrer");
+    }
+  });
+}
+function createAlternatesList(alternates) {
+  const section = createDetailsSectionHeader("Alternates");
+  const list = document.createElement("div");
+  list.className = "details-list";
+  if (alternates && alternates.length) {
+    alternates.forEach((a) => {
+      const item = document.createElement("div");
+      item.className = "details-item";
+
+      // Create clickable link for the alternate
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = a.alternateline;
+
+      link.dataset.convoId = a.conversationid;
+      link.dataset.id = a.dialogueid;
+      link.dataset.isAlternate = true;
+      link.dataset.alternateCondition = a.condition;
+      link.dataset.alternateLine = a.alternateline;
+
+      link.addEventListener("click", handleLineLinkClick);
+
+      item.appendChild(link);
+      const conditionSpan = document.createElement("span");
+      conditionSpan.textContent = ` (condition: ${a.condition})`;
+      item.appendChild(conditionSpan);
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+  } else {
+    section.append(createPlaceholderItem());
+  }
+
+  return section;
+}
+function createOriginalLineSection(data) {
+  const section = createDetailsSectionHeader("Original Line");
+  const list = document.createElement("div");
+  list.className = "details-list";
+
+  const item = document.createElement("div");
+  item.className = "details-item";
+
+  // Create clickable link to view the original
+  const link = document.createElement("a");
+  link.href = "#";
+  link.textContent = data.originalDialogueText;
+
+  link.dataset.convoId = data.convoId;
+  link.dataset.id = data.entryId;
+  link.dataset.isAlternate = false;
+  link.dataset.alternateCondition = data.condition;
+  link.dataset.alternateLine = data.selectedAlternateCondition;
+
+  link.addEventListener("click", handleLineLinkClick);
+
+  item.appendChild(link);
+  list.appendChild(item);
+  section.appendChild(list);
+
+  return section;
+}
+function createChecksList(checks) {
+  const section = createDetailsSectionHeader("Checks");
+  const list = document.createElement("div");
+  list.className = "details-list";
+  if (checks && checks.length) {
+    checks.forEach((check) => {
+      const item = createChecksTable(check);
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+  } else {
+    section.append(createPlaceholderItem());
+  }
+  return section;
+}
+function createChecksTable(data) {
+  const tableDiv = createDetailsSectionHeader("Check");
+  const rows = [
+    ["Check Type", data.checktype],
+    ["Difficulty", data.difficulty],
+    ["Flag Name", data.flagName],
+    ["Forced", data.forced],
+    ["Name", data.name],
+  ];
+
+  tableDiv.appendChild(buildTable(rows));
+  return tableDiv;
+}
+function createParentsList(parents) {
+  // Parents
+  const section = createDetailsSectionHeader("Parents");
+  const list = document.createElement("div");
+  list.className = "details-list";
+  if (parents && parents.length) {
+    parents.forEach((p) => {
+      const item = document.createElement("div");
+      item.className = "details-item";
+      const a = document.createElement("a");
+      a.textContent = `${p.o_convo}:${p.o_id}`;
+      a.href = "#";
+      a.dataset.convoId = p.o_convo;
+      a.dataset.id = p.o_id;
+      a.addEventListener("click", handleEntryClick);
+      item.appendChild(a);
+      const meta = document.createElement("span");
+      meta.textContent = ` (priority: ${p.priority}, connector: ${p.isConnector})`;
+      item.appendChild(meta);
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+  } else {
+    section.appendChild(createPlaceholderItem());
+  }
+  return section;
+}
+function createChildrenList(children) {
+  const section = createDetailsSectionHeader("Children");
+  const list = document.createElement("div");
+  list.className = "details-list";
+  if (children && children.length) {
+    children.forEach((c) => {
+      const item = document.createElement("div");
+      item.className = "details-item";
+      const a = document.createElement("a");
+      a.textContent = `${c.d_convo}:${c.d_id}`;
+      a.href = "#";
+      a.dataset.convoId = c.d_convo;
+      a.dataset.id = c.d_id;
+      a.addEventListener("click", handleEntryClick);
+      item.appendChild(a);
+      const meta = document.createElement("span");
+      meta.textContent = ` (priority: ${c.priority}, connector: ${c.isConnector})`;
+      item.appendChild(meta);
+      list.appendChild(item);
+    });
+    section.appendChild(list);
+  } else {
+    section.appendChild(createPlaceholderItem());
+  }
+  return section;
+}
+function createEntryTable(data) {
+  const tableDiv = createDetailsSectionHeader("Entry");
+  const rows = [
+    ["Entry Id", data.entryId],
+    ["Entry Title", data.title],
+    ["Entry Actor Id", data.actorId],
+    ["Entry Actor Name", data.actorName],
+    ["Entry Is Hidden", data.isHidden ? "Hidden" : "Visible"],
+  ];
+
+  tableDiv.appendChild(buildTable(rows));
+  return tableDiv;
+}
+function createConvoTable(data) {
+  const section = createDetailsSectionHeader("Conversation");
+  const rows = [
+    ["Conversation Id", data.convoId],
+    ["Conversation Title", data.conversationTitle],
+    ["Description", data.conversationDescription],
+    ["Actor Id", data.conversationActorId],
+    ["Actor name", data.conversationActorName],
+    ["Conversant Id", data.conversationConversantId],
+    ["Conversant name", data.conversationConversantName],
+    ["Conversation Type", data.type],
+    ["Conversation Is Hidden", data.isHidden ? "Hidden" : "Visible"],
+    ["On Use", data.onUse],
+    ["Override Dialogue Condition", data.overrideDialogueCondition],
+    ["Alternate Orb Text", data.alternateOrbText],
+    ["Check Type", data.checkType],
+    ["Conversation Condition", data.condition],
+    ["Instruction", data.instruction],
+    ["Orb Placement", data.placement],
+    ["Difficulty", data.difficulty],
+    ["Total Entries", data.totalEntries],
+  ];
+
+  section.appendChild(buildTable(rows));
+  return section;
+}
+function createTaskTable(data) {
+  const section = createDetailsSectionHeader("Task Details");
+
+  const rows = [
+    ["Display Condition", data.displayConditionMain],
+    ["Done Condition", data.doneConditionMain],
+    ["Cancel Condition", data.cancelConditionMain],
+    ["Reward", data.taskReward],
+    ["Is Timed", data.taskTimed ? "Timed" : "Not Timed"],
+    ["Total Subtasks", data.totalSubtasks],
+  ];
+
+  section.appendChild(buildTable(rows));
+  return section;
+}
+function createMetaTable(data) {
+  const section = createDetailsSectionHeader("Meta");
+
+  // Combine entry condition and alternate condition if both exist
+  let combinedCondition = data.conditionstring || "";
+  if (data.selectedAlternateCondition) {
+    if (combinedCondition) {
+      combinedCondition = `${combinedCondition} AND ${data.selectedAlternateCondition}`;
+    } else {
+      combinedCondition = data.selectedAlternateCondition;
+    }
+  }
+
+  const rows = [
+    ["Sequence", data.sequence],
+    ["Condition", combinedCondition],
+    ["Userscript", data.userscript],
+    ["Difficulty", data.difficultypass],
+  ];
+
+  section.appendChild(buildTable(rows));
+
+  return section;
+}
+function createDetailsSectionHeader(sectionTitle) {
+  const sectionHeader = document.createElement("div");
+  sectionHeader.innerHTML = `<div class="details-section-header">${sectionTitle}</div>`;
+  return sectionHeader;
+}
+function createPlaceholderItem() {
+  const item = document.createElement("span");
+  item.classList = "details-item details-item-placeholder";
+  item.textContent = "(none)";
+  return item;
+}
+function buildTable(rows, hideNone = true) {
+  const t = document.createElement("table");
+  t.className = "details-table";
+  rows.forEach(([label, value]) => {
+    if (hideNone && !value) {
+      return;
+    }
+    const tr = document.createElement("tr");
+    const th = document.createElement("th");
+    const td = document.createElement("td");
+    th.textContent = getStringOrDefault(label, "(none)");
+    td.textContent = getStringOrDefault(value, "(none)");
+    tr.appendChild(th);
+    tr.appendChild(td);
+    t.appendChild(tr);
+  });
+  return t;
+}
+function escapeHtml(s) {
+  return s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+  );
+}
+
